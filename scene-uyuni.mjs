@@ -65,45 +65,95 @@ function paintUyuni(g, globe, groundAt) {
   // 아랫면은 라일락 그늘. 같은 구름을 지평선 기준으로 뒤집어 거울에도 찍음
   const clouds = [
     [96, 116, 1],
-    [214, 88, 1.3],
+    [214, 108, 1.1],
     [322, 132, 0.9],
     [150, 170, 0.62],
     [292, 186, 0.5],
   ];
+  // 구름 한 덩이: 둥근 솜뭉치를 돔 모양으로 모아 한 덩어리 실루엣을 만든 뒤(따로 그린 캔버스),
+  // 그 실루엣 안에만 위는 희고 아래는 라일락 그늘인 빛을 칠함 → 공이 줄지은 모양이 아니라 한 몸의 구름.
+  // 꼭대기 몽글몽글한 부분만 아주 옅게 밝혀 결을 남기고, 가장자리는 살짝 흐리게 풀어 줌
   const cloud = (cx, baseY, s, flip, alpha) => {
     const rc = seeded(Math.round(cx * 13 + baseY));
-    const lumps = [];
-    for (let i = 0; i < 7; i++) {
-      const t = i / 6 - 0.5;
-      const rr = (10 + rc() * 8) * s * (1 - Math.abs(t) * 0.9);
-      lumps.push([cx + t * 70 * s + (rc() - 0.5) * 6 * s, baseY - rr * 0.55 - (1 - Math.abs(t) * 2) * 8 * s, rr]);
+    const W = 92 * s;
+    const H = 36 * s;
+    const puffs = [];
+    // 바닥 줄: 납작하고 넓게 깔린 솜
+    for (let i = 0; i < 9; i++) {
+      const t = (i / 8) * 2 - 1;
+      puffs.push({ x: (t * W) / 2.5, y: -5 * s, r: (7 + rc() * 4) * s * (1 - Math.abs(t) * 0.4) });
     }
+    // 허리: 봉우리 사이 골이 깊게 패지 않도록 중간 높이를 큰 솜으로 메움
+    for (let i = 0; i < 6; i++) {
+      const t = (i / 5) * 2 - 1;
+      puffs.push({ x: (t * W) / 3.2, y: -H * (0.32 + rc() * 0.1), r: (11 + rc() * 4) * s * (1 - Math.abs(t) * 0.35) });
+    }
+    // 위로 솟은 봉우리: 가운데가 가장 높고, 봉우리 2~3개가 겹침
+    const peaks = [[-0.28, 0.75], [0.05, 1], [0.32, 0.7]];
+    for (const [px, ph] of peaks) {
+      for (let i = 0; i < 8; i++) {
+        const k = i / 7;
+        puffs.push({
+          x: px * W + (rc() - 0.5) * 26 * s * (1 - k * 0.6),
+          y: -5 * s - k * H * ph * (0.85 + rc() * 0.25),
+          r: (12 - k * 5 + rc() * 3) * s,
+        });
+      }
+    }
+    const SC = 2;
+    const pad = 30 * s;
+    const cw = Math.ceil((W + pad * 2) * SC);
+    const ch = Math.ceil((H + pad * 2 + 10 * s) * SC);
+    const c = document.createElement("canvas");
+    c.width = cw;
+    c.height = ch;
+    const cg = c.getContext("2d");
+    cg.scale(SC, SC);
+    cg.translate(W / 2 + pad, H + pad);
+    // 실루엣
+    cg.fillStyle = "#fff";
+    for (const p of puffs) {
+      cg.beginPath();
+      cg.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      cg.fill();
+    }
+    // 바닥은 평평하게 자름
+    cg.clearRect(-W, 0, W * 2, pad + 10 * s);
+    // 실루엣 안에만 빛을 칠함: 위는 흰빛, 아래는 라일락 그늘, 해(오른쪽) 쪽은 복숭아빛
+    cg.globalCompositeOperation = "source-atop";
+    const shade = cg.createLinearGradient(0, -H - 6 * s, 0, 0);
+    shade.addColorStop(0, "#ffffff");
+    shade.addColorStop(0.55, "#f7f1f2");
+    shade.addColorStop(1, "#c8bfdf");
+    cg.fillStyle = shade;
+    cg.fillRect(-W, -H - pad, W * 2, H + pad * 2);
+    const warm = cg.createLinearGradient(-W / 2, 0, W / 2, 0);
+    warm.addColorStop(0, "rgba(255,214,190,0)");
+    warm.addColorStop(1, "rgba(255,200,170,0.45)");
+    cg.fillStyle = warm;
+    cg.fillRect(-W, -H - pad, W * 2, H + pad * 2);
+    // 봉우리 윗면마다 아주 옅은 밝은 결
+    for (const p of puffs) {
+      if (p.y > -H * 0.35) continue;
+      const hi = cg.createRadialGradient(p.x - p.r * 0.3, p.y - p.r * 0.4, 0, p.x, p.y, p.r);
+      hi.addColorStop(0, "rgba(255,255,255,0.55)");
+      hi.addColorStop(1, "rgba(255,255,255,0)");
+      cg.fillStyle = hi;
+      cg.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+    }
+    // 바닥 그늘 띠
+    const under = cg.createLinearGradient(0, -8 * s, 0, 0);
+    under.addColorStop(0, "rgba(170,160,205,0)");
+    under.addColorStop(1, "rgba(170,160,205,0.5)");
+    cg.fillStyle = under;
+    cg.fillRect(-W, -8 * s, W * 2, 8 * s);
+
     g.save();
     g.globalAlpha = alpha;
-    // 바닥선 아래로는 그리지 않아 밑면이 평평함 (거울 속에서는 위쪽이 평평)
-    g.beginPath();
-    if (flip > 0) g.rect(cx - 80 * s, baseY - 80 * s, 160 * s, 80 * s);
-    else g.rect(cx - 80 * s, baseY, 160 * s, 80 * s);
-    g.clip();
-    const Y = (y) => (flip > 0 ? y : 2 * baseY - y);
-    // 그늘 층
-    for (const [x, y, rr] of lumps) {
-      g.fillStyle = "#c9c2e0";
-      g.beginPath();
-      g.arc(x, Y(y + rr * 0.25), rr, 0, Math.PI * 2);
-      g.fill();
-    }
-    // 밝은 몸통: 위쪽은 흰빛, 해 쪽 아래는 복숭아빛
-    for (const [x, y, rr] of lumps) {
-      const body = g.createRadialGradient(x - rr * 0.3, Y(y - rr * 0.45), rr * 0.1, x, Y(y), rr * 1.05);
-      body.addColorStop(0, "#ffffff");
-      body.addColorStop(0.6, "#fbf3ee");
-      body.addColorStop(1, "#ffd9c4");
-      g.fillStyle = body;
-      g.beginPath();
-      g.arc(x, Y(y - rr * 0.12), rr * 0.92, 0, Math.PI * 2);
-      g.fill();
-    }
+    g.filter = `blur(${0.9 * s}px)`;
+    g.translate(cx, baseY);
+    if (flip < 0) g.scale(1, -1);
+    g.drawImage(c, -(W / 2 + pad), -(H + pad), cw / SC, ch / SC);
     g.restore();
   };
   for (const [cx, cy, s] of clouds) {
