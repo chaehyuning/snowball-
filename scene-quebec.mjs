@@ -369,8 +369,6 @@ export const quebec = {
   paint: paintQuebec,
   glare: 0.9,
   base: {
-    body: ["#140904", "#40241a", "#553222", "#2a170e", "#0e0603"],
-    collar: "#1a0d07",
     trim: ["#6b3e1f", "#e8a86a", "#b8703a", "#5a3218"],
     plate: "Château Frontenac",
     plateFont: "italic 600 15px 'Baskerville', 'Times New Roman', serif",

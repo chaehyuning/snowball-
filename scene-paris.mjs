@@ -382,8 +382,6 @@ export const paris = {
   animate: animateParis,
   glare: 0.55,
   base: {
-    body: ["#0a0608", "#2a1a22", "#3a2430", "#1c1016", "#060304"],
-    collar: "#140a0e",
     trim: ["#7a3a3a", "#f2b8a8", "#c97c74", "#6b3030"],
     plate: "Tour Eiffel",
     plateFont: "italic 600 16px 'Didot', 'Bodoni 72', Georgia, serif",

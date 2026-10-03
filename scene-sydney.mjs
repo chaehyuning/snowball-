@@ -1,6 +1,6 @@
 // 호주: 한낮의 시드니 항구, 오페라하우스와 하버브리지, 흩날리는 물방울
 
-import { seeded, fillSilhouette, paintTree } from "./util.mjs";
+import { seeded, fillSilhouette } from "./util.mjs";
 
 const DROP_COLORS = ["#ffffff", "#c8ecff", "#8fd3f7", "#4fb0e8", "#2b8fd6"];
 
@@ -34,7 +34,7 @@ function paintSydney(g, globe, groundAt) {
 
   // 뭉게구름
   g.filter = "blur(3px)";
-  for (let c = 0; c < 4; c++) {
+  for (let c = 0; c < 2; c++) {
     const cx = r(60, 340);
     const cy = r(90, 170);
     for (let i = 0; i < 6; i++) {
@@ -47,8 +47,8 @@ function paintSydney(g, globe, groundAt) {
   g.filter = "none";
 
   // 다리 너머 도심 빌딩과 시드니 타워 (멀어서 흐릿한 푸른빛)
-  for (let x = left; x < right; x += r(6, 12)) {
-    const h = r(6, 22) + (x < 200 ? r(0, 18) : 0);
+  for (let x = left + 20; x < right - 20; x += r(12, 22)) {
+    const h = r(5, 14) + (x < 200 ? r(0, 10) : 0);
     g.fillStyle = ["#9cbad0", "#a8c4d8", "#b3cce0"][Math.floor(rnd() * 3)];
     g.fillRect(x, 244 - h, r(5, 10), h + 4);
   }
@@ -71,7 +71,7 @@ function paintSydney(g, globe, groundAt) {
   g.fillRect(left, 244, size, 100);
 
   // 물결: 멀리는 가늘고 촘촘하게, 가까이는 굵고 성기게
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 140; i++) {
     const y = r(246, 330);
     const near = (y - 246) / 84;
     const x = r(left, right);
@@ -95,30 +95,6 @@ function paintSydney(g, globe, groundAt) {
 
   paintOperaHouse(g);
   paintFerry(g, 262, 298, 1.1);
-
-  // 돛단배 두 척
-  for (const [bx, by, s] of [[110, 262, 1], [150, 252, 0.7]]) {
-    g.fillStyle = "#ffffff";
-    g.beginPath();
-    g.moveTo(bx, by - 2);
-    g.lineTo(bx, by - 18 * s);
-    g.lineTo(bx + 9 * s, by - 2);
-    g.closePath();
-    g.fill();
-    g.fillStyle = "#1d3550";
-    g.beginPath();
-    g.moveTo(bx - 7 * s, by - 1);
-    g.lineTo(bx + 10 * s, by - 1);
-    g.lineTo(bx + 7 * s, by + 2 * s);
-    g.lineTo(bx - 5 * s, by + 2 * s);
-    g.closePath();
-    g.fill();
-  }
-
-  // 앞쪽: 사암 바위 턱과 그 위에 새겨진 미세스 매쿼리의 의자, 무화과나무
-  sandstone(g, left);
-  const fig = { trunk: "#4a3a2c", shade: "#1f4a2c", colors: ["#2f6b3a", "#3f7f46", "#356f3e", "#4a8a50"] };
-  paintTree(g, rnd, 16, 330, 40, -1.25, 8, 5, fig);
 
   // 바닥: 물가의 사암 테라스
   const floorTop = groundAt(globe.x);
@@ -349,37 +325,6 @@ function shell(g, x, y, w, h) {
   g.stroke();
 }
 
-// 왼쪽 앞 사암 바위 턱: 층층이 쌓인 황토색 바위, 위에 바위를 깎아 만든 의자
-function sandstone(g, left) {
-  const rock = g.createLinearGradient(0, 290, 0, 330);
-  rock.addColorStop(0, "#e0b480");
-  rock.addColorStop(1, "#a7764a");
-  g.fillStyle = rock;
-  g.beginPath();
-  g.moveTo(left, 330);
-  g.lineTo(left, 292);
-  g.quadraticCurveTo(80, 284, 140, 292);
-  g.lineTo(168, 304);
-  g.lineTo(176, 330);
-  g.closePath();
-  g.fill();
-  g.strokeStyle = "rgba(110,70,35,0.4)";
-  g.lineWidth = 0.8;
-  for (const y of [298, 306, 314, 322]) {
-    g.beginPath();
-    g.moveTo(left, y);
-    g.quadraticCurveTo(90, y - 4, 170, y + 2);
-    g.stroke();
-  }
-  // 바위를 깎아 만든 의자: 등받이와 앉는 자리
-  g.fillStyle = "#c79560";
-  g.fillRect(96, 278, 26, 12);
-  g.fillStyle = "#a87648";
-  g.fillRect(98, 286, 22, 4);
-  g.fillStyle = "rgba(80,50,25,0.35)";
-  g.fillRect(100, 281, 18, 1);
-}
-
 // 시드니 페리: 초록 선체에 크림색 선실, 노란 굴뚝
 function paintFerry(g, x, y, s) {
   g.fillStyle = "#1f6b3a";
@@ -402,56 +347,6 @@ function paintFerry(g, x, y, s) {
   g.moveTo(x - 22 * s, y + 4 * s);
   g.quadraticCurveTo(x - 30 * s, y + 3 * s, x - 38 * s, y + 5 * s);
   g.stroke();
-}
-
-// dir: 1이면 오른쪽으로, -1이면 왼쪽으로 기울어짐
-function paintPalm(g, r, x, y, dir) {
-  const topX = x + dir * 30;
-  const topY = y - 95;
-  g.strokeStyle = "#6b5236";
-  g.lineWidth = 5;
-  g.lineCap = "round";
-  g.beginPath();
-  g.moveTo(x, y);
-  g.quadraticCurveTo(x + dir * 4, y - 50, topX, topY);
-  g.stroke();
-  g.strokeStyle = "rgba(60,40,25,0.5)";
-  g.lineWidth = 0.8;
-  for (let t = 0.1; t < 1; t += 0.08) {
-    const px = (1 - t) ** 2 * x + 2 * (1 - t) * t * (x + dir * 4) + t * t * topX;
-    const py = (1 - t) ** 2 * y + 2 * (1 - t) * t * (y - 50) + t * t * topY;
-    g.beginPath();
-    g.moveTo(px - 2.5, py);
-    g.lineTo(px + 2.5, py - 1);
-    g.stroke();
-  }
-  // 잎: 휘어진 줄기에 작은 잎을 빗살처럼 붙임
-  for (let i = 0; i < 9; i++) {
-    const a = -Math.PI + (i / 8) * Math.PI + r(-0.1, 0.1);
-    const len = r(32, 44);
-    const ex = topX + Math.cos(a) * len;
-    const ey = topY + Math.sin(a) * len * 0.6 + len * 0.35;
-    const cx = topX + Math.cos(a) * len * 0.5;
-    const cy = topY + Math.sin(a) * len * 0.5 - 6;
-    g.strokeStyle = "#2f6b3a";
-    g.lineWidth = 1.4;
-    g.beginPath();
-    g.moveTo(topX, topY);
-    g.quadraticCurveTo(cx, cy, ex, ey);
-    g.stroke();
-    for (let t = 0.15; t < 1; t += 0.09) {
-      const px = (1 - t) ** 2 * topX + 2 * (1 - t) * t * cx + t * t * ex;
-      const py = (1 - t) ** 2 * topY + 2 * (1 - t) * t * cy + t * t * ey;
-      g.strokeStyle = t < 0.5 ? "#3f8a48" : "#5aa55a";
-      g.lineWidth = 1;
-      g.beginPath();
-      g.moveTo(px, py);
-      g.lineTo(px + 4, py + 6);
-      g.moveTo(px, py);
-      g.lineTo(px - 4, py + 6);
-      g.stroke();
-    }
-  }
 }
 
 // 물방울: 가장자리가 밝고 속이 비치는 방울. 색마다 한 번만 그려 둠
@@ -514,8 +409,6 @@ export const sydney = {
   animate: animateSydney,
   glare: 0.8,
   base: {
-    body: ["#06213a", "#0f4c78", "#1a6aa0", "#0b3a5e", "#041a2e"],
-    collar: "#062038",
     trim: ["#8a9aa8", "#ffffff", "#c9d4dd", "#7d8c99"],
     plate: "Sydney Opera House",
     plateFont: "600 14px 'Helvetica Neue', Arial, sans-serif",

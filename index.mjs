@@ -122,14 +122,57 @@ function groundAt(x) {
 }
 
 // 움직이지 않는 그림은 한 번만 그려 두고 매 프레임 복사해서 씀
-function makeLayer(paint) {
+function makeLayer(paint, grade = false) {
   const layer = document.createElement("canvas");
   layer.width = W * dpr;
   layer.height = H * dpr;
-  const g = layer.getContext("2d");
+  const g = layer.getContext("2d", { willReadFrequently: grade });
   g.scale(dpr, dpr);
   paint(g);
+  if (grade) gradeLayer(g, layer.width, layer.height);
   return layer;
+}
+
+// 모든 나라 그림에 같은 색 보정을 거쳐 한 사람이 그린 일러스트처럼 맞춤
+//  - 튀는 채도를 눌러 비슷한 수준으로
+//  - 그늘은 짙은 남색, 밝은 곳은 따뜻한 크림색 쪽으로 살짝 물들임
+//  - 완전한 검정·흰색을 피해 부드러운 톤
+//  - 아주 옅은 종이 질감
+const GRADE = {
+  saturation: 0.8,
+  shadow: [34, 40, 78],
+  highlight: [255, 241, 222],
+  tint: 0.14,
+  floor: 14,
+  ceiling: 248,
+  grain: 5,
+};
+
+function gradeLayer(g, w, h) {
+  const img = g.getImageData(0, 0, w, h);
+  const d = img.data;
+  const { saturation, shadow, highlight, tint, floor, ceiling, grain } = GRADE;
+  const range = (ceiling - floor) / 255;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    let r = d[i];
+    let gg = d[i + 1];
+    let b = d[i + 2];
+    const lum = 0.2126 * r + 0.7152 * gg + 0.0722 * b;
+    r = lum + (r - lum) * saturation;
+    gg = lum + (gg - lum) * saturation;
+    b = lum + (b - lum) * saturation;
+    const t = lum / 255;
+    const k = t * t * (3 - 2 * t);
+    r += (shadow[0] + (highlight[0] - shadow[0]) * k - r) * tint;
+    gg += (shadow[1] + (highlight[1] - shadow[1]) * k - gg) * tint;
+    b += (shadow[2] + (highlight[2] - shadow[2]) * k - b) * tint;
+    const n = (Math.random() - 0.5) * grain;
+    d[i] = floor + r * range + n;
+    d[i + 1] = floor + gg * range + n;
+    d[i + 2] = floor + b * range + n;
+  }
+  g.putImageData(img, 0, 0);
 }
 
 function settle(p) {
@@ -149,10 +192,10 @@ let layers = {};
 function loadScene(id) {
   scene = SCENES.find((s) => s.id === id) || SCENES[0];
   layers = {
-    baseBack: makeLayer(paintBaseBack),
-    scene: makeLayer((g) => scene.paint(g, globe, groundAt)),
+    baseBack: makeLayer(paintBaseBack, true),
+    scene: makeLayer((g) => scene.paint(g, globe, groundAt), true),
     glass: makeLayer(paintGlass),
-    baseFront: makeLayer(paintBaseFront),
+    baseFront: makeLayer(paintBaseFront, true),
   };
   particles = Array.from({ length: scene.particles.count }, () => {
     const p = {
@@ -401,8 +444,12 @@ function paintGlass(g) {
 // 받침대: 유리구가 꽂히는 윗면(뒤쪽)과 몸통(앞쪽)을 나눠 그린다
 const base = { top: 352, bottom: 452, topRx: 100, bottomRx: 128, ry: 14 };
 
+// 받침대 몸통은 모든 나라가 같은 짙은 호두나무. 나라별 색은 테두리와 이름판에만
+const BASE_BODY = ["#0f0a09", "#33241f", "#43302a", "#22171a", "#0a0606"];
+const BASE_COLLAR = "#1a1210";
+
 function paintBaseBack(g) {
-  g.fillStyle = scene.base.collar;
+  g.fillStyle = BASE_COLLAR;
   g.beginPath();
   g.ellipse(globe.x, base.top, base.topRx, base.ry, 0, 0, Math.PI * 2);
   g.fill();
@@ -415,7 +462,7 @@ function paintBaseFront(g) {
 
   // 옻칠 몸통. 가운데가 밝아 둥근 원통처럼 보임
   const body = g.createLinearGradient(cx - bottomRx, 0, cx + bottomRx, 0);
-  [0, 0.35, 0.5, 0.7, 1].forEach((stop, i) => body.addColorStop(stop, look.body[i]));
+  [0, 0.35, 0.5, 0.7, 1].forEach((stop, i) => body.addColorStop(stop, BASE_BODY[i]));
   g.fillStyle = body;
   g.beginPath();
   g.ellipse(cx, top, topRx, ry, 0, 0, Math.PI);

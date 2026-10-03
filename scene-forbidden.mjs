@@ -391,8 +391,6 @@ export const forbidden = {
   animate: animateLanterns,
   glare: 0.9,
   base: {
-    body: ["#03100b", "#123a2b", "#1b4c39", "#0c2a1f", "#020a06"],
-    collar: "#06150f",
     trim: ["#7a5a1c", "#f2d17a", "#c99a35", "#6b4d16"],
     plate: "故宫",
     plateFont: "600 17px 'Songti SC', 'STSong', 'SimSun', serif",

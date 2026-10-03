@@ -414,8 +414,6 @@ export const egypt = {
   paint: paintEgypt,
   glare: 0.8,
   base: {
-    body: ["#1e0d05", "#6e3519", "#8a4a26", "#4e2510", "#160903"],
-    collar: "#2a1308",
     trim: ["#7a5a1c", "#f2d17a", "#c99a35", "#6b4d16"],
     plate: "أهرامات الجيزة",
     plateFont: "600 15px 'Geeza Pro', 'Noto Naskh Arabic', 'Segoe UI', sans-serif",

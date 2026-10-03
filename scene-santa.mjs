@@ -645,8 +645,6 @@ export const santa = {
   animate: animateSanta,
   glare: 0.6,
   base: {
-    body: ["#8b96a3", "#dde4ec", "#f7f9fb", "#c4ced9", "#7f8b98"],
-    collar: "#aab4c0",
     trim: ["#7a1c1c", "#e25555", "#b52a2a", "#6a1515"],
     plate: "Joulupukin Pajakylä",
     plateFont: "600 13px 'Helvetica Neue', Arial, sans-serif",
