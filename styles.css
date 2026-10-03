@@ -512,7 +512,7 @@ body {
 }
 
 #globe {
-  width: min(calc(100vw - 32px - 46px - 154px - 36px), 400px);
+  width: min(calc(100vw - 32px - 46px - 262px - 36px), 400px);
   max-width: 100%;
   aspect-ratio: 2 / 3;
   cursor: pointer;
@@ -530,13 +530,8 @@ body {
 
 .scene-grid {
   display: grid;
-  grid-template-columns: repeat(3, 46px);
+  grid-template-columns: repeat(5, 46px);
   gap: 8px;
-}
-
-/* 나라가 10개라 마지막 줄 하나는 가운데 칸에 둠 */
-.scene-grid > :last-child:nth-child(3n + 1) {
-  grid-column: 2;
 }
 
 .scenes-or {
