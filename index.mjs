@@ -183,7 +183,8 @@ const GRADE = {
 function gradeLayer(g, w, h) {
   const img = g.getImageData(0, 0, w, h);
   const d = img.data;
-  const { saturation, shadow, highlight, tint, floor, ceiling, grain } = GRADE;
+  // 장면마다 grade로 일부 값을 바꿀 수 있음 (예: 후지산은 채도를 살리고, 퀘벡은 따뜻한 골든아워 필터)
+  const { saturation, shadow, highlight, tint, floor, ceiling, grain } = { ...GRADE, ...(scene?.grade || {}) };
   const range = (ceiling - floor) / 255;
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3] === 0) continue;
