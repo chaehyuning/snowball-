@@ -58,6 +58,12 @@ const INFO = {
     tagline: "Blue light under six minarets",
     text: "1617년 완공된 술탄 아흐메트 모스크. 안쪽 벽을 덮은 이즈니크 타일 2만여 장의 푸른빛 때문에 블루 모스크라 불리고, 첨탑 6개가 서 있다. 지금도 예배가 열린다.",
   },
+  spain: {
+    word: "Barcelona", city: "Barcelona", region: "Catalonia, Spain", landmark: "Sagrada Família",
+    coord: "41°24′13″N  2°10′28″E", particle: "Stained glass",
+    tagline: "Light through a forest of stone",
+    text: "안토니 가우디가 1883년부터 설계를 맡은 성당. 2010년 축성됐고 지금도 공사 중이다. 동쪽 창은 파랑·초록, 서쪽 창은 주황·빨강 스테인드글라스라 해가 움직이면 실내 빛깔이 바뀌고, 나무처럼 갈라지는 기둥이 천장을 받친다.",
+  },
 };
 
 const pad = (n) => String(n).padStart(2, "0");

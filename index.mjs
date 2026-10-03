@@ -7,12 +7,13 @@ import { forbidden } from "./scene-forbidden.mjs";
 import { egypt } from "./scene-egypt.mjs";
 import { paris } from "./scene-paris.mjs";
 import { istanbul } from "./scene-istanbul.mjs";
+import { barcelona } from "./scene-barcelona.mjs";
 import { openPicker } from "./picker.mjs";
 import * as sfx from "./sound.mjs";
 import { showSceneInfo, fillTicker, setupMetaToggle } from "./editorial.mjs";
 import { startTutorial, tutorialDone, openHelp } from "./tutorial.mjs";
 
-const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul];
+const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul, barcelona];
 
 const canvas = document.getElementById("globe");
 const ctx = canvas.getContext("2d");
