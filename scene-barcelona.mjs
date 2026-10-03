@@ -635,10 +635,10 @@ export const barcelona = {
   paint: paintBarcelona,
   glare: 0.7,
   base: {
-    trim: ["#6a5a46", "#f3e8d2", "#c9b48f", "#55473a"],
+    trim: ["#2a7a50", "#c6f0d2", "#5cc987", "#1f5e3d"],
     plate: "Sagrada Família",
     plateFont: "italic 600 15px Georgia, 'Times New Roman', serif",
-    plateInk: "#2c2418",
+    plateInk: "#0f2e1d",
   },
   // 유리 조각은 꽃잎보다 무거워 조금 빨리 떨어지고, 뒤집힐 때마다 반짝임
   particles: {
