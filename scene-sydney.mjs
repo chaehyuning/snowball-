@@ -47,11 +47,31 @@ function paintSydney(g, globe, groundAt) {
   g.filter = "none";
 
   // 다리 너머 도심 빌딩과 시드니 타워 (멀어서 흐릿한 푸른빛)
+  // 빌딩마다 햇빛 받는 왼쪽 면과 그늘진 오른쪽 면, 옅은 창 줄. 도심(왼쪽)은 높은 빌딩이 몰려 있음
+  const rc = seeded(1788);
+  const towers = [];
   for (let x = left + 20; x < right - 20; x += r(12, 22)) {
     const h = r(5, 14) + (x < 200 ? r(0, 10) : 0);
-    g.fillStyle = ["#9cbad0", "#a8c4d8", "#b3cce0"][Math.floor(rnd() * 3)];
-    g.fillRect(x, 244 - h, r(5, 10), h + 4);
+    const color = ["#9cbad0", "#a8c4d8", "#b3cce0"][Math.floor(rnd() * 3)];
+    const w = r(5, 10);
+    towers.push([x, h + (x > 60 && x < 190 ? rc() * 16 : 0), w, color]);
   }
+  for (const [x, h, w, color] of towers) {
+    g.fillStyle = color;
+    g.fillRect(x, 244 - h, w, h + 4);
+    g.fillStyle = "rgba(255,255,255,0.22)";
+    g.fillRect(x, 244 - h, w * 0.4, h + 4);
+    g.fillStyle = "rgba(60,90,120,0.12)";
+    g.fillRect(x + w * 0.7, 244 - h, w * 0.3, h + 4);
+    g.fillStyle = "rgba(70,100,130,0.18)";
+    for (let wy = 244 - h + 2; wy < 244; wy += 2.2) g.fillRect(x + 0.8, wy, w - 1.6, 0.5);
+  }
+  // 물가에 낀 옅은 해무
+  const seaHaze = g.createLinearGradient(0, 228, 0, 246);
+  seaHaze.addColorStop(0, "rgba(220,238,250,0)");
+  seaHaze.addColorStop(1, "rgba(220,238,250,0.6)");
+  g.fillStyle = seaHaze;
+  g.fillRect(left, 228, size, 18);
   g.fillStyle = "#94b2c8";
   g.fillRect(105, 172, 2, 72);
   g.fillStyle = "#c9a85a";
@@ -92,6 +112,34 @@ function paintSydney(g, globe, groundAt) {
     g.fillRect(300 + r(-25, 25) * (1 + (y - 246) / 40), y, r(2, 7), 0.8);
   }
   g.globalCompositeOperation = "source-over";
+
+  // 멀리 떠 있는 작은 요트 두 척: 햇빛 받는 돛과 그늘진 돛
+  for (const [bx, by, bs] of [[96, 252, 0.8], [132, 256, 1]]) {
+    g.fillStyle = "#f8fbff";
+    g.beginPath();
+    g.moveTo(bx, by - 1);
+    g.lineTo(bx, by - 12 * bs);
+    g.lineTo(bx + 6 * bs, by - 1);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "#d9e3ee";
+    g.beginPath();
+    g.moveTo(bx - 0.5, by - 1);
+    g.lineTo(bx - 0.5, by - 9 * bs);
+    g.lineTo(bx - 4 * bs, by - 1);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "#33465a";
+    g.beginPath();
+    g.moveTo(bx - 5 * bs, by - 1);
+    g.lineTo(bx + 7 * bs, by - 1);
+    g.lineTo(bx + 5.5 * bs, by + 0.8);
+    g.lineTo(bx - 4 * bs, by + 0.8);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "rgba(255,255,255,0.35)";
+    g.fillRect(bx - 4 * bs, by + 1.4, 10 * bs, 0.5);
+  }
 
   paintOperaHouse(g);
   paintFerry(g, 262, 298, 1.1);
@@ -307,14 +355,23 @@ function paintOperaHouse(g) {
   // 껍데기: 꼭짓점이 왼쪽 위에 있고, 바깥 곡선이 오른쪽 아래로 크게 휘어 내려옴.
   // 왼쪽으로 열린 입구 안은 어두운 내부와 구릿빛 유리. 뒤(오른쪽)부터 그려서 앞 껍데기가 겹침
   // [꼭짓점 x, 꼭짓점 y, 밑변 폭, 밑변 y]. 꼭짓점이 밑동보다 왼쪽으로 튀어나와 앞으로 기운 모양
+  // 맨 오른쪽 껍데기는 뒤로 맞붙어 반대쪽(오른쪽)을 보고 있어 좌우를 뒤집어 그림
   const shells = [
-    [298, 212, 54, 256],
-    [262, 186, 56, 256],
-    [233, 204, 48, 256],
-    [210, 226, 38, 256],
-    [176, 242, 26, 263],
+    [346, 210, 56, 256, true],
+    [262, 186, 56, 256, false],
+    [233, 204, 48, 256, false],
+    [210, 226, 38, 256, false],
+    [176, 242, 26, 263, false],
   ];
-  for (const [ax, ay, w, by] of shells) shell(g, ax, ay, w, by);
+  for (const [ax, ay, w, by, flip] of shells) {
+    g.save();
+    if (flip) {
+      g.translate(ax * 2, 0);
+      g.scale(-1, 1);
+    }
+    shell(g, ax, ay, w, by);
+    g.restore();
+  }
 }
 
 // 껍데기 하나. 뾰족한 끝이 왼쪽 위로 튀어나오고, 등 곡선은 오른쪽으로 둥글게 내려옴.
@@ -428,26 +485,72 @@ function shell(g, ax, ay, w, by) {
 
 // 시드니 페리: 초록 선체에 크림색 선실, 노란 굴뚝
 function paintFerry(g, x, y, s) {
-  g.fillStyle = "#1f6b3a";
+  // 뒤로 퍼지는 물살: V자 흰 거품과 배 밑 그림자
+  g.fillStyle = "rgba(10,40,80,0.35)";
+  g.beginPath();
+  g.ellipse(x + 1 * s, y + 4.8 * s, 18 * s, 1.6 * s, 0, 0, Math.PI * 2);
+  g.fill();
+  for (const [dy, a] of [[0, 0.75], [2.2, 0.45]]) {
+    g.strokeStyle = `rgba(255,255,255,${a})`;
+    g.lineWidth = 0.9 - dy * 0.15;
+    g.beginPath();
+    g.moveTo(x - 14 * s, y + (3.5 + dy) * s);
+    g.quadraticCurveTo(x - 28 * s, y + (2.5 + dy * 1.6) * s, x - 44 * s, y + (5 + dy * 2.4) * s);
+    g.stroke();
+  }
+  g.fillStyle = "rgba(255,255,255,0.8)";
+  g.beginPath();
+  g.ellipse(x + 17 * s, y + 3.6 * s, 3 * s, 0.8 * s, 0, 0, Math.PI * 2);
+  g.fill();
+
+  // 초록 선체: 위는 밝고 아래는 어두움, 흰 흘수선과 노란 띠
+  const hull = g.createLinearGradient(0, y, 0, y + 4 * s);
+  hull.addColorStop(0, "#2a8a4c");
+  hull.addColorStop(1, "#14502c");
+  g.fillStyle = hull;
   g.beginPath();
   g.moveTo(x - 16 * s, y);
   g.lineTo(x + 18 * s, y);
-  g.lineTo(x + 14 * s, y + 4 * s);
+  g.lineTo(x + 14.5 * s, y + 4 * s);
   g.lineTo(x - 13 * s, y + 4 * s);
   g.closePath();
   g.fill();
-  g.fillStyle = "#f3ead2";
-  g.fillRect(x - 11 * s, y - 6 * s, 24 * s, 6 * s);
-  g.fillStyle = "#3b4b5a";
-  for (let i = 0; i < 6; i++) g.fillRect(x - 9 * s + i * 3.8 * s, y - 4.5 * s, 2.2 * s, 2 * s);
   g.fillStyle = "#e9c23a";
-  g.fillRect(x - 1 * s, y - 10 * s, 3 * s, 4 * s);
-  g.strokeStyle = "rgba(255,255,255,0.7)";
-  g.lineWidth = 0.8;
-  g.beginPath();
-  g.moveTo(x - 22 * s, y + 4 * s);
-  g.quadraticCurveTo(x - 30 * s, y + 3 * s, x - 38 * s, y + 5 * s);
-  g.stroke();
+  g.fillRect(x - 15.5 * s, y + 0.2 * s, 33 * s, 0.6 * s);
+  g.fillStyle = "rgba(255,255,255,0.85)";
+  g.fillRect(x - 13 * s, y + 3.6 * s, 27.5 * s, 0.4 * s);
+
+  // 크림색 2층 선실: 아래층은 넓고 위층은 짧음. 창 띠는 어두운 유리
+  const deck = (dx, dy, w, h) => {
+    const cabin = g.createLinearGradient(0, y + dy, 0, y + dy + h);
+    cabin.addColorStop(0, "#fffaf0");
+    cabin.addColorStop(1, "#e2d7bd");
+    g.fillStyle = cabin;
+    g.fillRect(x + dx, y + dy, w, h);
+    g.fillStyle = "#2e3e4e";
+    g.fillRect(x + dx + 0.8 * s, y + dy + h * 0.25, w - 1.6 * s, h * 0.42);
+    g.fillStyle = "rgba(255,255,255,0.35)";
+    for (let wx = x + dx + 1.6 * s; wx < x + dx + w - 1.6 * s; wx += 2.6 * s) g.fillRect(wx, y + dy + h * 0.25, 0.4 * s, h * 0.42);
+    g.fillStyle = "rgba(90,80,60,0.35)";
+    g.fillRect(x + dx, y + dy + h - 0.5, w, 0.5);
+  };
+  deck(-12 * s, -5.5 * s, 25 * s, 5.5 * s);
+  deck(-7 * s, -9.5 * s, 14 * s, 4 * s);
+  // 조타실과 노란 굴뚝
+  g.fillStyle = "#fffaf0";
+  g.fillRect(x + 7 * s, -11.5 * s + y, 4 * s, 2.2 * s);
+  g.fillStyle = "#2e3e4e";
+  g.fillRect(x + 7.5 * s, -11 * s + y, 3 * s, 1 * s);
+  const funnel = g.createLinearGradient(x - 1 * s, 0, x + 2 * s, 0);
+  funnel.addColorStop(0, "#f5d65a");
+  funnel.addColorStop(1, "#c99a1e");
+  g.fillStyle = funnel;
+  g.fillRect(x - 1 * s, y - 13 * s, 3 * s, 3.6 * s);
+  g.fillStyle = "#2a2a2a";
+  g.fillRect(x - 1 * s, y - 13 * s, 3 * s, 0.6 * s);
+  // 난간
+  g.fillStyle = "rgba(255,255,255,0.8)";
+  g.fillRect(x - 12 * s, y - 6 * s, 25 * s, 0.4 * s);
 }
 
 // 물방울: 가장자리가 밝고 속이 비치는 방울. 색마다 한 번만 그려 둠
