@@ -36,14 +36,70 @@ let prevGlobeVel = 0;
 // 물이 휘젓는 세기. 흔들면 커지고 시간이 지나면 잦아든다
 let stir = 0;
 
-// 클릭하면 스노우볼이 저절로 위아래로 몇 번 흔들림
-const AUTO_SHAKE_MS = 900;
+// 누르면 말랑하게 눌리고, 떼면 누른 자리에서 입자가 팡 터지며 젤리처럼 출렁임
+const AUTO_SHAKE_MS = 700;
 const AUTO_SHAKE_PERIOD = 250; // 한 번 오르내리는 시간
 const AUTO_SHAKE_HEIGHT = 60;
+const SQUEEZE_MS = 600; // 이만큼 누르고 있으면 가장 세게 눌림
 let autoShakeStart = -Infinity;
+let autoShakePower = 1;
+let pressing = false;
+let pressStart = 0;
+let pressPoint = { x: 200, y: 300 };
+let squash = 0; // 음수면 납작하게 눌림, 양수면 위로 늘어남
+let squashVel = 0;
+let rings = []; // 누른 자리에서 퍼지는 충격파 고리
 
-function startAutoShake() {
+function startAutoShake(power = 1) {
   autoShakeStart = performance.now();
+  autoShakePower = power;
+}
+
+// (x, y)에서 입자를 사방으로 밀어냄. 가까울수록 세게, 바닥에 쌓인 입자도 띄움
+function burst(x, y, power) {
+  for (const p of particles) {
+    const dx = p.x - x;
+    const dy = p.y - y;
+    const d = Math.max(8, Math.hypot(dx, dy));
+    const force = power * 11 * Math.exp(-d / 110);
+    if (p.settled) {
+      // 바닥에 쌓인 입자는 바닥을 뚫을 수 없으니 위로 튀어 오름
+      if (force < p.grip * 0.4) continue;
+      p.settled = false;
+      p.vx += (dx / d) * force + rand(-1, 1) * power;
+      p.vy = -force * rand(0.7, 1.2);
+      continue;
+    }
+    p.vx += (dx / d) * force + rand(-1, 1) * power;
+    p.vy += (dy / d) * force - force * 0.5;
+  }
+  stir = Math.min(stir + 3 * power, 5);
+  rings.push({ x, y, start: performance.now(), power });
+  try {
+    navigator.vibrate?.(power > 0.75 ? 30 : 15);
+  } catch {}
+}
+
+// 화면 좌표 → 스노우볼 그림 좌표. 유리구 밖을 누르면 유리구 안 가장 가까운 곳으로
+function toGlobe(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  let x = ((clientX - rect.left) * W) / rect.width;
+  let y = ((clientY - rect.top) * H) / rect.height - PAD - offset * VISUAL_SHAKE;
+  const dx = x - globe.x;
+  const dy = y - globe.y;
+  const d = Math.hypot(dx, dy);
+  const max = globe.r - 20;
+  if (d > max) {
+    x = globe.x + (dx / d) * max;
+    y = globe.y + (dy / d) * max;
+  }
+  return { x, y };
+}
+
+function pop(power) {
+  burst(pressPoint.x, pressPoint.y, power);
+  startAutoShake(power);
+  squashVel += 0.16 * power;
 }
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -170,13 +226,17 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") stepScene(-1);
   if (e.key === " " && e.target === document.body) {
     e.preventDefault();
-    startAutoShake();
+    pressPoint = { x: globe.x, y: globe.y + 80 };
+    pop(0.8);
   }
 });
 
 // 위아래로 끌면 흔들기, 좌우로 밀면 나라 바꾸기
 canvas.addEventListener("pointerdown", (e) => {
   dragging = true;
+  pressing = true;
+  pressStart = performance.now();
+  pressPoint = toGlobe(e.clientX, e.clientY);
   startX = e.clientX;
   startY = e.clientY;
   canvas.setPointerCapture(e.pointerId);
@@ -184,20 +244,25 @@ canvas.addEventListener("pointerdown", (e) => {
 
 canvas.addEventListener("pointermove", (e) => {
   if (!dragging) return;
+  // 손가락이 움직이면 누르기가 아니라 밀기·끌기로 봄
+  if (Math.hypot(e.clientX - startX, e.clientY - startY) > 10) pressing = false;
   const scale = H / canvas.getBoundingClientRect().height;
   target = clamp((e.clientY - startY) * scale, -MAX_OFFSET, MAX_OFFSET);
 });
 
 function release() {
   dragging = false;
+  pressing = false;
   target = 0;
 }
 canvas.addEventListener("pointerup", (e) => {
   const dx = e.clientX - startX;
   const dy = e.clientY - startY;
+  const held = Math.min(1, (performance.now() - pressStart) / SQUEEZE_MS);
+  const wasPress = pressing;
   release();
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) stepScene(dx < 0 ? 1 : -1);
-  else if (Math.hypot(dx, dy) < 10) startAutoShake(); // 거의 움직이지 않았으면 클릭
+  else if (wasPress) pop(0.45 + 0.55 * held); // 오래 눌렀다 뗄수록 세게 터짐
 });
 canvas.addEventListener("pointercancel", release);
 
@@ -254,8 +319,8 @@ function update(t, accel) {
       const out = p.vx * nx + p.vy * ny;
       if (out > 0) {
         // 벽에 부딪히면 살짝 튕겨 나와 천장에 몰리지 않게 함
-        p.vx -= 1.5 * out * nx;
-        p.vy -= 1.5 * out * ny;
+        p.vx -= 1.8 * out * nx;
+        p.vy -= 1.8 * out * ny;
       }
       p.x = globe.x + nx * max;
       p.y = globe.y + ny * max;
@@ -282,6 +347,20 @@ function drawParticles(t) {
   scene.animate?.(ctx, t, globe);
   ctx.globalCompositeOperation = scene.particles.blend;
   for (const p of particles) scene.particles.draw(ctx, p, t);
+
+  // 충격파 고리: 0.6초 동안 커지며 사라짐
+  const now = performance.now();
+  rings = rings.filter((ring) => now - ring.start < 600);
+  ctx.globalCompositeOperation = "source-over";
+  for (const ring of rings) {
+    const k = (now - ring.start) / 600;
+    ctx.globalAlpha = (1 - k) * 0.6;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 3 * (1 - k) + 0.5;
+    ctx.beginPath();
+    ctx.arc(ring.x, ring.y, 10 + k * 120 * ring.power, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -404,12 +483,20 @@ loadScene(location.hash.slice(1));
 function frame(t) {
   // 스노우볼이 손을 스프링처럼 따라가고, 놓으면 살짝 출렁이며 제자리로 돌아감
   // 클릭 흔들기 중에는 정해진 박자로 오르내리며 점점 약해짐
-  const shakeT = performance.now() - autoShakeStart;
+  const now = performance.now();
+  const shakeT = now - autoShakeStart;
   if (shakeT < AUTO_SHAKE_MS) {
-    target = AUTO_SHAKE_HEIGHT * Math.sin((2 * Math.PI * shakeT) / AUTO_SHAKE_PERIOD) * (1 - shakeT / AUTO_SHAKE_MS);
+    target =
+      AUTO_SHAKE_HEIGHT * autoShakePower * Math.sin((2 * Math.PI * shakeT) / AUTO_SHAKE_PERIOD) * (1 - shakeT / AUTO_SHAKE_MS);
   } else if (!dragging) {
     target = 0;
   }
+
+  // 누르는 동안 납작해지고, 떼면 젤리처럼 늘어났다 출렁이며 돌아옴
+  const squeezeTarget = pressing ? -0.13 * Math.min(1, (now - pressStart) / SQUEEZE_MS) : 0;
+  squashVel += (squeezeTarget - squash) * 0.22;
+  squashVel *= 0.8;
+  squash += squashVel;
 
   globeVel += (target - offset) * 0.2;
   globeVel *= 0.75;
@@ -435,6 +522,10 @@ function frame(t) {
 
   ctx.save();
   ctx.translate(0, PAD + offset * VISUAL_SHAKE);
+  // 받침대 바닥을 기준으로 위아래는 줄고 옆으로는 퍼짐
+  ctx.translate(globe.x, base.bottom);
+  ctx.scale(1 - squash * 0.7, 1 + squash);
+  ctx.translate(-globe.x, -base.bottom);
   ctx.drawImage(layers.baseBack, 0, 0, W, H);
   ctx.drawImage(layers.scene, 0, 0, W, H);
   drawParticles(t);
