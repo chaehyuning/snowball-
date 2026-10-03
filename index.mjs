@@ -56,34 +56,66 @@ function startAutoShake(power = 1) {
   autoShakePower = power;
 }
 
-// (x, y)에서 입자를 사방으로 밀어냄. 가까울수록 세게, 바닥에 쌓인 입자도 띄움
+// 누르고 떼면 누른 자리에서 물이 유리구 안쪽으로 밀려 들어감.
+// 물리적으로는 서로 반대로 도는 소용돌이 한 쌍이 생겨, 가운데로는 물이 뿜어져 나가고
+// 양옆으로는 말려 돌아오는 버섯 모양 흐름이 된다. 입자는 이 물에 실려 움직인다.
+const vortices = [];
+
 function burst(x, y, power) {
-  for (const p of particles) {
-    const dx = p.x - x;
-    const dy = p.y - y;
-    const d = Math.max(8, Math.hypot(dx, dy));
-    const force = power * 11 * Math.exp(-d / 110);
-    // 입자마다 날아가는 방향과 세기를 조금씩 다르게 비틂
-    const kick = force * rand(0.5, 1.6);
-    const a = Math.atan2(dy, dx) + rand(-0.6, 0.6);
-    p.wx += rand(-1, 1) * power;
-    p.wy += rand(-1, 1) * power;
-    if (p.settled) {
-      // 바닥에 쌓인 입자는 바닥을 뚫을 수 없으니 위로 튀어 오름
-      if (force < p.grip * 0.4) continue;
-      p.settled = false;
-      p.vx += Math.cos(a) * kick;
-      p.vy = -kick * rand(0.7, 1.2);
-      continue;
-    }
-    p.vx += Math.cos(a) * kick;
-    p.vy += Math.sin(a) * kick - kick * 0.5;
+  let nx = globe.x - x;
+  let ny = globe.y - 20 - y;
+  const n = Math.hypot(nx, ny);
+  if (n < 20) {
+    nx = 0;
+    ny = -1;
+  } else {
+    nx /= n;
+    ny /= n;
   }
-  stir = Math.min(stir + 3 * power, 5);
+  const px = -ny;
+  const py = nx;
+  const qx = x + nx * 25;
+  const qy = y + ny * 25;
+  const g = 1300 * power;
+  vortices.push({ x: qx + px * 28, y: qy + py * 28, g, rc: 25 }, { x: qx - px * 28, y: qy - py * 28, g: -g, rc: 25 });
+  stir = Math.min(stir + 0.8 * power, 5);
   rings.push({ x, y, start: performance.now(), power });
   try {
     navigator.vibrate?.(power > 0.75 ? 30 : 15);
   } catch {}
+}
+
+// 소용돌이 하나가 (x, y)에 만드는 물의 속도 (중심 가까이는 부드럽게 0으로)
+function vortexAt(w, x, y) {
+  const dx = x - w.x;
+  const dy = y - w.y;
+  const r2 = dx * dx + dy * dy + 1;
+  const f = (w.g / (2 * Math.PI * r2)) * (1 - Math.exp(-r2 / (w.rc * w.rc)));
+  return { u: -f * dy, v: f * dx };
+}
+
+// 소용돌이는 서로를 밀며 함께 흘러가고, 물의 끈적임 때문에 약해지며 넓게 퍼짐
+function updateVortices() {
+  for (const w of vortices) {
+    let u = 0;
+    let v = 0;
+    for (const o of vortices) {
+      if (o === w) continue;
+      const vel = vortexAt(o, w.x, w.y);
+      u += vel.u;
+      v += vel.v;
+    }
+    w.x += u * 0.5;
+    w.y += v * 0.5;
+  }
+  for (const w of vortices) {
+    w.g *= 0.986;
+    w.rc += 0.25;
+  }
+  for (let i = vortices.length - 1; i >= 0; i--) {
+    const w = vortices[i];
+    if (Math.abs(w.g) < 30 || Math.hypot(w.x - globe.x, w.y - globe.y) > globe.r) vortices.splice(i, 1);
+  }
 }
 
 // 화면 좌표 → 스노우볼 그림 좌표. 유리구 밖을 누르면 유리구 안 가장 가까운 곳으로
@@ -131,10 +163,10 @@ function makeLayer(paint) {
 
 // 물속 소용돌이. 방향이 다른 물결 몇 개를 겹친 흐름 함수(psi)로 만든다.
 // psi에 유리 경계에서 0이 되는 값을 곱해서, 물이 벽을 뚫지 않고 벽을 따라 돈다.
-// 물결을 잘게 쪼개 두어 가까운 입자끼리도 다른 방향으로 갈라지게 함
-const waves = Array.from({ length: 7 }, () => {
+// 흔들어서 생기는 물살은 유리구 크기만 한 큰 소용돌이 몇 개로 둠
+const waves = Array.from({ length: 3 }, () => {
   const angle = rand(0, Math.PI * 2);
-  const k = rand(0.02, 0.05);
+  const k = rand(0.008, 0.015);
   return {
     kx: Math.cos(angle) * k,
     ky: Math.sin(angle) * k,
@@ -158,7 +190,14 @@ function flowAt(x, y, t) {
   const h = 1;
   const u = (streamAt(x, y + h, t) - streamAt(x, y - h, t)) / (2 * h);
   const v = -(streamAt(x + h, y, t) - streamAt(x - h, y, t)) / (2 * h);
-  return { x: u * stir * 0.8, y: v * stir * 0.8 };
+  let x2 = u * stir * 0.8;
+  let y2 = v * stir * 0.8;
+  for (const w of vortices) {
+    const vel = vortexAt(w, x, y);
+    x2 += vel.u;
+    y2 += vel.v;
+  }
+  return { x: x2, y: y2 };
 }
 
 function settle(p) {
@@ -190,10 +229,6 @@ function loadScene(id) {
       spin: 0,
       flip: 0,
       flipSpeed: 0,
-      follow: rand(0.25, 0.7), // 물살을 따르는 정도. 입자마다 달라서 줄지어 다니지 않음
-      wander: rand(0.6, 1.5), // 혼자 떠도는 힘의 크기
-      wx: 0, // 혼자 떠도는 속도
-      wy: 0,
     };
     Object.assign(p, scene.particles.make(rand));
     p.size *= PARTICLE_SCALE;
@@ -288,6 +323,7 @@ function update(t, accel) {
   // 흔든 만큼 물이 휘저어지고, 몇 초에 걸쳐 잦아든다
   stir = Math.min(stir + Math.abs(accel) * 0.25, 5);
   stir *= 0.993;
+  updateVortices();
 
   for (const p of particles) {
     const flow = flowAt(p.x, p.y, t);
@@ -296,9 +332,10 @@ function update(t, accel) {
       // 스노우볼이 아래로 가속하는 힘 + 바닥 근처 물살이 입자마다 다른 기준을 넘으면 떠오름
       const lift = accel * p.inertia - flow.y + Math.hypot(flow.x, flow.y) * 0.3;
       if (lift > p.grip) {
+        // 물에 들려 올라감. 가벼운 입자일수록(inertia가 작을수록) 물을 더 잘 따라감
         p.settled = false;
-        p.vy = -Math.min(lift * rand(0.7, 1.3), 7);
-        p.vx = flow.x + rand(-0.9, 0.9) * Math.min(lift, 5);
+        p.vy = Math.min(flow.y, 0) - Math.min(lift, 7) * (0.5 + p.inertia);
+        p.vx = flow.x;
       }
       continue;
     }
@@ -306,14 +343,10 @@ function update(t, accel) {
     // 유리가 움직이면 물보다 무거운 입자는 뒤처진다
     p.vy -= accel * p.inertia;
 
-    // 입자마다 자기 박자로 방향을 천천히 바꾸며 떠돎. 흔든 직후에 크게 움직임
-    const energy = (0.08 + stir * 0.25) * p.wander;
-    p.wx = p.wx * 0.94 + rand(-1, 1) * energy;
-    p.wy = p.wy * 0.94 + rand(-1, 1) * energy;
-
-    // 물살은 입자마다 다른 만큼만 따르고, 물이 잔잔하면 제 무게만큼 가라앉는다
-    p.vx += (flow.x * p.follow + p.wx - p.vx) * p.drag;
-    p.vy += (flow.y * p.follow + p.wy + p.sink - p.vy) * p.drag;
+    // 점성 저항: 입자 속도는 (물의 속도 + 제 무게로 가라앉는 속도)를 향해 서서히 맞춰짐.
+    // 크고 무거운 입자일수록 drag가 작아 늦게 맞춰지고 sink가 커서 빨리 가라앉음
+    p.vx += (flow.x - p.vx) * p.drag;
+    p.vy += (flow.y + p.sink - p.vy) * p.drag;
 
     // 꽃잎처럼 납작한 입자는 뒤집힐 때마다 옆으로 미끄러지며 팔랑임
     p.vx += Math.cos(p.flip) * p.flutter;
@@ -326,7 +359,7 @@ function update(t, accel) {
     p.angle += p.spin * (1 + speed * 2);
     p.flip += p.flipSpeed * (1 + speed);
 
-    // 유리 벽에 닿으면 벽을 따라 미끄러지며 살짝 튕김
+    // 유리 벽에 닿으면 벽을 따라 미끄러짐. 물속이라 거의 튕기지 않음
     const dx = p.x - globe.x;
     const dy = p.y - globe.y;
     const d = Math.hypot(dx, dy);
@@ -336,9 +369,8 @@ function update(t, accel) {
       const ny = dy / d;
       const out = p.vx * nx + p.vy * ny;
       if (out > 0) {
-        // 벽에 부딪히면 살짝 튕겨 나와 천장에 몰리지 않게 함
-        p.vx -= 1.8 * out * nx;
-        p.vy -= 1.8 * out * ny;
+        p.vx -= 1.2 * out * nx;
+        p.vy -= 1.2 * out * ny;
       }
       p.x = globe.x + nx * max;
       p.y = globe.y + ny * max;
