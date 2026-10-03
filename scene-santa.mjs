@@ -118,6 +118,13 @@ function paintSanta(g, globe, groundAt) {
     spruce(g, x, farY(x) + r(4, 12), r(14, 26), 0.75);
   }
 
+  // 숲과 마을 사이에 낀 옅은 눈안개: 뒤 숲이 멀어 보이게
+  const haze = g.createLinearGradient(0, 240, 0, 278);
+  haze.addColorStop(0, "rgba(236,241,248,0)");
+  haze.addColorStop(1, "rgba(236,241,248,0.75)");
+  g.fillStyle = haze;
+  g.fillRect(left, 240, size, 40);
+
   // 마을이 있는 눈밭
   const fieldY = (x) => 272 + 4 * Math.sin(x * 0.03);
   const field = g.createLinearGradient(0, 265, 0, 330);
@@ -125,6 +132,41 @@ function paintSanta(g, globe, groundAt) {
   field.addColorStop(1, "#dbe4ef");
   g.fillStyle = field;
   fillSilhouette(g, fieldY, left, right, 400);
+  // 눈 언덕의 부드러운 굴곡: 밝은 등성이와 푸른 골
+  const rd = seeded(66);
+  g.save();
+  g.filter = "blur(6px)";
+  for (let i = 0; i < 14; i++) {
+    const dx = left + rd() * size;
+    const dy = 280 + rd() * 45;
+    g.fillStyle = i % 2 ? "rgba(255,255,255,0.7)" : "rgba(150,172,210,0.28)";
+    g.beginPath();
+    g.ellipse(dx, dy, 22 + rd() * 30, 3 + rd() * 4, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+
+  // 물체들이 눈 위에 드리우는 푸른 그림자. 오로라와 하늘빛이 뒤에서 비추므로 앞쪽 오른편으로 늘어짐
+  g.save();
+  g.filter = "blur(2.5px)";
+  g.fillStyle = "rgba(85,110,165,0.34)";
+  const shadow = (x0, x1, y, len) => {
+    g.beginPath();
+    g.moveTo(x0, y);
+    g.lineTo(x1, y);
+    g.lineTo(x1 + len * 0.6, y + len * 0.45);
+    g.lineTo(x0 + len * 0.6, y + len * 0.45);
+    g.closePath();
+    g.fill();
+  };
+  shadow(81, 123, 282, 18); // 우체국
+  shadow(165, 235, 278, 22); // 집무실
+  shadow(140, 160, 296, 14); // 트리
+  shadow(277, 305, 290, 12); // 이글루
+  shadow(311, 335, 294, 10);
+  shadow(252, 256, 298, 16); // 이정표 기둥
+  shadow(288, 342, 312, 14); // 썰매와 순록
+  g.restore();
 
   lights = [];
 
@@ -140,13 +182,40 @@ function paintSanta(g, globe, groundAt) {
   g.lineTo(138, 330);
   g.closePath();
   g.fill();
-  g.strokeStyle = "rgba(120,145,185,0.55)";
-  g.lineWidth = 0.8;
+  // 썰매 자국: 앞쪽일수록 진하고 굵음. 살짝 휘어짐
   for (const k of [-0.35, -0.25, 0.25, 0.35]) {
-    g.beginPath();
-    g.moveTo(200 + k * 12, 279);
-    g.lineTo(200 + k * 124, 330);
-    g.stroke();
+    for (let seg = 0; seg < 6; seg++) {
+      const t0 = seg / 6;
+      const t1 = (seg + 1) / 6;
+      const px = (t) => 200 + k * (12 + 112 * t) + Math.sin(t * 3) * 2;
+      g.strokeStyle = `rgba(110,135,180,${0.2 + t1 * 0.4})`;
+      g.lineWidth = 0.4 + t1 * 0.9;
+      g.beginPath();
+      g.moveTo(px(t0), 279 + 51 * t0);
+      g.lineTo(px(t1), 279 + 51 * t1);
+      g.stroke();
+    }
+  }
+  // 길 양옆으로 치워 쌓은 눈둑: 밝은 등과 바깥쪽 푸른 그늘
+  for (const side of [-1, 1]) {
+    for (let seg = 0; seg < 8; seg++) {
+      const t0 = seg / 8;
+      const t1 = (seg + 1) / 8;
+      const ex = (t) => 200 + side * (6 + 56 * t + 2);
+      const ey = (t) => 278 + 52 * t;
+      g.strokeStyle = "rgba(120,145,190,0.35)";
+      g.lineWidth = 1 + t1 * 2.5;
+      g.beginPath();
+      g.moveTo(ex(t0) + side * 1.2, ey(t0) + 0.6);
+      g.lineTo(ex(t1) + side * 1.2, ey(t1) + 0.6);
+      g.stroke();
+      g.strokeStyle = "#ffffff";
+      g.lineWidth = 0.8 + t1 * 2;
+      g.beginPath();
+      g.moveTo(ex(t0), ey(t0));
+      g.lineTo(ex(t1), ey(t1));
+      g.stroke();
+    }
   }
 
   // 왼쪽: 산타클로스 중앙우체국과 빨간 우체통
@@ -191,34 +260,113 @@ function paintSanta(g, globe, groundAt) {
   g.quadraticCurveTo(200, 292, right, 300);
   g.stroke();
 
-  // 북극선 이정표: 세계 도시 방향을 가리키는 화살표 판
-  g.fillStyle = "#5a3a24";
-  g.fillRect(253, 262, 2, 36);
+  // 북극선 이정표: 나뭇결이 보이는 기둥에 두께가 있는 화살표 판, 판마다 위에 눈이 얹힘
+  const pole = g.createLinearGradient(252, 0, 256, 0);
+  pole.addColorStop(0, "#7a5236");
+  pole.addColorStop(0.5, "#5a3a24");
+  pole.addColorStop(1, "#3a2416");
+  g.fillStyle = pole;
+  g.fillRect(252.5, 258, 3, 40);
+  g.fillStyle = "rgba(30,15,8,0.35)";
+  for (let gy = 262; gy < 296; gy += 5) g.fillRect(253.2, gy, 0.4, 2.5);
   const arrows = [
-    [266, -1, "#2e4f7a"],
-    [272, 1, "#b52a2a"],
-    [278, -1, "#2f6b4a"],
-    [284, 1, "#c9952a"],
+    [267, -1, "#2e4f7a"],
+    [273.5, 1, "#b52a2a"],
+    [280, -1, "#2f6b4a"],
+    [286.5, 1, "#c9952a"],
   ];
-  for (const [ay, dir, color] of arrows) {
+  const board = (ay, dir, color) => {
+    const len = 17;
+    const path = () => {
+      g.beginPath();
+      g.moveTo(254, ay - 2.4);
+      g.lineTo(254 + dir * (len - 3), ay - 2.4);
+      g.lineTo(254 + dir * len, ay);
+      g.lineTo(254 + dir * (len - 3), ay + 2.4);
+      g.lineTo(254, ay + 2.4);
+      g.closePath();
+    };
+    // 판 두께(아래쪽 어두운 옆면)
+    g.save();
+    g.translate(0, 0.9);
+    g.fillStyle = "rgba(20,15,10,0.55)";
+    path();
+    g.fill();
+    g.restore();
     g.fillStyle = color;
+    path();
+    g.fill();
+    // 위는 밝고 아래는 어두운 나무판
+    const shade = g.createLinearGradient(0, ay - 2.4, 0, ay + 2.4);
+    shade.addColorStop(0, "rgba(255,255,255,0.22)");
+    shade.addColorStop(1, "rgba(0,0,0,0.22)");
+    g.fillStyle = shade;
+    path();
+    g.fill();
+    // 글씨 자리: 작은 흰 획 (도시 이름과 거리)
+    g.fillStyle = "rgba(255,255,255,0.75)";
+    const x0 = dir > 0 ? 256.5 : 254 - (len - 3.5);
+    for (let k = 0; k < 4; k++) g.fillRect(x0 + k * 2.6, ay - 0.6, 1.8 - (k % 2) * 0.6, 1.1);
+    // 판 위 눈
+    g.fillStyle = "#f6f9fd";
     g.beginPath();
-    g.moveTo(254, ay - 2.5);
-    g.lineTo(254 + dir * 14, ay - 2.5);
-    g.lineTo(254 + dir * 17, ay);
-    g.lineTo(254 + dir * 14, ay + 2.5);
-    g.lineTo(254, ay + 2.5);
+    g.moveTo(254, ay - 2.4);
+    g.quadraticCurveTo(254 + dir * len * 0.4, ay - 4, 254 + dir * (len - 4), ay - 2.6);
+    g.lineTo(254, ay - 2.2);
     g.closePath();
     g.fill();
-  }
+  };
+  for (const [ay, dir, color] of arrows) board(ay, dir, color);
+  // 위쪽 표지판: 테두리, 그늘, 눈
+  g.fillStyle = "rgba(20,15,10,0.5)";
+  g.fillRect(238, 254, 34, 9.2);
   g.fillStyle = "#2e4f7a";
   g.fillRect(238, 253, 34, 9);
+  const plate = g.createLinearGradient(0, 253, 0, 262);
+  plate.addColorStop(0, "rgba(255,255,255,0.2)");
+  plate.addColorStop(1, "rgba(0,0,0,0.2)");
+  g.fillStyle = plate;
+  g.fillRect(238, 253, 34, 9);
+  g.strokeStyle = "rgba(240,230,210,0.8)";
+  g.lineWidth = 0.4;
+  g.strokeRect(238.8, 253.8, 32.4, 7.4);
   g.fillStyle = "#ffffff";
   g.font = "bold 4px sans-serif";
   g.textAlign = "center";
   g.textBaseline = "middle";
   g.fillText("ARCTIC CIRCLE", 255, 256);
   g.fillText("66°33′07″", 255, 260);
+  g.fillStyle = "#f6f9fd";
+  g.beginPath();
+  g.moveTo(237.5, 253);
+  g.quadraticCurveTo(255, 250.5, 272.5, 253);
+  g.lineTo(272.5, 253.6);
+  g.lineTo(237.5, 253.6);
+  g.closePath();
+  g.fill();
+
+  // 가로등 아래 눈에 번진 불빛
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  for (const k of [0.25, 0.55, 0.9]) {
+    const y = 278 + 52 * k;
+    const half = 6 + 56 * k;
+    const sc = 0.35 + 0.65 * k;
+    for (const side of [-1, 1]) {
+      const lx = 200 + side * (half + 6 * sc);
+      const pool = g.createRadialGradient(lx, y, 0, lx, y, 14 * sc);
+      pool.addColorStop(0, "rgba(255,200,130,0.35)");
+      pool.addColorStop(1, "rgba(255,200,130,0)");
+      g.fillStyle = pool;
+      g.save();
+      g.translate(lx, y);
+      g.scale(1, 0.35);
+      g.translate(-lx, -y);
+      g.fillRect(lx - 14 * sc, y - 14 * sc, 28 * sc, 28 * sc);
+      g.restore();
+    }
+  }
+  g.restore();
 
   // 길가 가로등: 멀수록 작게
   for (const k of [0.25, 0.55, 0.9]) {
@@ -227,8 +375,6 @@ function paintSanta(g, globe, groundAt) {
     const sc = 0.35 + 0.65 * k;
     for (const side of [-1, 1]) streetLamp(g, 200 + side * (half + 6 * sc), y, sc);
   }
-
-  snowman(g, 228, 304);
 
   // 순록이 끄는 빨간 썰매
   sleigh(g, 300, 312);
@@ -463,14 +609,78 @@ function santaOffice(g, x, baseY) {
   g.fill();
   // 탑의 "SANTA IS HERE" 표시
   sign(g, x, baseY - 46, 30, 6, "#b52a2a", "SANTA IS HERE", 3.6);
-  // 빨간 문과 화환
-  g.fillStyle = "#b52a2a";
-  g.fillRect(x - 5, baseY - 13, 10, 13);
-  g.strokeStyle = "#2f5a3a";
-  g.lineWidth = 1.6;
+  // 현관: 문 앞으로 퍼지는 불빛 → 나무 문틀 → 아치형 두 짝 문(세로 널판, 쇠띠) → 문 위 화환
+  const spill = g.createRadialGradient(x, baseY, 0, x, baseY, 18);
+  spill.addColorStop(0, "rgba(255,200,130,0.45)");
+  spill.addColorStop(1, "rgba(255,200,130,0)");
+  g.fillStyle = spill;
+  g.fillRect(x - 18, baseY - 6, 36, 12);
+  const doorPath = (inset) => {
+    g.beginPath();
+    g.moveTo(x - 6 + inset, baseY);
+    g.lineTo(x - 6 + inset, baseY - 11);
+    g.quadraticCurveTo(x, baseY - 17 + inset * 1.4, x + 6 - inset, baseY - 11);
+    g.lineTo(x + 6 - inset, baseY);
+    g.closePath();
+  };
+  g.fillStyle = "#3a2318";
+  doorPath(-0.9);
+  g.fill();
+  const door = g.createLinearGradient(x - 6, 0, x + 6, 0);
+  door.addColorStop(0, "#c8392f");
+  door.addColorStop(0.5, "#a82a22");
+  door.addColorStop(1, "#7e1d18");
+  g.fillStyle = door;
+  doorPath(0);
+  g.fill();
+  g.save();
+  doorPath(0);
+  g.clip();
+  g.fillStyle = "rgba(60,10,8,0.35)";
+  for (let px = x - 6; px < x + 6; px += 2) g.fillRect(px, baseY - 17, 0.35, 17);
+  g.fillStyle = "rgba(40,10,5,0.6)";
+  g.fillRect(x - 0.4, baseY - 17, 0.8, 17);
+  g.fillStyle = "#2a2220";
+  g.fillRect(x - 6, baseY - 9.5, 12, 0.7);
+  g.fillRect(x - 6, baseY - 3.5, 12, 0.7);
+  const shadeTop = g.createLinearGradient(0, baseY - 17, 0, baseY - 9);
+  shadeTop.addColorStop(0, "rgba(20,5,5,0.45)");
+  shadeTop.addColorStop(1, "rgba(20,5,5,0)");
+  g.fillStyle = shadeTop;
+  g.fillRect(x - 6, baseY - 17, 12, 8);
+  g.restore();
+  g.fillStyle = "#e0b040";
   g.beginPath();
-  g.arc(x, baseY - 19, 3, 0, Math.PI * 2);
-  g.stroke();
+  g.arc(x - 1.4, baseY - 6, 0.5, 0, Math.PI * 2);
+  g.arc(x + 1.4, baseY - 6, 0.5, 0, Math.PI * 2);
+  g.fill();
+  // 문 앞 눈 밟힌 디딤돌
+  g.fillStyle = "#c9d3e2";
+  g.fillRect(x - 8, baseY - 0.6, 16, 1.4);
+  // 화환: 짙은 잎 위에 밝은 잎, 빨간 열매와 리본
+  const wy = baseY - 20.5;
+  for (let k = 0; k < 18; k++) {
+    const a = (k / 18) * Math.PI * 2;
+    g.fillStyle = k % 3 ? "#2f5a3a" : "#4a7a52";
+    g.beginPath();
+    g.arc(x + Math.cos(a) * 2.6, wy + Math.sin(a) * 2.6, 1.1, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = "#d8322a";
+  for (const a of [0.6, 2.2, 3.9, 5.2]) {
+    g.beginPath();
+    g.arc(x + Math.cos(a) * 2.6, wy + Math.sin(a) * 2.6, 0.5, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.beginPath();
+  g.moveTo(x, wy + 2.6);
+  g.lineTo(x - 1.6, wy + 4.6);
+  g.lineTo(x - 0.6, wy + 4.8);
+  g.lineTo(x, wy + 3.2);
+  g.lineTo(x + 0.6, wy + 4.8);
+  g.lineTo(x + 1.6, wy + 4.6);
+  g.closePath();
+  g.fill();
 }
 
 // 위치를 저장해 두었다가 animate에서 반짝이게 하는 전구들
@@ -600,30 +810,6 @@ function igloo(g, x, baseY, r) {
   g.fill();
 }
 
-function snowman(g, x, baseY) {
-  g.fillStyle = "#ffffff";
-  for (const [dy, rr] of [[-5, 5.5], [-13.5, 4], [-20, 3]]) {
-    g.beginPath();
-    g.arc(x, baseY + dy, rr, 0, Math.PI * 2);
-    g.fill();
-  }
-  g.fillStyle = "rgba(150,170,200,0.4)";
-  g.beginPath();
-  g.arc(x + 1.5, baseY - 5, 5.5, -0.6, 1.4);
-  g.fill();
-  g.fillStyle = "#b52a2a";
-  g.fillRect(x - 3.5, baseY - 17.5, 7, 1.6);
-  g.fillStyle = "#222";
-  g.fillRect(x - 3, baseY - 26, 6, 3.5);
-  g.fillRect(x - 4.2, baseY - 23, 8.4, 1);
-  g.fillStyle = "#f08a24";
-  g.beginPath();
-  g.moveTo(x + 0.5, baseY - 20.5);
-  g.lineTo(x + 4, baseY - 20);
-  g.lineTo(x + 0.5, baseY - 19.5);
-  g.fill();
-}
-
 // 금빛 활주부가 말려 올라간 빨간 썰매
 function sleigh(g, x, y) {
   g.strokeStyle = "#e0b040";
@@ -670,42 +856,139 @@ function sleigh(g, x, y) {
 
 // 순록 실루엣
 function reindeer(g, x, y) {
-  g.fillStyle = "#6a4a34";
-  g.strokeStyle = "#6a4a34";
-  g.beginPath();
-  g.ellipse(x, y - 9, 9, 4.5, 0, 0, Math.PI * 2);
-  g.fill();
-  g.lineWidth = 1.4;
-  for (const lx of [x - 6, x - 3, x + 4, x + 7]) {
+  // 옆에서 본 순록: 어깨가 높고 엉덩이 쪽으로 낮아지는 등, 깊은 가슴, 가는 다리와 큰 발굽,
+  // 목 아래 흰 갈기, 긴 주둥이, 뒤로 휘며 가지를 친 큰 뿔
+  const legs = [
+    // [허벅지 x, 앞다리?, 먼 쪽?]
+    [x - 6.5, false, true],
+    [x + 5.5, true, true],
+    [x - 8, false, false],
+    [x + 7, true, false],
+  ];
+  for (const [lx, front, far] of legs) {
+    g.fillStyle = far ? "#4a382c" : "#5e4636";
     g.beginPath();
-    g.moveTo(lx, y - 7);
-    g.lineTo(lx, y);
-    g.stroke();
+    if (front) {
+      g.moveTo(lx - 1.5, y - 9);
+      g.lineTo(lx + 1.5, y - 9);
+      g.lineTo(lx + 0.8, y - 4);
+      g.lineTo(lx + 0.6, y - 1);
+      g.lineTo(lx - 0.4, y - 1);
+      g.lineTo(lx - 0.6, y - 4);
+    } else {
+      // 뒷다리: 허벅지가 굵고 뒤꿈치(비절)가 뒤로 꺾임
+      g.moveTo(lx - 2, y - 10);
+      g.quadraticCurveTo(lx + 2.5, y - 9, lx + 1.2, y - 5);
+      g.lineTo(lx + 0.4, y - 1);
+      g.lineTo(lx - 0.6, y - 1);
+      g.lineTo(lx - 0.4, y - 5);
+      g.quadraticCurveTo(lx - 2.4, y - 6, lx - 2, y - 10);
+    }
+    g.closePath();
+    g.fill();
+    // 넓은 발굽
+    g.fillStyle = "#2a201a";
+    g.beginPath();
+    g.ellipse(lx + 0.1, y - 0.5, 1.1, 0.6, 0, 0, Math.PI * 2);
+    g.fill();
   }
-  g.lineWidth = 2.2;
+  // 몸통
+  const body = () => {
+    g.beginPath();
+    g.moveTo(x - 10, y - 9);
+    g.quadraticCurveTo(x - 11.5, y - 13, x - 8.5, y - 14);
+    g.quadraticCurveTo(x - 1, y - 15, x + 5, y - 16.5);
+    g.quadraticCurveTo(x + 8.5, y - 17, x + 9, y - 14);
+    g.quadraticCurveTo(x + 9.5, y - 9, x + 7, y - 8);
+    g.quadraticCurveTo(x - 1, y - 7.5, x - 10, y - 9);
+    g.closePath();
+  };
+  const coat = g.createLinearGradient(0, y - 17, 0, y - 7);
+  coat.addColorStop(0, "#8a6e58");
+  coat.addColorStop(0.6, "#6a5040");
+  coat.addColorStop(1, "#c9b8a2");
+  g.fillStyle = coat;
+  body();
+  g.fill();
+  // 목과 머리
+  g.fillStyle = "#6a5040";
   g.beginPath();
-  g.moveTo(x + 7, y - 11);
-  g.lineTo(x + 11, y - 17);
+  g.moveTo(x + 5, y - 16);
+  g.quadraticCurveTo(x + 9, y - 21, x + 12, y - 22.5);
+  g.lineTo(x + 16.5, y - 21);
+  g.quadraticCurveTo(x + 17.5, y - 20, x + 16.2, y - 19.3);
+  g.lineTo(x + 13, y - 19.5);
+  g.quadraticCurveTo(x + 11, y - 16, x + 9, y - 12);
+  g.closePath();
+  g.fill();
+  // 목 아래 흰 갈기
+  g.fillStyle = "#ece6da";
+  g.beginPath();
+  g.moveTo(x + 9, y - 12.5);
+  g.quadraticCurveTo(x + 11.5, y - 15, x + 12.4, y - 19);
+  g.quadraticCurveTo(x + 10.5, y - 14.5, x + 10.5, y - 11.5);
+  g.closePath();
+  g.fill();
+  // 귀, 눈, 코
+  g.fillStyle = "#5a4232";
+  g.beginPath();
+  g.ellipse(x + 11.2, y - 23, 1.6, 0.6, -0.6, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#1e1612";
+  g.beginPath();
+  g.arc(x + 13.6, y - 21.6, 0.45, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#3a2a22";
+  g.beginPath();
+  g.arc(x + 16.6, y - 20.2, 0.6, 0, Math.PI * 2);
+  g.fill();
+  // 뿔: 머리에서 뒤로 크게 휘는 줄기, 앞쪽 눈가지와 끝가지. 밑동이 굵고 끝으로 가늘어짐
+  const antler = (dx, alpha) => {
+    g.globalAlpha = alpha;
+    g.strokeStyle = "#a88a68";
+    g.lineCap = "round";
+    const beam = [
+      [x + 12.5 + dx, y - 23.5],
+      [x + 10 + dx, y - 30],
+      [x + 13 + dx, y - 35.5],
+      [x + 17 + dx, y - 36],
+    ];
+    for (let k = 0; k < 3; k++) {
+      g.lineWidth = 1.3 - k * 0.35;
+      g.beginPath();
+      g.moveTo(beam[k][0], beam[k][1]);
+      g.lineTo(beam[k + 1][0], beam[k + 1][1]);
+      g.stroke();
+    }
+    g.lineWidth = 0.55;
+    g.beginPath();
+    g.moveTo(x + 11.6 + dx, y - 26);
+    g.quadraticCurveTo(x + 14 + dx, y - 26.5, x + 15 + dx, y - 25);
+    g.moveTo(x + 10.6 + dx, y - 31);
+    g.lineTo(x + 8 + dx, y - 33);
+    g.moveTo(x + 13 + dx, y - 35.5);
+    g.lineTo(x + 12.5 + dx, y - 38.5);
+    g.moveTo(x + 15 + dx, y - 35.8);
+    g.lineTo(x + 16 + dx, y - 38.8);
+    g.stroke();
+    g.globalAlpha = 1;
+  };
+  antler(-1.6, 0.6);
+  antler(0, 1);
+  // 등에 비친 달빛과 짧은 흰 꼬리
+  g.save();
+  body();
+  g.clip();
+  g.strokeStyle = "rgba(230,235,255,0.45)";
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(x - 9, y - 14);
+  g.quadraticCurveTo(x - 1, y - 15, x + 5, y - 16.5);
   g.stroke();
+  g.restore();
+  g.fillStyle = "#f4f2ec";
   g.beginPath();
-  g.ellipse(x + 13, y - 17, 3, 2, 0.3, 0, Math.PI * 2);
-  g.fill();
-  // 뿔
-  g.strokeStyle = "#8a6a4c";
-  g.lineWidth = 0.8;
-  for (const dir of [-1, 1]) {
-    g.beginPath();
-    g.moveTo(x + 11, y - 19);
-    g.lineTo(x + 9 + dir * 2, y - 25);
-    g.lineTo(x + 7 + dir * 3, y - 28);
-    g.moveTo(x + 9 + dir * 2, y - 25);
-    g.lineTo(x + 13 + dir * 2, y - 26);
-    g.stroke();
-  }
-  // 흰 꼬리
-  g.fillStyle = "#f4f4f4";
-  g.beginPath();
-  g.arc(x - 9, y - 10, 1.6, 0, Math.PI * 2);
+  g.ellipse(x - 10.6, y - 12.5, 1.1, 1.6, 0.3, 0, Math.PI * 2);
   g.fill();
 }
 
