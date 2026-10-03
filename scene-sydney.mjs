@@ -83,66 +83,116 @@ function paintSydney(g, globe, groundAt) {
 
   paintBridge(g);
 
-  // 바다
-  const sea = g.createLinearGradient(0, 244, 0, 330);
-  sea.addColorStop(0, "#3a93d0");
-  sea.addColorStop(1, "#0b4f8c");
+  // 바다: 수평선 쪽은 하늘을 비춰 밝고, 앞으로 올수록 짙은 남색
+  const sea = g.createLinearGradient(0, 244, 0, 332);
+  sea.addColorStop(0, "#79bfe6");
+  sea.addColorStop(0.12, "#3f99d2");
+  sea.addColorStop(0.55, "#1c6fb0");
+  sea.addColorStop(1, "#0a4a86");
   g.fillStyle = sea;
   g.fillRect(left, 244, size, 100);
-
-  // 물결: 멀리는 가늘고 촘촘하게, 가까이는 굵고 성기게
-  for (let i = 0; i < 140; i++) {
-    const y = r(246, 330);
-    const near = (y - 246) / 84;
-    const x = r(left, right);
-    const w = 3 + near * r(6, 16);
-    g.strokeStyle = rnd() < 0.6 ? `rgba(190,232,255,${0.25 + near * 0.3})` : `rgba(8,52,100,${0.25 + near * 0.2})`;
-    g.lineWidth = 0.5 + near;
-    g.beginPath();
-    g.moveTo(x, y);
-    g.quadraticCurveTo(x + w / 2, y - 1 - near * 2, x + w, y);
-    g.stroke();
-  }
+  // 수평선에 닿은 밝은 띠
+  g.fillStyle = "rgba(235,248,255,0.55)";
+  g.fillRect(left, 244, size, 1.2);
 
   // 바다 깊이: 기슭 가까운 얕은 곳은 청록, 가운데 깊은 곳은 짙은 남색 얼룩
   const rw = seeded(2000);
   g.save();
   g.filter = "blur(8px)";
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 12; i++) {
     const wx = left + rw() * size;
-    const wy = 250 + rw() * 70;
-    g.fillStyle = i % 2 ? "rgba(40,170,190,0.18)" : "rgba(5,40,90,0.22)";
+    const wy = 252 + rw() * 72;
+    g.fillStyle = i % 2 ? "rgba(40,170,190,0.2)" : "rgba(5,40,90,0.24)";
     g.beginPath();
-    g.ellipse(wx, wy, 30 + rw() * 40, 4 + rw() * 5, 0, 0, Math.PI * 2);
+    g.ellipse(wx, wy, 30 + rw() * 40, 4 + rw() * 6, 0, 0, Math.PI * 2);
     g.fill();
   }
   g.restore();
-  // 다리와 빌딩이 물에 비친 흐린 세로 그림자: 물결에 끊김
-  g.fillStyle = "rgba(30,60,95,0.18)";
-  for (let y = 245; y < 262; y += 1.5) {
-    for (let x = 60; x < 320; x += 3 + rw() * 5) {
-      if (rw() < 0.5) g.fillRect(x, y, 1 + rw() * 3, 0.7);
+
+  // 물에 비친 하버브리지 아치: 위아래가 뒤집혀 납작하고, 물결에 끊긴 가로 획으로만 보임
+  const bx0 = 58;
+  const bx1 = 318;
+  const archAt = (x) => 54 * (1 - ((2 * (x - bx0)) / (bx1 - bx0) - 1) ** 2);
+  g.fillStyle = "rgba(40,66,96,0.32)";
+  for (let x = bx0; x < bx1; x += 1.5) {
+    const ry = 245 + archAt(x) * 0.42;
+    if (rw() < 0.7) g.fillRect(x, ry + (rw() - 0.5) * 1.2, 1.5 + rw() * 3, 0.8);
+  }
+  // 도심 빌딩이 비친 흐린 세로 그림자
+  g.fillStyle = "rgba(60,95,130,0.16)";
+  for (let y = 245; y < 264; y += 1.4) {
+    for (let x = left + 20; x < 200; x += 3 + rw() * 5) {
+      if (rw() < 0.5 - (y - 245) * 0.02) g.fillRect(x, y, 1 + rw() * 3, 0.7);
     }
   }
+
+  // 물결: 줄마다 햇빛 받은 마루와 그늘진 골. 멀리는 가늘고 촘촘하게, 가까이는 굵고 성기게
+  const rv = seeded(4242);
+  for (let y = 247; y < 334; ) {
+    const near = (y - 246) / 88;
+    const len = 3 + near * 15;
+    const amp = 0.5 + near * 2.4;
+    for (let x = left - rv() * len * 2; x < right; x += len * (1.4 + rv() * 1.4)) {
+      const l = len * (0.7 + rv() * 0.6);
+      g.strokeStyle = `rgba(6,38,78,${0.16 + near * 0.24})`;
+      g.lineWidth = 0.4 + near * 1.2;
+      g.beginPath();
+      g.moveTo(x, y + amp * 0.5);
+      g.quadraticCurveTo(x + l / 2, y + amp * 1.5, x + l, y + amp * 0.5);
+      g.stroke();
+      g.strokeStyle = `rgba(210,242,255,${0.2 + near * 0.32})`;
+      g.lineWidth = 0.35 + near * 0.9;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x + l / 2, y - amp, x + l, y);
+      g.stroke();
+    }
+    y += 1.1 + near * near * 6 + rv() * 0.8;
+  }
+
   // 바람이 스친 물결 띠: 가로로 길게 옅게 밝은 결
-  g.strokeStyle = "rgba(200,235,255,0.18)";
+  g.strokeStyle = "rgba(200,235,255,0.16)";
   g.lineWidth = 0.6;
   for (let i = 0; i < 6; i++) {
-    const y = 250 + i * 8 + rw() * 4;
+    const y = 252 + i * 9 + rw() * 4;
     g.beginPath();
     g.moveTo(left, y);
     for (let x = left; x <= right; x += 10) g.lineTo(x, y + Math.sin(x * 0.04 + i) * 1.2);
     g.stroke();
   }
 
-  // 햇빛 반사
+  // 햇빛 윤슬: 해 아래로 길게 뻗는 반짝이는 길. 앞으로 올수록 넓게 퍼짐
   g.globalCompositeOperation = "lighter";
-  for (let i = 0; i < 60; i++) {
-    const y = r(246, 300);
-    g.fillStyle = `rgba(255,255,230,${r(0.15, 0.45)})`;
-    g.fillRect(300 + r(-25, 25) * (1 + (y - 246) / 40), y, r(2, 7), 0.8);
+  for (let i = 0; i < 170; i++) {
+    const y = 246 + Math.pow(rv(), 1.3) * 82;
+    const near = (y - 246) / 82;
+    const spread = 12 + near * 58;
+    const dx = (rv() - 0.5) * 2 * spread * rv();
+    const w = 1 + near * 5 * rv();
+    g.fillStyle = `rgba(255,252,228,${(0.18 + 0.5 * rv()) * (1 - (Math.abs(dx) / spread) * 0.7)})`;
+    g.fillRect(300 + dx - w / 2, y, w, 0.5 + near * 0.7);
   }
   g.globalCompositeOperation = "source-over";
+
+  // 항로 표지 부표: 초록 원뿔, 물에 비친 그림자
+  g.fillStyle = "rgba(20,90,60,0.35)";
+  g.fillRect(70.5, 272, 3, 4);
+  g.fillStyle = "#2f8a55";
+  g.beginPath();
+  g.moveTo(72, 262);
+  g.lineTo(75.5, 271.5);
+  g.lineTo(68.5, 271.5);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(255,255,255,0.4)";
+  g.fillRect(70.5, 266, 1, 5);
+  g.strokeStyle = "rgba(230,248,255,0.7)";
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.ellipse(72, 272, 5, 0.9, 0, 0, Math.PI * 2);
+  g.stroke();
+
+  paintWaterTaxi(g, 128, 284);
 
   // 멀리 떠 있는 작은 요트 두 척: 햇빛 받는 돛과 그늘진 돛
   for (const [bx, by, bs] of [[96, 252, 0.8], [132, 256, 1]]) {
@@ -565,6 +615,43 @@ function shell(g, ax, ay, w, by) {
   g.moveTo(ax, ay);
   backTo();
   g.stroke();
+}
+
+// 노란 수상 택시: 물살을 가르며 오른쪽으로 달림
+function paintWaterTaxi(g, x, y) {
+  g.strokeStyle = "rgba(240,252,255,0.75)";
+  g.lineCap = "round";
+  for (const [dy, len, lw] of [[-1, 34, 0.8], [1.5, 40, 1.1], [0.2, 22, 1.6]]) {
+    g.lineWidth = lw;
+    g.beginPath();
+    g.moveTo(x - 2, y + 0.5);
+    g.quadraticCurveTo(x - len * 0.5, y + dy * 1.5, x - len, y + dy * 3);
+    g.stroke();
+  }
+  g.fillStyle = "rgba(255,255,255,0.8)";
+  g.beginPath();
+  g.ellipse(x + 15, y + 0.8, 3, 1, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "rgba(5,40,80,0.35)";
+  g.fillRect(x - 1, y + 1, 17, 1.5);
+  const hull = g.createLinearGradient(0, y - 4, 0, y + 1);
+  hull.addColorStop(0, "#ffd84a");
+  hull.addColorStop(1, "#d9a316");
+  g.fillStyle = hull;
+  g.beginPath();
+  g.moveTo(x, y - 4);
+  g.lineTo(x + 13, y - 4);
+  g.quadraticCurveTo(x + 17, y - 3.5, x + 18, y - 2);
+  g.lineTo(x + 14, y + 1);
+  g.lineTo(x + 1, y + 1);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "#f6f2e6";
+  g.fillRect(x + 3, y - 8, 8, 4);
+  g.fillStyle = "#2b3f55";
+  g.fillRect(x + 4, y - 7, 6, 1.6);
+  g.fillStyle = "rgba(255,255,255,0.6)";
+  g.fillRect(x + 3, y - 8.4, 8, 0.6);
 }
 
 // 시드니 페리: 초록 선체에 크림색 선실, 노란 굴뚝

@@ -377,7 +377,6 @@ function maybeTutorial() {
 }
 
 document.querySelector(".help-toggle").addEventListener("click", openHelp);
-document.querySelector(".let-snow")?.addEventListener("click", letItSnow);
 
 // 폰 가속도 센서: 손으로 흔들면 입자가 소용돌이침. iOS는 첫 탭에서 권한을 물음
 let lastMotion = 0;

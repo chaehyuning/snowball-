@@ -1087,76 +1087,38 @@ function reindeer(g, x, y) {
 }
 
 // 눈꽃 결정: 여섯 갈래 가지. 작은 것은 동그란 눈송이
-// 육각 얼음 결정: 투명한 육각 판에 결정 가지, 오로라 빛(청록·보라)이 뒤집힐 때마다 면을 타고 흐르며 반짝임
-function drawFlake(ctx, p, t = 0) {
+function drawFlake(ctx, p) {
   const s = p.size;
-  const turn = Math.abs(Math.cos(p.flip));
-  const hue = (Math.sin(p.flip * 1.3 + p.x * 0.01) + 1) / 2; // 0 청록 → 1 보라
-  const c1 = `rgba(${Math.round(90 + 110 * hue)},${Math.round(240 - 130 * hue)},${Math.round(220 + 30 * hue)},`;
+  ctx.globalAlpha = p.settled ? 0.7 : 0.95;
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.rotate(p.angle);
-  ctx.scale(1, 0.55 + 0.45 * turn);
-  // 오로라를 머금은 은은한 빛무리
-  if (!p.settled) {
-    ctx.globalCompositeOperation = "lighter";
-    const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 1.8);
-    halo.addColorStop(0, c1 + "0.35)");
-    halo.addColorStop(1, c1 + "0)");
-    ctx.fillStyle = halo;
-    ctx.fillRect(-s * 1.8, -s * 1.8, s * 3.6, s * 3.6);
-    ctx.globalCompositeOperation = "source-over";
-  }
-  // 육각 판: 가운데는 투명하고 가장자리로 갈수록 빛을 머금음
-  const hex = (r) => {
+  ctx.strokeStyle = "#ffffff";
+  ctx.fillStyle = "#ffffff";
+  if (s < 2.6) {
     ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const a = (i * Math.PI) / 3 + Math.PI / 6;
-      ctx[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r);
-    }
-    ctx.closePath();
-  };
-  const plate = ctx.createLinearGradient(-s, -s, s, s);
-  plate.addColorStop(0, "rgba(255,255,255,0.85)");
-  plate.addColorStop(0.45, c1 + "0.35)");
-  plate.addColorStop(1, "rgba(200,160,255,0.55)");
-  ctx.globalAlpha = p.settled ? 0.75 : 0.95;
-  ctx.fillStyle = plate;
-  hex(s * 0.62);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.9)";
-  ctx.lineWidth = 0.6;
-  ctx.stroke();
-  // 결정 가지: 큰 결정만
-  if (s >= 2.6) {
-    ctx.strokeStyle = "rgba(255,255,255,0.95)";
-    ctx.lineWidth = 0.6;
+    ctx.arc(0, 0, s * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.lineWidth = 0.7;
     ctx.lineCap = "round";
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const a = (i * Math.PI) / 3;
       const cx = Math.cos(a);
       const cy = Math.sin(a);
-      ctx.moveTo(cx * s * 0.3, cy * s * 0.3);
+      ctx.moveTo(0, 0);
       ctx.lineTo(cx * s, cy * s);
-      const bx = cx * s * 0.75;
-      const by = cy * s * 0.75;
+      // 가지 끝 쪽 작은 곁가지
+      const bx = cx * s * 0.6;
+      const by = cy * s * 0.6;
       for (const side of [-1, 1]) {
-        const b = a + side * 0.6;
+        const b = a + side * 0.7;
         ctx.moveTo(bx, by);
-        ctx.lineTo(bx + Math.cos(b) * s * 0.22, by + Math.sin(b) * s * 0.22);
+        ctx.lineTo(bx + Math.cos(b) * s * 0.3, by + Math.sin(b) * s * 0.3);
       }
     }
     ctx.stroke();
-  }
-  // 빛이 면에 정면으로 닿는 순간 번쩍이는 반짝임
-  const glint = Math.pow(turn, 12);
-  if (glint > 0.2 && !p.settled) {
-    ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = glint;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(-s * 1.4, -0.3, s * 2.8, 0.6);
-    ctx.fillRect(-0.3, -s * 1.4, 0.6, s * 2.8);
   }
   ctx.restore();
 }
@@ -1179,17 +1141,16 @@ export const santa = {
     count: 210,
     blend: "source-over",
     make(rand) {
-      const size = rand(2, 5.2);
+      const size = rand(1.4, 5);
       return {
         size,
-        flip: rand(0, Math.PI * 2),
         sink: 0.1 + size * 0.025 + rand(-0.03, 0.03),
         drag: rand(0.09, 0.14),
         inertia: rand(0.3, 0.6),
         grip: rand(0.4, 1.7),
         angle: rand(0, Math.PI),
         spin: rand(-0.02, 0.02),
-        flipSpeed: rand(0.015, 0.04),
+        flipSpeed: 0,
         flutter: 0,
       };
     },

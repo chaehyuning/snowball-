@@ -53,6 +53,46 @@ function paintBarcelona(g, globe, groundAt) {
     g.lineTo(...ceil(1, z));
     g.stroke();
   }
+  // 격자 칸마다 움푹한 금빛 판(코퍼)을 채워 빈 곳이 없게: 가운데는 밝고 가장자리는 그늘
+  const sxs = [-1, -0.5, 0, 0.5, 1];
+  for (let k = 0; k < zs.length - 1; k++) {
+    for (let i = 0; i < sxs.length - 1; i++) {
+      const pts = [ceil(sxs[i], zs[k]), ceil(sxs[i + 1], zs[k]), ceil(sxs[i + 1], zs[k + 1]), ceil(sxs[i], zs[k + 1])];
+      const [mx, my] = ceil((sxs[i] + sxs[i + 1]) / 2, (zs[k] + zs[k + 1]) / 2);
+      const panel = g.createRadialGradient(mx, my, 0, mx, my, 40 / zs[k]);
+      panel.addColorStop(0, "rgba(255,226,150,0.55)");
+      panel.addColorStop(1, "rgba(190,130,60,0.35)");
+      g.fillStyle = panel;
+      g.beginPath();
+      pts.forEach((pt, j) => (j ? g.lineTo(...pt) : g.moveTo(...pt)));
+      g.closePath();
+      g.fill();
+      // 칸 안쪽 테두리: 한 단 들어간 금빛 테
+      const inset = pts.map(([x, y]) => [mx + (x - mx) * 0.82, my + (y - my) * 0.82]);
+      g.strokeStyle = "rgba(255,236,180,0.6)";
+      g.lineWidth = 0.8 / zs[k];
+      g.beginPath();
+      inset.forEach((pt, j) => (j ? g.lineTo(...pt) : g.moveTo(...pt)));
+      g.closePath();
+      g.stroke();
+    }
+  }
+  // 금빛 갈비뼈를 한 번 더 굵게
+  g.strokeStyle = "rgba(200,140,50,0.55)";
+  for (const sx of sxs) {
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.moveTo(...ceil(sx, 0.45));
+    g.lineTo(...ceil(sx, 2.07));
+    g.stroke();
+  }
+  for (const z of zs) {
+    g.lineWidth = 1.8 / z;
+    g.beginPath();
+    g.moveTo(...ceil(-1, z));
+    g.lineTo(...ceil(1, z));
+    g.stroke();
+  }
   // 칸마다 잎사귀 볼트 하나. 가운데 줄은 금빛 별 천창
   const rc = seeded(1926);
   for (let k = 0; k < zs.length - 1; k++) {
@@ -100,7 +140,18 @@ function paintBarcelona(g, globe, groundAt) {
   g.fillStyle = "rgba(150,120,85,0.18)";
   for (const px of [130, 150, 250, 270]) g.fillRect(px, 170, 2, 160);
   // 장미창 위를 덮은 부채꼴 돌 차양 (가는 줄이 방사형으로 퍼짐)
-  g.strokeStyle = "rgba(160,130,95,0.35)";
+  for (let k = -8; k < 8; k++) {
+    const x0 = 200 + k * 9;
+    const x1 = 200 + (k + 1) * 9;
+    g.fillStyle = k % 2 ? "rgba(236,214,176,0.9)" : "rgba(214,184,140,0.9)";
+    g.beginPath();
+    g.moveTo(200, 168);
+    g.lineTo(x0, 132 + Math.abs(k) * 2.4);
+    g.lineTo(x1, 132 + Math.abs(k + 1) * 2.4);
+    g.closePath();
+    g.fill();
+  }
+  g.strokeStyle = "rgba(150,110,70,0.45)";
   g.lineWidth = 0.6;
   for (let k = -8; k <= 8; k++) {
     g.beginPath();
@@ -480,8 +531,8 @@ function stainedWindow(g, rnd, cx, y, w, h, palette, alpha) {
   g.clip();
   g.globalAlpha = alpha;
   // 칸: 들쭉날쭉한 격자. 칸마다 다른 색, 가운데는 조금 밝게
-  const cols = Math.max(2, Math.round(w / 6));
-  const rows = Math.max(4, Math.round(h / 7));
+  const cols = Math.max(3, Math.round(w / 4));
+  const rows = Math.max(6, Math.round(h / 4.5));
   const cw = w / cols;
   const ch = h / rows;
   const jitter = (v) => v + (rnd() - 0.5) * Math.min(cw, ch) * 0.5;
