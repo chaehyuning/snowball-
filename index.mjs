@@ -159,14 +159,18 @@ function groundAt(x) {
 // 움직이지 않는 그림은 한 번만 그려 두고 매 프레임 복사해서 씀
 // 고정 그림 층은 해상도를 2배까지만: 3배 화면(최신 폰)에서 픽셀 수가 절반 아래로 줄어 나라 전환이 빨라짐
 const LAYER_DPR = Math.min(dpr, 2);
-function makeLayer(paint, grade = false) {
+function paintLayer(paint, grade) {
   const layer = document.createElement("canvas");
   layer.width = W * LAYER_DPR;
   layer.height = H * LAYER_DPR;
   const g = layer.getContext("2d", { willReadFrequently: grade });
   g.scale(LAYER_DPR, LAYER_DPR);
   paint(g);
-  if (grade) gradeLayer(g, layer.width, layer.height);
+  return layer;
+}
+function makeLayer(paint, grade = false) {
+  const layer = paintLayer(paint, grade);
+  if (grade) gradeLayer(layer.getContext("2d"), layer.width, layer.height, scene?.grade);
   return layer;
 }
 
@@ -185,11 +189,12 @@ const GRADE = {
   grain: 5,
 };
 
-function gradeLayer(g, w, h) {
-  const img = g.getImageData(0, 0, w, h);
+// y0~y1 줄만 보정할 수 있어서, 미리 만들기를 여러 조각으로 나눠 쉬는 틈마다 조금씩 처리함
+function gradeLayer(g, w, h, look, y0 = 0, y1 = h) {
+  const img = g.getImageData(0, y0, w, y1 - y0);
   const d = img.data;
   // 장면마다 grade로 일부 값을 바꿀 수 있음 (예: 후지산은 채도를 살리고, 퀘벡은 따뜻한 골든아워 필터)
-  const { saturation, shadow, highlight, tint, floor, ceiling, grain } = { ...GRADE, ...(scene?.grade || {}) };
+  const { saturation, shadow, highlight, tint, floor, ceiling, grain } = { ...GRADE, ...(look || {}) };
   const range = (ceiling - floor) / 255;
   // 종이 질감 잡음: 빠른 정수 난수(LCG). 표를 되풀이해 쓰면 일정한 간격의 점무늬가 생겨서 쓰지 않음
   let seed = (Math.random() * 4294967296) >>> 0;
@@ -213,7 +218,7 @@ function gradeLayer(g, w, h) {
     d[i + 1] = floor + gg * range + n;
     d[i + 2] = floor + b * range + n;
   }
-  g.putImageData(img, 0, 0);
+  g.putImageData(img, 0, y0);
 }
 
 function makeParticle() {
@@ -325,17 +330,30 @@ let layers = {};
 // 나라마다 고정 그림 층(받침·장면·유리)을 한 번 만들면 기억해 둠. 최근 4곳까지만 들고 있음
 const layerCache = new Map();
 const CACHE_SIZE = 4;
-function buildLayers(target) {
+// 한 나라의 고정 그림 층을 만드는 단계들: 먼저 네 층을 그리고, 색 보정은 띠(STRIP 줄)로 나눠 한 단계씩
+const STRIP = 400;
+function* buildSteps(target, out) {
   const prev = scene;
-  scene = target; // 받침 색·명판·색 보정이 지금 장면 값을 읽으므로 잠시 바꿔 둠
-  const built = {
-    baseBack: makeLayer(paintBaseBack, true),
-    scene: makeLayer((g) => target.paint(g, globe, groundAt), true),
-    glass: makeLayer(paintGlass),
-    baseFront: makeLayer(paintBaseFront, true),
-  };
+  scene = target; // 받침 색·명판이 지금 장면 값을 읽으므로 잠시 바꿔 둠
+  out.baseBack = paintLayer(paintBaseBack, true);
+  out.scene = paintLayer((g) => target.paint(g, globe, groundAt), true);
+  out.glass = paintLayer(paintGlass, false);
+  out.baseFront = paintLayer(paintBaseFront, true);
   scene = prev;
-  return built;
+  yield;
+  for (const key of ["baseBack", "scene", "baseFront"]) {
+    const layer = out[key];
+    const g = layer.getContext("2d");
+    for (let y = 0; y < layer.height; y += STRIP) {
+      gradeLayer(g, layer.width, layer.height, target.grade, y, Math.min(layer.height, y + STRIP));
+      yield;
+    }
+  }
+}
+function buildLayers(target) {
+  const out = {};
+  for (const _ of buildSteps(target, out));
+  return out;
 }
 function layersFor(target) {
   let built = layerCache.get(target.id);
@@ -345,28 +363,52 @@ function layersFor(target) {
   while (layerCache.size > CACHE_SIZE) layerCache.delete(layerCache.keys().next().value);
   return built;
 }
-// 지금 나라를 보는 동안 쉬는 틈에 앞뒤 나라 그림을 미리 만들어 둠 → 화살표·옆 버튼으로 넘길 때 바로 바뀜
+// 지금 나라를 보는 동안 쉬는 틈에 앞뒤 나라 그림을 미리 만들어 둠 → 화살표·옆 버튼으로 넘길 때 바로 바뀜.
+// 조각마다 쉬는 틈 하나씩 쓰고, 화면을 만지거나 스크롤하는 중·설명 시트가 열린 동안에는 미룸
 let warmTimer = 0;
-const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+let lastInput = 0;
+for (const type of ["pointerdown", "pointermove", "touchmove", "wheel", "scroll", "keydown"]) {
+  window.addEventListener(type, () => (lastInput = performance.now()), { passive: true, capture: true });
+}
+const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 60));
+const busy = () =>
+  performance.now() - lastInput < 1200 ||
+  document.body.classList.contains("sheet-open") ||
+  document.body.classList.contains("picker-open");
 function warmNeighbours() {
   clearTimeout(warmTimer);
   const i = SCENES.indexOf(scene);
-  const queue = [SCENES[(i + 1) % SCENES.length], SCENES[(i - 1 + SCENES.length) % SCENES.length]];
+  const queue = [SCENES[(i + 1) % SCENES.length], SCENES[(i - 1 + SCENES.length) % SCENES.length]].filter(
+    (t) => !layerCache.has(t.id),
+  );
   const current = scene.id;
-  const next = () => {
-    const target = queue.shift();
-    if (!target || scene.id !== current) return;
-    if (!layerCache.has(target.id)) {
-      layerCache.set(target.id, buildLayers(target));
+  let target = null;
+  let steps = null;
+  let out = null;
+  const step = () => {
+    if (scene.id !== current) return;
+    if (busy()) {
+      warmTimer = setTimeout(step, 400);
+      return;
+    }
+    if (!steps) {
+      target = queue.shift();
+      if (!target) return;
+      out = {};
+      steps = buildSteps(target, out);
+    }
+    if (steps.next().done) {
+      layerCache.set(target.id, out);
       // 지금 장면이 가장 최근 것으로 남도록 다시 맨 뒤로
       const mine = layerCache.get(current);
       layerCache.delete(current);
       layerCache.set(current, mine);
       while (layerCache.size > CACHE_SIZE) layerCache.delete(layerCache.keys().next().value);
+      steps = null;
     }
-    warmTimer = setTimeout(() => idle(next, { timeout: 2000 }), 300);
+    warmTimer = setTimeout(() => idle(step, { timeout: 1000 }), 16);
   };
-  warmTimer = setTimeout(() => idle(next, { timeout: 2000 }), 1200);
+  warmTimer = setTimeout(() => idle(step, { timeout: 1000 }), 1200);
 }
 
 function loadScene(id) {
@@ -925,7 +967,20 @@ showMusic();
 if (!startId) openPicker(SCENES, scene.id, switchScene, maybeTutorial);
 else maybeTutorial();
 
+// 스노우볼이 안 보일 때는 그리지 않음: 설명 시트나 지구본 창이 덮었을 때, 화면 밖으로 스크롤됐을 때.
+// 그 사이 시트가 오르내리거나 페이지를 스크롤하는 움직임이 끊기지 않음
+let globeOnScreen = true;
+if ("IntersectionObserver" in window) {
+  new IntersectionObserver(([entry]) => (globeOnScreen = entry.isIntersecting)).observe(canvas);
+}
+const covered = () =>
+  !globeOnScreen || document.body.classList.contains("sheet-open") || document.body.classList.contains("picker-open");
+
 function frame(t) {
+  if (covered()) {
+    requestAnimationFrame(frame);
+    return;
+  }
   // 스노우볼이 손을 스프링처럼 따라가고, 놓으면 살짝 출렁이며 제자리로 돌아감
   // 클릭 흔들기 중에는 정해진 박자로 오르내리며 점점 약해짐
   const now = performance.now();

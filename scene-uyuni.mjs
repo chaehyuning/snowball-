@@ -61,34 +61,54 @@ function paintUyuni(g, globe, groundAt) {
   g.fill();
   g.globalAlpha = 1;
 
-  // 뭉게구름: 하늘에 그린 구름을 지평선 기준으로 뒤집어 거울에도 똑같이 찍음
+  // 뭉게구름: 아래는 평평하고 위로 몽글몽글 부푼 적운. 해(오른쪽 아래) 쪽 면은 복숭아빛으로 물들고
+  // 아랫면은 라일락 그늘. 같은 구름을 지평선 기준으로 뒤집어 거울에도 찍음
   const clouds = [
-    [92, 112, 1],
-    [210, 86, 1.25],
-    [318, 128, 0.9],
-    [150, 168, 0.7],
-    [300, 182, 0.55],
+    [96, 116, 1],
+    [214, 88, 1.3],
+    [322, 132, 0.9],
+    [150, 170, 0.62],
+    [292, 186, 0.5],
   ];
-  const puff = (cx, cy, s, flip, alpha) => {
-    const rc = seeded(Math.round(cx * 7 + cy));
-    for (let i = 0; i < 9; i++) {
-      const px = cx + (rc() - 0.5) * 60 * s;
-      const py = cy + (rc() - 0.6) * 14 * s * flip;
-      const rr = (8 + rc() * 12) * s;
-      const shade = g.createRadialGradient(px, py - 4 * s * flip, 0, px, py, rr);
-      shade.addColorStop(0, `rgba(255,255,255,${0.95 * alpha})`);
-      shade.addColorStop(0.7, `rgba(250,244,240,${0.85 * alpha})`);
-      shade.addColorStop(1, `rgba(214,222,236,${0.0})`);
-      g.fillStyle = shade;
+  const cloud = (cx, baseY, s, flip, alpha) => {
+    const rc = seeded(Math.round(cx * 13 + baseY));
+    const lumps = [];
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6 - 0.5;
+      const rr = (10 + rc() * 8) * s * (1 - Math.abs(t) * 0.9);
+      lumps.push([cx + t * 70 * s + (rc() - 0.5) * 6 * s, baseY - rr * 0.55 - (1 - Math.abs(t) * 2) * 8 * s, rr]);
+    }
+    g.save();
+    g.globalAlpha = alpha;
+    // 바닥선 아래로는 그리지 않아 밑면이 평평함 (거울 속에서는 위쪽이 평평)
+    g.beginPath();
+    if (flip > 0) g.rect(cx - 80 * s, baseY - 80 * s, 160 * s, 80 * s);
+    else g.rect(cx - 80 * s, baseY, 160 * s, 80 * s);
+    g.clip();
+    const Y = (y) => (flip > 0 ? y : 2 * baseY - y);
+    // 그늘 층
+    for (const [x, y, rr] of lumps) {
+      g.fillStyle = "#c9c2e0";
       g.beginPath();
-      g.ellipse(px, py, rr * 1.4, rr, 0, 0, Math.PI * 2);
+      g.arc(x, Y(y + rr * 0.25), rr, 0, Math.PI * 2);
       g.fill();
     }
+    // 밝은 몸통: 위쪽은 흰빛, 해 쪽 아래는 복숭아빛
+    for (const [x, y, rr] of lumps) {
+      const body = g.createRadialGradient(x - rr * 0.3, Y(y - rr * 0.45), rr * 0.1, x, Y(y), rr * 1.05);
+      body.addColorStop(0, "#ffffff");
+      body.addColorStop(0.6, "#fbf3ee");
+      body.addColorStop(1, "#ffd9c4");
+      g.fillStyle = body;
+      g.beginPath();
+      g.arc(x, Y(y - rr * 0.12), rr * 0.92, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.restore();
   };
   for (const [cx, cy, s] of clouds) {
-    // 원근: 지평선에 가까운 구름일수록 작고 납작
-    puff(cx, cy, s, 1, 1);
-    puff(cx, 2 * HORIZON - cy, s, -1, 0.75);
+    cloud(cx, cy, s, 1, 1);
+    cloud(cx, 2 * HORIZON - cy, s, -1, 0.7);
   }
 
   // 먼 산(투누파 화산 쪽): 낮은 라일락빛 능선과 거울 속 능선
@@ -128,46 +148,59 @@ function paintUyuni(g, globe, groundAt) {
   island(-1, 0.8);
   island(1, 0.45);
 
-  // 거울 위 아주 얕은 물결: 지평선 가까이는 촘촘하고 가늘게, 앞으로 올수록 성기게
-  for (let y = HORIZON + 3; y < 310; ) {
-    const near = (y - HORIZON) / 90;
-    for (let x = left + r(0, 40); x < right; x += 30 + near * 60 + r(0, 50)) {
-      const len = 8 + near * 30 + r(0, 20);
-      g.fillStyle = `rgba(255,255,255,${0.12 + near * 0.12})`;
-      g.fillRect(x, y, len, 0.5 + near * 0.4);
+  // 소금 껍질 무늬: 땅 위의 벌집(육각) 그물을 원근으로 옮김. 꼭짓점마다 조금씩 흔들어 손으로 그린 듯
+  // 불규칙하게. 평면 좌표 (U 가로, D 거리) → 화면 (200 + U·90/D, 지평선 + 90/D)
+  const FOCAL = 90;
+  const toScreen = (U, D) => [200 + (U * FOCAL) / D, HORIZON + FOCAL / D];
+  let HEX = 0.42; // 육각 한 칸 반지름(평면 단위). 바닥 언덕은 더 촘촘하게 바꿔 씀
+  const jitter = (i, j) => {
+    const h = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
+    const k = Math.sin(i * 269.5 + j * 183.3) * 43758.5453;
+    return [(h - Math.floor(h) - 0.5) * HEX * 0.5, (k - Math.floor(k) - 0.5) * HEX * 0.5];
+  };
+  // 육각 칸 (col, row)의 꼭짓점: 이웃 칸과 같은 점을 쓰도록 꼭짓점 좌표로 흔듦
+  const hexCorners = (col, row) => {
+    const cxU = col * HEX * Math.sqrt(3) + (row % 2) * HEX * (Math.sqrt(3) / 2);
+    const cyD = row * HEX * 1.5;
+    const pts = [];
+    for (let k = 0; k < 6; k++) {
+      const a = (Math.PI / 3) * k + Math.PI / 6;
+      const u = cxU + HEX * Math.cos(a);
+      const d = cyD + HEX * Math.sin(a);
+      const [ju, jd] = jitter(Math.round(u * 100), Math.round(d * 100));
+      pts.push([u + ju, d + jd]);
     }
-    y += 2 + near * 9;
-  }
-
-  // 물이 얕아진 앞쪽: 소금 껍질의 육각 무늬가 물 밑으로 비쳐 보임 (원근으로 납작하게)
-  const hexRow = (y0, rows) => {
-    for (let row = 0; row < rows; row++) {
-      const y = y0 + row * (4 + row * 2.2);
-      const sx = 1 + row * 0.6; // 가까울수록 크게
-      const w = 16 * sx;
-      const h = 3 + row * 1.4;
-      for (let x = left - 20 + (row % 2) * (w / 2); x < right + 20; x += w) {
-        g.strokeStyle = `rgba(255,255,255,${0.18 + row * 0.06})`;
-        g.lineWidth = 0.5 + row * 0.15;
-        g.beginPath();
-        g.moveTo(x - w / 2, y);
-        g.lineTo(x - w / 4, y - h / 2);
-        g.lineTo(x + w / 4, y - h / 2);
-        g.lineTo(x + w / 2, y);
-        g.lineTo(x + w / 4, y + h / 2);
-        g.lineTo(x - w / 4, y + h / 2);
-        g.closePath();
-        g.stroke();
+    return pts;
+  };
+  const saltNet = (dNear, dFar, style) => {
+    for (let row = Math.floor(dNear / (HEX * 1.5)) - 1; row * HEX * 1.5 < dFar; row++) {
+      const dRow = Math.max(dNear, row * HEX * 1.5);
+      const halfU = (200 * dRow) / FOCAL + 1;
+      const cols = Math.ceil(halfU / (HEX * Math.sqrt(3))) + 1;
+      for (let col = -cols; col <= cols; col++) {
+        const pts = hexCorners(col, row);
+        if (pts.some(([, d]) => d < dNear * 0.98)) continue;
+        const screen = pts.map(([u, d]) => toScreen(u, d));
+        style(screen, dRow);
       }
     }
   };
-  hexRow(276, 4);
+  // 거울 앞쪽: 물 밑으로 아주 옅게 비치는 그물
+  saltNet(1.25, 5, (pts, d) => {
+    const k = Math.max(0, 1 - (d - 1.25) / 3.75);
+    g.strokeStyle = `rgba(255,255,255,${0.05 + 0.13 * k})`;
+    g.lineWidth = 0.4 + 0.5 * k;
+    g.beginPath();
+    pts.forEach((pt, i) => (i ? g.lineTo(...pt) : g.moveTo(...pt)));
+    g.closePath();
+    g.stroke();
+  });
 
-  // 바닥: 마른 소금 언덕. 흰 소금에 육각 테두리가 도드라짐
+  // 바닥: 마른 소금 언덕. 흰 소금 위로 육각 테두리가 낮은 둑처럼 솟음 (밝은 윗선 + 옅은 그늘)
   const floorTop = groundAt(globe.x);
   const salt = g.createLinearGradient(0, floorTop - 10, 0, bottom);
   salt.addColorStop(0, "#fbf8f2");
-  salt.addColorStop(1, "#d9dfe4");
+  salt.addColorStop(1, "#dfe3e8");
   g.fillStyle = salt;
   fillSilhouette(g, groundAt, left, right, bottom);
   g.save();
@@ -177,31 +210,22 @@ function paintUyuni(g, globe, groundAt) {
   g.lineTo(left, bottom);
   g.closePath();
   g.clip();
-  for (let row = 0; row < 7; row++) {
-    const y = floorTop + 4 + row * (6 + row * 1.6);
-    const w = 22 + row * 6;
-    const h = 5 + row * 1.6;
-    for (let x = left - 20 + (row % 2) * (w / 2); x < right + 20; x += w) {
-      g.strokeStyle = "rgba(170,182,196,0.55)";
-      g.lineWidth = 0.9;
-      g.beginPath();
-      g.moveTo(x - w / 2, y);
-      g.lineTo(x - w / 4, y - h / 2);
-      g.lineTo(x + w / 4, y - h / 2);
-      g.lineTo(x + w / 2, y);
-      g.lineTo(x + w / 4, y + h / 2);
-      g.lineTo(x - w / 4, y + h / 2);
-      g.closePath();
-      g.stroke();
-      // 육각 테두리 위로 소금이 솟아 밝은 선
-      g.strokeStyle = "rgba(255,255,255,0.8)";
-      g.lineWidth = 0.6;
-      g.beginPath();
-      g.moveTo(x - w / 4, y - h / 2 - 0.6);
-      g.lineTo(x + w / 4, y - h / 2 - 0.6);
-      g.stroke();
-    }
-  }
+  HEX = 0.15;
+  saltNet(0.4, 1.3, (pts, d) => {
+    const k = Math.min(1, 0.7 / d);
+    g.beginPath();
+    pts.forEach((pt, i) => (i ? g.lineTo(...pt) : g.moveTo(...pt)));
+    g.closePath();
+    g.strokeStyle = "rgba(140,152,175,0.45)";
+    g.lineWidth = 1.6 * k;
+    g.save();
+    g.translate(0, 0.8 * k);
+    g.stroke();
+    g.restore();
+    g.strokeStyle = "rgba(255,255,255,0.95)";
+    g.lineWidth = 0.9 * k;
+    g.stroke();
+  });
   g.restore();
   // 물가: 소금 언덕과 거울이 만나는 가장자리에 고인 물빛
   g.strokeStyle = "rgba(160,215,230,0.7)";

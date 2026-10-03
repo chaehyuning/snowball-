@@ -350,20 +350,23 @@ function paintHongKong(g, globe, groundAt) {
 
     // 젖은 길에 비친 간판 빛: 간판 아래 길바닥에서 아래로 길게 번지는 세로 띠
     const [rx, ry] = P(sg.x0 + sg.w / 2, STREET_Y, sg.z);
-    // 물결에 끊긴 가로 획을 아래로 쌓아, 흐릿하게 일렁이는 빛기둥처럼 보이게 함
+    // 젖은 길에 비친 빛: 아래로 갈수록 가늘어지고 옅어지는 부드러운 빛기둥 (가로 줄 없이 흐리게)
     g.save();
     g.globalCompositeOperation = "lighter";
-    g.filter = `blur(${Math.max(0.6, 2 / sg.z)}px)`;
-    g.fillStyle = sg.color;
+    g.filter = `blur(${Math.max(2, 4.5 / sg.z)}px)`;
     const len = 80 / sg.z;
-    const rw = Math.max(2, (bx - ax) * 0.4);
-    for (let dy = 0; dy < len; dy += 1.6) {
-      const k = 1 - dy / len;
-      if (rnd() < 0.3) continue;
-      g.globalAlpha = 0.45 * k * k;
-      const w = rw * (0.5 + rnd() * 0.7) * (0.6 + k * 0.4);
-      g.fillRect(rx - w / 2 + (rnd() - 0.5) * 3, ry + dy, w, 0.9);
-    }
+    const rw = Math.max(2, (bx - ax) * 0.45);
+    const refl = g.createLinearGradient(0, ry, 0, ry + len);
+    refl.addColorStop(0, sg.color + "70");
+    refl.addColorStop(1, sg.color + "00");
+    g.fillStyle = refl;
+    g.beginPath();
+    g.moveTo(rx - rw / 2, ry);
+    g.lineTo(rx + rw / 2, ry);
+    g.lineTo(rx + rw * 0.18, ry + len);
+    g.lineTo(rx - rw * 0.18, ry + len);
+    g.closePath();
+    g.fill();
     g.restore();
   }
 
@@ -426,15 +429,6 @@ function paintHongKong(g, globe, groundAt) {
     g.fill();
   }
   g.restore();
-  // 보도블록 줄눈
-  g.strokeStyle = "rgba(255,255,255,0.06)";
-  g.lineWidth = 0.6;
-  for (let y = floorTop + 8; y < bottom; y += 9) {
-    g.beginPath();
-    for (let x = left; x <= right; x += 6) g.lineTo(x, Math.max(groundAt(x) + 3, y));
-    g.stroke();
-  }
-
   g.restore();
 }
 
