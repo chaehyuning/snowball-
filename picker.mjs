@@ -1,14 +1,16 @@
 // 지구본 선택창: 지구본을 돌려 나라를 고르는 캐릭터 선택 화면
 // 육지 윤곽은 Natural Earth 1:110m (world-atlas, 퍼블릭 도메인)을 0.5도 단위로 줄인 land.json
 
-// 각 나라 핀의 위치(위도, 경도)와 카드에 보여줄 내용
+// 각 나라 핀의 위치(위도, 경도)와 카드에 보여줄 내용.
+// 핀 머리는 실제 위치에서 위로 stem, 옆으로 dx만큼 떨어져 있음.
+// 한중일은 서로 가까워서 중국은 왼쪽 위, 한국은 바로 위로 높게, 일본은 오른쪽 위로 벌려 둠
 const PLACES = {
-  japan: { lat: 35.36, lon: 138.73, landmark: "후지산", particle: "벚꽃잎", color: "#f6a3ba", stem: 30 },
-  korea: { lat: 37.55, lon: 126.99, landmark: "N서울타워", particle: "반짝이는 불빛", color: "#ffd27a", stem: 16 },
-  canada: { lat: 46.81, lon: -71.21, landmark: "샤토 프롱트낙", particle: "단풍잎", color: "#e0531f", stem: 22 },
-  australia: { lat: -33.86, lon: 151.21, landmark: "오페라하우스", particle: "물방울", color: "#4fb0e8", stem: 22 },
-  finland: { lat: 66.54, lon: 25.85, landmark: "산타마을", particle: "눈꽃", color: "#e8f2ff", stem: 22 },
-  china: { lat: 39.92, lon: 116.39, landmark: "자금성", particle: "은행잎", color: "#f2c230", stem: 36 },
+  japan: { lat: 35.36, lon: 138.73, landmark: "후지산", particle: "벚꽃잎", color: "#f6a3ba", stem: 24, dx: 30 },
+  korea: { lat: 37.55, lon: 126.99, landmark: "N서울타워", particle: "반짝이는 불빛", color: "#ffd27a", stem: 42, dx: 0 },
+  canada: { lat: 46.81, lon: -71.21, landmark: "샤토 프롱트낙", particle: "단풍잎", color: "#e0531f", stem: 22, dx: 0 },
+  australia: { lat: -33.86, lon: 151.21, landmark: "오페라하우스", particle: "물방울", color: "#4fb0e8", stem: 22, dx: 0 },
+  finland: { lat: 66.54, lon: 25.85, landmark: "산타마을", particle: "눈꽃", color: "#e8f2ff", stem: 22, dx: 0 },
+  china: { lat: 39.92, lon: 116.39, landmark: "자금성", particle: "은행잎", color: "#f2c230", stem: 24, dx: -30 },
 };
 
 const RAD = Math.PI / 180;
@@ -333,8 +335,8 @@ function draw() {
     const focused = id === state.focus;
     const s = size / 340;
     const pr = (focused ? 17 : 12) * s;
-    const stem = p.stem * s * (focused ? 1.15 : 1);
-    const by = y - stem;
+    const bx = x + p.dx * s;
+    const by = y - p.stem * s;
 
     g.globalAlpha = Math.min(1, cosc * 3);
     g.fillStyle = "rgba(0,0,0,0.35)";
@@ -345,8 +347,13 @@ function draw() {
     g.lineWidth = 1.5 * s;
     g.beginPath();
     g.moveTo(x, y);
-    g.lineTo(x, by + pr);
+    g.lineTo(bx, by);
     g.stroke();
+    // 실제 위치 표시점
+    g.fillStyle = "#ffffff";
+    g.beginPath();
+    g.arc(x, y, 1.8 * s, 0, Math.PI * 2);
+    g.fill();
 
     if (focused) {
       // 고른 핀 둘레에서 퍼지는 고리
@@ -355,7 +362,7 @@ function draw() {
       g.globalAlpha = (1 - k) * 0.8;
       g.lineWidth = 2 * s;
       g.beginPath();
-      g.arc(x, by, pr + k * 14 * s, 0, Math.PI * 2);
+      g.arc(bx, by, pr + k * 14 * s, 0, Math.PI * 2);
       g.stroke();
       g.globalAlpha = Math.min(1, cosc * 3);
     }
@@ -363,12 +370,12 @@ function draw() {
     g.strokeStyle = focused ? p.color : "rgba(207,216,234,0.6)";
     g.lineWidth = (focused ? 2.5 : 1.2) * s;
     g.beginPath();
-    g.arc(x, by, pr, 0, Math.PI * 2);
+    g.arc(bx, by, pr, 0, Math.PI * 2);
     g.fill();
     g.stroke();
     const icon = state.icons[id];
-    if (icon.complete && icon.naturalWidth) g.drawImage(icon, x - pr * 0.72, by - pr * 0.72, pr * 1.44, pr * 1.44);
+    if (icon.complete && icon.naturalWidth) g.drawImage(icon, bx - pr * 0.72, by - pr * 0.72, pr * 1.44, pr * 1.44);
     g.globalAlpha = 1;
-    state.pins.push({ id, x, y: by, r: pr });
+    state.pins.push({ id, x: bx, y: by, r: pr });
   }
 }
