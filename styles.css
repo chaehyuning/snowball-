@@ -37,3 +37,31 @@ canvas {
   font-size: 14px;
   opacity: 0.7;
 }
+
+.scenes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.scenes button {
+  padding: 8px 14px;
+  border: 1px solid rgba(207, 216, 234, 0.3);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.scenes button:hover {
+  border-color: rgba(207, 216, 234, 0.6);
+}
+
+.scenes button[aria-pressed="true"] {
+  background: #cfd8ea;
+  border-color: #cfd8ea;
+  color: #0b1226;
+}

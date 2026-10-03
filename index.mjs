@@ -1,4 +1,8 @@
-import { paintFuji, SAKURA_COLORS } from "./scene-fuji.mjs";
+import { fuji } from "./scene-fuji.mjs";
+import { namsan } from "./scene-namsan.mjs";
+import { quebec } from "./scene-quebec.mjs";
+
+const SCENES = [fuji, namsan, quebec];
 
 const canvas = document.getElementById("globe");
 const ctx = canvas.getContext("2d");
@@ -13,11 +17,11 @@ ctx.scale(dpr, dpr);
 
 const globe = { x: 200, y: 210, r: 170 };
 const mound = { x: 200, y: 360, rx: 190, ry: 50 };
-const PETAL_COUNT = 220;
 const MAX_OFFSET = 50; // 흔들 수 있는 최대 거리
 
 // 흔들기 상태 (스노우볼은 손을 스프링처럼 따라감)
 let dragging = false;
+let startX = 0;
 let startY = 0;
 let target = 0;
 let offset = 0;
@@ -87,30 +91,71 @@ function settle(p) {
   p.flip = rand(-0.6, 0.6); // 바닥에 누운 꽃잎은 넓은 면이 보이게
 }
 
-// 꽃잎마다 무게·저항·떠오르기 쉬운 정도를 다르게 준다.
-// 꽃잎은 눈보다 가볍고 넓어서 천천히 가라앉고 물살을 잘 탄다.
-const petals = Array.from({ length: PETAL_COUNT }, () => {
-  const size = rand(2.6, 4.6);
-  const p = {
-    x: globe.x + rand(-120, 120),
-    size,
-    color: SAKURA_COLORS[Math.floor(Math.random() * SAKURA_COLORS.length)],
-    sink: 0.1 + size * 0.03 + rand(-0.03, 0.03), // 가라앉는 속도
-    drag: rand(0.08, 0.13), // 물 흐름을 따라가는 정도
-    inertia: rand(0.3, 0.6), // 흔들림에 반응하는 정도
-    grip: rand(0.4, 1.8), // 바닥에서 떠오르기 어려운 정도
-    angle: rand(0, Math.PI * 2),
-    spin: rand(-0.04, 0.04),
-    flip: 0, // 뒤집히는 각도
-    flipSpeed: rand(0.03, 0.08),
+let scene;
+let particles = [];
+let layers = {};
+
+// 장면을 바꾸면 고정 그림을 다시 그리고 입자를 새로 만든다.
+// 입자마다 무게·저항·떠오르기 쉬운 정도는 장면 파일이 정한다.
+function loadScene(id) {
+  scene = SCENES.find((s) => s.id === id) || SCENES[0];
+  layers = {
+    baseBack: makeLayer(paintBaseBack),
+    scene: makeLayer((g) => scene.paint(g, globe, groundAt)),
+    glass: makeLayer(paintGlass),
+    baseFront: makeLayer(paintBaseFront),
   };
-  settle(p);
-  return p;
+  particles = Array.from({ length: scene.particles.count }, () => {
+    const p = { x: globe.x + rand(-120, 120), angle: 0, spin: 0, flip: 0, flipSpeed: 0 };
+    Object.assign(p, scene.particles.make(rand));
+    settle(p);
+    return p;
+  });
+  stir = 0;
+  document.title = `Snowball · ${scene.title}`;
+  for (const button of document.querySelectorAll("[data-scene]")) {
+    button.setAttribute("aria-pressed", String(button.dataset.scene === scene.id));
+  }
+}
+
+// 장면이 바뀔 때 직전 화면을 잠깐 겹쳐 그려 부드럽게 넘어가게 함
+const FADE_MS = 350;
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let fadeFrom = null;
+let fadeStart = 0;
+
+function switchScene(id) {
+  if (id === scene.id) return;
+  if (!reduceMotion.matches) {
+    fadeFrom = document.createElement("canvas");
+    fadeFrom.width = canvas.width;
+    fadeFrom.height = canvas.height;
+    fadeFrom.getContext("2d").drawImage(canvas, 0, 0);
+    fadeStart = performance.now();
+  }
+  history.replaceState(null, "", `#${id}`);
+  loadScene(id);
+}
+
+// 1이면 다음 나라, -1이면 이전 나라. 끝에서는 처음으로 돌아감
+function stepScene(dir) {
+  const i = SCENES.indexOf(scene);
+  switchScene(SCENES[(i + dir + SCENES.length) % SCENES.length].id);
+}
+
+for (const button of document.querySelectorAll("[data-scene]")) {
+  button.addEventListener("click", () => switchScene(button.dataset.scene));
+}
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") stepScene(1);
+  if (e.key === "ArrowLeft") stepScene(-1);
 });
 
-// 드래그로 위아래 흔들기
+// 위아래로 끌면 흔들기, 좌우로 밀면 나라 바꾸기
 canvas.addEventListener("pointerdown", (e) => {
   dragging = true;
+  startX = e.clientX;
   startY = e.clientY;
   canvas.setPointerCapture(e.pointerId);
   canvas.style.cursor = "grabbing";
@@ -127,7 +172,12 @@ function release() {
   target = 0;
   canvas.style.cursor = "grab";
 }
-canvas.addEventListener("pointerup", release);
+canvas.addEventListener("pointerup", (e) => {
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  release();
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) stepScene(dx < 0 ? 1 : -1);
+});
 canvas.addEventListener("pointercancel", release);
 
 function update(t, accel) {
@@ -135,11 +185,11 @@ function update(t, accel) {
   stir = Math.min(stir + Math.abs(accel) * 0.12, 3);
   stir *= 0.99;
 
-  for (const p of petals) {
+  for (const p of particles) {
     const flow = flowAt(p.x, p.y, t);
 
     if (p.settled) {
-      // 스노우볼이 아래로 가속하는 힘 + 바닥 근처 물살이 꽃잎마다 다른 기준을 넘으면 떠오름
+      // 스노우볼이 아래로 가속하는 힘 + 바닥 근처 물살이 입자마다 다른 기준을 넘으면 떠오름
       const lift = accel * p.inertia - flow.y + Math.hypot(flow.x, flow.y) * 0.3;
       if (lift > p.grip) {
         p.settled = false;
@@ -149,15 +199,15 @@ function update(t, accel) {
       continue;
     }
 
-    // 유리가 움직이면 물보다 무거운 꽃잎은 뒤처진다
+    // 유리가 움직이면 물보다 무거운 입자는 뒤처진다
     p.vy -= accel * p.inertia;
 
     // 물 흐름 쪽으로 서서히 끌려가고, 물이 잔잔하면 제 무게만큼 가라앉는다
     p.vx += (flow.x - p.vx) * p.drag;
     p.vy += (flow.y + p.sink - p.vy) * p.drag;
 
-    // 꽃잎이 뒤집힐 때마다 옆으로 미끄러지며 팔랑임
-    p.vx += Math.cos(p.flip) * 0.025;
+    // 꽃잎처럼 납작한 입자는 뒤집힐 때마다 옆으로 미끄러지며 팔랑임
+    p.vx += Math.cos(p.flip) * p.flutter;
 
     // 미세하게 흔들려서 한 줄로 뭉치지 않게 함
     const jitter = 0.03 + stir * 0.05;
@@ -202,35 +252,14 @@ function update(t, accel) {
   }
 }
 
-// 벚꽃잎: 끝이 V자로 살짝 갈라진 둥근 잎
-function drawPetal(p) {
-  const s = p.size;
-  ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(p.angle);
-  // 뒤집히는 각도에 따라 폭이 줄었다 늘었다 해서 회전하는 것처럼 보임
-  ctx.scale(Math.max(0.2, Math.abs(Math.cos(p.flip))), 1);
-  ctx.fillStyle = p.color;
-  ctx.beginPath();
-  ctx.moveTo(0, s);
-  ctx.bezierCurveTo(-s * 0.95, s * 0.25, -s * 0.75, -s * 0.9, -s * 0.22, -s);
-  ctx.lineTo(0, -s * 0.72);
-  ctx.lineTo(s * 0.22, -s);
-  ctx.bezierCurveTo(s * 0.75, -s * 0.9, s * 0.95, s * 0.25, 0, s);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawPetals() {
+function drawParticles(t) {
   ctx.save();
   ctx.beginPath();
   ctx.arc(globe.x, globe.y, globe.r, 0, Math.PI * 2);
   ctx.clip();
-  for (const p of petals) {
-    ctx.globalAlpha = p.settled ? 0.95 : 0.75 + p.size * 0.05;
-    drawPetal(p);
-  }
-  ctx.globalAlpha = 1;
+  scene.animate?.(ctx, t);
+  ctx.globalCompositeOperation = scene.particles.blend;
+  for (const p of particles) scene.particles.draw(ctx, p, t);
   ctx.restore();
 }
 
@@ -252,7 +281,7 @@ function paintGlass(g) {
   g.translate(x - 62, y - 78);
   g.rotate(-0.7);
   const soft = g.createRadialGradient(0, 0, 0, 0, 0, 70);
-  soft.addColorStop(0, "rgba(255,255,255,0.45)");
+  soft.addColorStop(0, `rgba(255,255,255,${0.45 * scene.glare})`);
   soft.addColorStop(1, "rgba(255,255,255,0)");
   g.fillStyle = soft;
   g.beginPath();
@@ -261,7 +290,7 @@ function paintGlass(g) {
   g.restore();
 
   // 또렷한 작은 반사점
-  g.fillStyle = "rgba(255,255,255,0.85)";
+  g.fillStyle = `rgba(255,255,255,${0.85 * scene.glare})`;
   g.beginPath();
   g.ellipse(x - 95, y - 85, 9, 5, -0.8, 0, Math.PI * 2);
   g.fill();
@@ -291,7 +320,7 @@ function paintGlass(g) {
 const base = { top: 352, bottom: 452, topRx: 100, bottomRx: 128, ry: 14 };
 
 function paintBaseBack(g) {
-  g.fillStyle = "#1d1214";
+  g.fillStyle = scene.base.collar;
   g.beginPath();
   g.ellipse(globe.x, base.top, base.topRx, base.ry, 0, 0, Math.PI * 2);
   g.fill();
@@ -300,14 +329,11 @@ function paintBaseBack(g) {
 function paintBaseFront(g) {
   const cx = globe.x;
   const { top, bottom, topRx, bottomRx, ry } = base;
+  const look = scene.base;
 
-  // 검은 옻칠 몸통. 가운데가 밝아 둥근 원통처럼 보임
+  // 옻칠 몸통. 가운데가 밝아 둥근 원통처럼 보임
   const body = g.createLinearGradient(cx - bottomRx, 0, cx + bottomRx, 0);
-  body.addColorStop(0, "#0e0809");
-  body.addColorStop(0.35, "#3a2426");
-  body.addColorStop(0.5, "#4a2f30");
-  body.addColorStop(0.7, "#24161a");
-  body.addColorStop(1, "#0b0607");
+  [0, 0.35, 0.5, 0.7, 1].forEach((stop, i) => body.addColorStop(stop, look.body[i]));
   g.fillStyle = body;
   g.beginPath();
   g.ellipse(cx, top, topRx, ry, 0, 0, Math.PI);
@@ -323,12 +349,9 @@ function paintBaseFront(g) {
   g.fillStyle = sheen;
   g.fill();
 
-  // 금색 테두리 두 줄
+  // 금속 테두리 두 줄
   const gold = g.createLinearGradient(cx - bottomRx, 0, cx + bottomRx, 0);
-  gold.addColorStop(0, "#7a5a1c");
-  gold.addColorStop(0.45, "#f2d17a");
-  gold.addColorStop(0.6, "#c99a35");
-  gold.addColorStop(1, "#6b4d16");
+  [0, 0.45, 0.6, 1].forEach((stop, i) => gold.addColorStop(stop, look.trim[i]));
   g.strokeStyle = gold;
   for (const [yy, rx, w] of [
     [top + 3, topRx + 2, 3],
@@ -340,23 +363,21 @@ function paintBaseFront(g) {
     g.stroke();
   }
 
-  // 이름판
+  // 이름판. 글자 길이에 맞춰 폭을 정함
   const plateY = top + 50;
+  g.font = look.plateFont;
+  const plateW = g.measureText(look.plate).width + 24;
   g.fillStyle = gold;
   g.beginPath();
-  g.roundRect(cx - 58, plateY - 13, 116, 26, 4);
+  g.roundRect(cx - plateW / 2, plateY - 13, plateW, 26, 4);
   g.fill();
-  g.fillStyle = "#2b1d10";
+  g.fillStyle = look.plateInk;
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.font = "600 13px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
-  g.fillText("富士山 · MT. FUJI", cx, plateY + 1);
+  g.fillText(look.plate, cx, plateY + 1);
 }
 
-const baseBackLayer = makeLayer(paintBaseBack);
-const sceneLayer = makeLayer((g) => paintFuji(g, globe, groundAt));
-const glassLayer = makeLayer(paintGlass);
-const baseFrontLayer = makeLayer(paintBaseFront);
+loadScene(location.hash.slice(1));
 
 function frame(t) {
   // 스노우볼이 손을 스프링처럼 따라가고, 놓으면 살짝 출렁이며 제자리로 돌아감
@@ -384,12 +405,23 @@ function frame(t) {
 
   ctx.save();
   ctx.translate(0, PAD + offset);
-  ctx.drawImage(baseBackLayer, 0, 0, W, H);
-  ctx.drawImage(sceneLayer, 0, 0, W, H);
-  drawPetals();
-  ctx.drawImage(glassLayer, 0, 0, W, H);
-  ctx.drawImage(baseFrontLayer, 0, 0, W, H);
+  ctx.drawImage(layers.baseBack, 0, 0, W, H);
+  ctx.drawImage(layers.scene, 0, 0, W, H);
+  drawParticles(t);
+  ctx.drawImage(layers.glass, 0, 0, W, H);
+  ctx.drawImage(layers.baseFront, 0, 0, W, H);
   ctx.restore();
+
+  if (fadeFrom) {
+    const k = (performance.now() - fadeStart) / FADE_MS;
+    if (k >= 1) {
+      fadeFrom = null;
+    } else {
+      ctx.globalAlpha = 1 - k;
+      ctx.drawImage(fadeFrom, 0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+  }
 
   requestAnimationFrame(frame);
 }
