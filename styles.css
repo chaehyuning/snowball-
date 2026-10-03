@@ -182,12 +182,12 @@ body {
   }
 }
 
-/* 왼쪽 아래 장면 정보 */
+/* 왼쪽 아래 도시 소개: 관광 홍보 지면처럼 */
 .meta {
   position: absolute;
   left: clamp(16px, 4vw, 72px);
-  bottom: 110px;
-  width: 230px;
+  bottom: 96px;
+  width: 270px;
   font-size: 11px;
   letter-spacing: 0.04em;
 }
@@ -207,22 +207,37 @@ body {
   letter-spacing: 0.08em;
 }
 
-.meta-title {
-  margin-top: 14px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0;
+.meta-visit {
+  margin-top: 16px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
-.meta-region {
-  margin-top: 2px;
+.meta-tagline {
+  margin-top: 4px;
+  font-family: var(--script);
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.meta-text {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.75;
+  letter-spacing: 0;
   color: var(--ink-dim);
+  word-break: keep-all;
 }
 
 .meta-list {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 4px 14px;
+  gap: 5px 14px;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
@@ -240,6 +255,10 @@ body {
 .meta-list dd {
   color: var(--ink-dim);
   white-space: pre;
+}
+
+.meta-coord {
+  color: var(--ink) !important;
 }
 
 .meta-particle::before {
@@ -313,7 +332,7 @@ body {
 
 .deco-left {
   left: clamp(16px, 4vw, 72px);
-  top: 22%;
+  top: 13%;
 }
 
 .deco-right {
@@ -354,9 +373,19 @@ body {
 
 /* 장식 글씨와 장면 정보가 버튼과 겹칠 만큼 좁아지면 숨김 */
 @media (max-width: 1180px) {
-  .deco-right,
-  .meta {
+  .deco-right {
     display: none;
+  }
+
+  /* 도시 소개는 스노우볼과 버튼 아래로 내려옴 */
+  body {
+    flex-direction: column;
+    gap: 36px;
+  }
+
+  .meta {
+    position: static;
+    width: min(100%, 420px);
   }
 
   .deco-left .deco-sub {
