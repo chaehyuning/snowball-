@@ -1,6 +1,6 @@
 // 일본: 후지산과 벚꽃
 
-import { seeded, fillSilhouette } from "./util.mjs";
+import { seeded, fillSilhouette, paintTree } from "./util.mjs";
 
 const SAKURA_COLORS = ["#fff0f4", "#ffe3ea", "#ffd0dc", "#fbb9cb", "#f6a3ba"];
 
@@ -84,8 +84,9 @@ function paintFuji(g, globe, groundAt) {
   }
 
   // 앞쪽 벚나무 두 그루가 양옆에서 풍경을 감쌈
-  paintCherryTree(g, rnd, 34, 352, 50, -1.3, 7, 5);
-  paintCherryTree(g, rnd, 368, 354, 50, -1.85, 7, 5);
+  const cherry = { trunk: "#3e2c2c", shade: "#d97f9c", colors: SAKURA_COLORS.slice(0, 4) };
+  paintTree(g, rnd, 34, 352, 50, -1.3, 7, 5, cherry);
+  paintTree(g, rnd, 368, 354, 50, -1.85, 7, 5, cherry);
 
   // 꽃잎이 깔린 바닥
   const floorTop = groundAt(globe.x);
@@ -226,55 +227,6 @@ function paintPagoda(g, x, baseY, scale) {
     g.stroke();
   }
   g.restore();
-}
-
-// 가지를 재귀로 뻗고, 가지 끝마다 꽃송이를 겹겹이 찍는다
-function paintCherryTree(g, rnd, x, y, len, angle, width, depth) {
-  const r = (a, b) => a + rnd() * (b - a);
-  const clusters = [];
-
-  function branch(x, y, len, angle, width, depth) {
-    const ex = x + Math.cos(angle) * len;
-    const ey = y + Math.sin(angle) * len;
-    const mx = (x + ex) / 2 + r(-0.15, 0.15) * len;
-    const my = (y + ey) / 2 + r(-0.15, 0.15) * len;
-    g.strokeStyle = "#3e2c2c";
-    g.lineWidth = width;
-    g.lineCap = "round";
-    g.beginPath();
-    g.moveTo(x, y);
-    g.quadraticCurveTo(mx, my, ex, ey);
-    g.stroke();
-
-    if (depth === 0) {
-      clusters.push([ex, ey, r(10, 17)]);
-      return;
-    }
-    if (depth <= 2) clusters.push([ex, ey, r(8, 13)]);
-    const n = rnd() < 0.4 ? 3 : 2;
-    for (let i = 0; i < n; i++) {
-      branch(ex, ey, len * r(0.62, 0.8), angle + r(-0.7, 0.7), width * 0.66, depth - 1);
-    }
-  }
-  branch(x, y, len, angle, width, depth);
-
-  // 뒤쪽 그늘진 꽃 → 앞쪽 밝은 꽃 순서로 찍어 입체감을 냄
-  for (const pass of [0, 1]) {
-    for (const [cx, cy, cr] of clusters) {
-      const count = Math.round(cr * (pass ? 2.2 : 1.4));
-      for (let i = 0; i < count; i++) {
-        const a = r(0, Math.PI * 2);
-        const d = Math.sqrt(rnd()) * cr;
-        const shift = pass ? -1.2 : 1.5;
-        g.globalAlpha = pass ? r(0.65, 0.95) : 0.6;
-        g.fillStyle = pass ? SAKURA_COLORS[Math.floor(rnd() * 4)] : "#d97f9c";
-        g.beginPath();
-        g.arc(cx + Math.cos(a) * d + shift, cy + Math.sin(a) * d + shift, r(1.2, 3), 0, Math.PI * 2);
-        g.fill();
-      }
-    }
-  }
-  g.globalAlpha = 1;
 }
 
 // 벚꽃잎: 끝이 V자로 살짝 갈라진 둥근 잎

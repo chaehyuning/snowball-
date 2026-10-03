@@ -1,7 +1,8 @@
 import { fuji } from "./scene-fuji.mjs";
 import { namsan } from "./scene-namsan.mjs";
+import { quebec } from "./scene-quebec.mjs";
 
-const SCENES = [fuji, namsan];
+const SCENES = [fuji, namsan, quebec];
 
 const canvas = document.getElementById("globe");
 const ctx = canvas.getContext("2d");
