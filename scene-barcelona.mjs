@@ -6,7 +6,7 @@ import { seeded, fillSilhouette } from "./util.mjs";
 const JEWEL = ["#2f6fd6", "#1aa3a0", "#3cbf6a", "#7fd0f0", "#f2b632", "#f06a2a", "#d8324a", "#ffd86a"];
 
 // 신랑에서 제단 쪽 벽을 올려다본 구도:
-// 금빛 별 천장 → 큰 장미창 → 두 쌍의 긴 창 → 성가대 회랑 → 아래 문과 작은 장미창
+// 별 그물 천장과 숲 기둥(같은 3차원 좌표) → 뾰족 아치 속 장미창과 창 → 성가대 회랑 → 아래 문
 function paintBarcelona(g, globe, groundAt) {
   const rnd = seeded(1882);
   const r = (a, b) => a + rnd() * (b - a);
@@ -34,83 +34,148 @@ function paintBarcelona(g, globe, groundAt) {
   // 가로 s(-1 왼쪽 벽 ~ 1 오른쪽 벽), 깊이 z(작을수록 가까움)로 놓고 화면에 옮김
   const CEIL_Y = 64 + 0.15 * 373;
   const ceil = (sx, z) => [200 + (sx * 170) / z, 230 + (CEIL_Y - 230) / z];
-  const zs = [0.5, 0.62, 0.78, 1, 1.3, 1.7, 2.07];
-  // 세로 갈비뼈: 벽과 나란히 소실점으로 모이는 선
-  g.strokeStyle = "rgba(160,110,50,0.35)";
+
+  // ── 3차원 뼈대 ──────────────────────────────────────────────
+  // 점 (X, Y, z) → 화면 (200 + X/z, 230 + (Y-230)/z). X는 z=1에서의 가로 px, Y는 높이(아래로 +),
+  // z는 깊이(1 = 가까운 벽 끝, 2.07 = 제단 벽). 깊이 1은 가로 400px 만큼의 거리(DEPTH)
+  const DEPTH = 400;
+  const P = (X, Y, z) => [200 + X / z, 230 + (Y - 230) / z];
+  const onCeil = (X, z) => P(X, CEIL_Y, z);
+  // 천장 마디: 가운데 줄(큰 별 볼트), 기둥 바로 위 줄(X=±95, 작은 별), 벽 줄(X=±170).
+  // 가운데 줄과 기둥 줄은 깊이가 반 칸씩 엇갈려, 이으면 별 그물(지그재그 삼각형)이 됨
+  const COL_X = 95;
+  const COL_Z = 1.18;
+  const SIDE_Z = [0.72, COL_Z, 1.72];
+  const MID_Z = [0.5, 0.94, 1.45, 2.0];
+  const tri = (a, b, c) => {
+    g.beginPath();
+    g.moveTo(...a);
+    g.lineTo(...b);
+    g.lineTo(...c);
+    g.closePath();
+  };
+  // 삼각 면: 마디(기둥 위 별)에서 가장 밝고 멀어질수록 금빛 그늘. 면마다 밝기를 번갈아 깎인 느낌
+  let facet = 0;
+  const panel = (hub, a, b) => {
+    const [hx, hy] = hub;
+    const reach = Math.hypot(a[0] - hx, a[1] - hy) + 10;
+    const grad = g.createRadialGradient(hx, hy, 0, hx, hy, reach);
+    const light = facet++ % 2 === 0;
+    grad.addColorStop(0, "#ffe6a6");
+    grad.addColorStop(0.5, light ? "#efbf72" : "#e4b062");
+    grad.addColorStop(1, light ? "#c98c45" : "#b97b3a");
+    g.fillStyle = grad;
+    tri(hub, a, b);
+    g.fill();
+  };
+  for (const s of [-1, 1]) {
+    for (let k = 0; k < SIDE_Z.length; k++) {
+      const S = onCeil(s * COL_X, SIDE_Z[k]);
+      const C0 = onCeil(0, MID_Z[k]);
+      const C1 = onCeil(0, MID_Z[k + 1]);
+      const W0 = onCeil(s * 170, MID_Z[k]);
+      const W1 = onCeil(s * 170, MID_Z[k + 1]);
+      panel(S, C0, C1);
+      panel(S, W0, W1);
+      panel(S, C0, W0);
+      panel(S, C1, W1);
+    }
+    // 앞뒤 끝: 첫 마디 앞과 마지막 마디 뒤를 같은 결로 메움
+    const first = onCeil(s * COL_X, SIDE_Z[0]);
+    panel(first, onCeil(0, 0.3), onCeil(0, MID_Z[0]));
+    panel(first, onCeil(s * 170, 0.3), onCeil(s * 170, MID_Z[0]));
+    panel(first, onCeil(0, 0.3), onCeil(s * 170, 0.3));
+    const last = onCeil(s * COL_X, SIDE_Z[SIDE_Z.length - 1]);
+    panel(last, onCeil(0, MID_Z[3]), onCeil(0, 2.07));
+    panel(last, onCeil(s * 170, MID_Z[3]), onCeil(s * 170, 2.07));
+    panel(last, onCeil(0, 2.07), onCeil(s * 170, 2.07));
+  }
+  // 갈비뼈: 삼각 면의 모서리. 가까울수록 굵게
+  const rib = (X0, z0, X1, z1) => {
+    g.lineWidth = 1.6 / Math.min(z0, z1);
+    g.beginPath();
+    g.moveTo(...onCeil(X0, z0));
+    g.lineTo(...onCeil(X1, z1));
+    g.stroke();
+  };
   g.lineCap = "round";
-  for (const sx of [-1, -0.5, 0, 0.5, 1]) {
-    g.lineWidth = sx === 0 ? 1.4 : 1;
-    g.beginPath();
-    g.moveTo(...ceil(sx, 0.45));
-    g.lineTo(...ceil(sx, 2.07));
-    g.stroke();
+  g.strokeStyle = "rgba(140,88,34,0.6)";
+  for (const s of [-1, 1]) {
+    for (let k = 0; k < SIDE_Z.length; k++) {
+      const z = SIDE_Z[k];
+      rib(s * COL_X, z, 0, MID_Z[k]);
+      rib(s * COL_X, z, 0, MID_Z[k + 1]);
+      rib(s * COL_X, z, s * 170, MID_Z[k]);
+      rib(s * COL_X, z, s * 170, MID_Z[k + 1]);
+    }
   }
-  // 가로 갈비뼈: 깊이마다 한 줄, 멀수록 촘촘
-  for (const z of zs) {
-    g.lineWidth = 1.4 / z;
+  // 별 볼트: 천장 평면 위의 별(바깥 끝 R, 안쪽 r)을 원근으로 옮겨 그림. 가운데는 빛이 들어오는 둥근 구멍
+  const star = (X0, z0, n, R, r) => {
+    const pts = [];
+    for (let i = 0; i < n * 2; i++) {
+      const a = (i * Math.PI) / n - Math.PI / 2;
+      const rad = i % 2 ? r : R;
+      pts.push(onCeil(X0 + rad * Math.cos(a), z0 + (rad * Math.sin(a)) / DEPTH));
+    }
+    const [cx, cy] = onCeil(X0, z0);
+    const body = g.createRadialGradient(cx, cy, 0, cx, cy, R / z0);
+    body.addColorStop(0, "#fff6d2");
+    body.addColorStop(0.45, "#f7cd6a");
+    body.addColorStop(1, "#d9963c");
+    g.fillStyle = body;
     g.beginPath();
-    g.moveTo(...ceil(-1, z));
-    g.lineTo(...ceil(1, z));
+    pts.forEach((pt, i) => (i ? g.lineTo(...pt) : g.moveTo(...pt)));
+    g.closePath();
+    g.fill();
+    g.strokeStyle = "rgba(150,95,35,0.55)";
+    g.lineWidth = 0.8 / z0;
     g.stroke();
-  }
-  // 격자 칸마다 움푹한 금빛 판(코퍼)을 채워 빈 곳이 없게: 가운데는 밝고 가장자리는 그늘
-  const sxs = [-1, -0.5, 0, 0.5, 1];
-  for (let k = 0; k < zs.length - 1; k++) {
-    for (let i = 0; i < sxs.length - 1; i++) {
-      const pts = [ceil(sxs[i], zs[k]), ceil(sxs[i + 1], zs[k]), ceil(sxs[i + 1], zs[k + 1]), ceil(sxs[i], zs[k + 1])];
-      const [mx, my] = ceil((sxs[i] + sxs[i + 1]) / 2, (zs[k] + zs[k + 1]) / 2);
-      const panel = g.createRadialGradient(mx, my, 0, mx, my, 40 / zs[k]);
-      panel.addColorStop(0, "rgba(255,226,150,0.55)");
-      panel.addColorStop(1, "rgba(190,130,60,0.35)");
-      g.fillStyle = panel;
+    // 별 가지마다 가운데 결: 밝은 선이 끝으로 뻗음
+    g.strokeStyle = "rgba(255,246,214,0.7)";
+    g.lineWidth = 0.6 / z0;
+    for (let i = 0; i < n * 2; i += 2) {
       g.beginPath();
-      pts.forEach((pt, j) => (j ? g.lineTo(...pt) : g.moveTo(...pt)));
-      g.closePath();
-      g.fill();
-      // 칸 안쪽 테두리: 한 단 들어간 금빛 테
-      const inset = pts.map(([x, y]) => [mx + (x - mx) * 0.82, my + (y - my) * 0.82]);
-      g.strokeStyle = "rgba(255,236,180,0.6)";
-      g.lineWidth = 0.8 / zs[k];
-      g.beginPath();
-      inset.forEach((pt, j) => (j ? g.lineTo(...pt) : g.moveTo(...pt)));
-      g.closePath();
+      g.moveTo(cx, cy);
+      g.lineTo(...pts[i]);
       g.stroke();
     }
-  }
-  // 금빛 갈비뼈를 한 번 더 굵게
-  g.strokeStyle = "rgba(200,140,50,0.55)";
-  for (const sx of sxs) {
-    g.lineWidth = 1.6;
-    g.beginPath();
-    g.moveTo(...ceil(sx, 0.45));
-    g.lineTo(...ceil(sx, 2.07));
-    g.stroke();
-  }
-  for (const z of zs) {
-    g.lineWidth = 1.8 / z;
-    g.beginPath();
-    g.moveTo(...ceil(-1, z));
-    g.lineTo(...ceil(1, z));
-    g.stroke();
-  }
-  // 칸마다 잎사귀 볼트 하나. 가운데 줄은 금빛 별 천창
-  const rc = seeded(1926);
-  for (let k = 0; k < zs.length - 1; k++) {
-    const z = (zs[k] + zs[k + 1]) / 2;
-    for (const sx of [-0.75, -0.25, 0.25, 0.75]) {
-      const [x, y] = ceil(sx, z);
-      leafVault(g, x, y, 11 / z, rc);
+    // 둥근 빛 구멍: 테는 어둡고 속은 하얗게 빛남
+    const hole = [];
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      hole.push(onCeil(X0 + r * 0.62 * Math.cos(a), z0 + (r * 0.62 * Math.sin(a)) / DEPTH));
     }
-    const [cx, cy] = ceil(0, zs[k]);
-    starVault(g, cx, cy, 16 / zs[k]);
-  }
+    const light = g.createRadialGradient(cx, cy, 0, cx, cy, (r * 0.62) / z0);
+    light.addColorStop(0, "#ffffff");
+    light.addColorStop(0.6, "#ffe9a6");
+    light.addColorStop(1, "#e3a040");
+    g.fillStyle = light;
+    g.beginPath();
+    hole.forEach((pt, i) => (i ? g.lineTo(...pt) : g.moveTo(...pt)));
+    g.closePath();
+    g.fill();
+    g.strokeStyle = "rgba(120,72,24,0.6)";
+    g.lineWidth = 1 / z0;
+    g.stroke();
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    const gr = (r * 1.2) / z0;
+    const glow = g.createRadialGradient(cx, cy, 0, cx, cy, gr);
+    glow.addColorStop(0, "rgba(255,230,160,0.5)");
+    glow.addColorStop(1, "rgba(255,200,120,0)");
+    g.fillStyle = glow;
+    g.fillRect(cx - gr, cy - gr, gr * 2, gr * 2);
+    g.restore();
+  };
+  for (const z of MID_Z) star(0, z, 8, 58, 24);
+  for (const s of [-1, 1]) for (const z of SIDE_Z) star(s * COL_X, z, 6, 38, 15);
 
   // 천장 전체에 쏟아지는 금빛: 가운데 줄을 따라 밝게 번지고 반짝이는 작은 빛점
   g.save();
   g.globalCompositeOperation = "lighter";
   const gold = g.createRadialGradient(200, 80, 0, 200, 80, 170);
-  gold.addColorStop(0, "rgba(255,170,60,0.28)");
-  gold.addColorStop(0.5, "rgba(255,160,50,0.1)");
+  gold.addColorStop(0, "rgba(255,170,60,0.12)");
+  gold.addColorStop(0.5, "rgba(255,160,50,0.04)");
   gold.addColorStop(1, "rgba(255,160,50,0)");
   g.fillStyle = gold;
   g.fillRect(left, top, size, 260);
@@ -309,9 +374,17 @@ function paintBarcelona(g, globe, groundAt) {
     g.restore();
   }
 
-  // 숲 기둥 두 그루: 소실점(200, 230)을 사이에 두고 좌우 같은 깊이에 섬. 세로선은 그대로 곧고,
-  // 위에서 가지가 갈라져 천장을 받침
-  for (const side of [-1, 1]) forestColumn(g, side, 0.56, 1.18, CEIL_Y, groundAt);
+  // 숲 기둥 두 그루: 소실점을 사이에 두고 좌우 같은 깊이(COL_Z)에 섬. 몸통은 곧게 오르다
+  // 가지 다섯 갈래로 나뉘어, 각 가지 끝이 천장 별 그물의 마디에 정확히 닿음 (같은 3차원 좌표로 계산)
+  for (const side of [-1, 1]) {
+    forestColumn(g, P, groundAt, side * COL_X, COL_Z, CEIL_Y, [
+      [side * COL_X, COL_Z], // 바로 위 작은 별
+      [0, MID_Z[1]], // 안쪽 앞 큰 별
+      [0, MID_Z[2]], // 안쪽 뒤 큰 별
+      [side * 170, MID_Z[1]], // 벽 쪽 앞
+      [side * 170, MID_Z[2]], // 벽 쪽 뒤
+    ]);
+  }
 
   // 바닥: 따뜻한 돌. 창빛이 색 웅덩이로 비침
   const floorTop = groundAt(globe.x);
@@ -337,206 +410,100 @@ function paintBarcelona(g, globe, groundAt) {
   g.restore();
 }
 
-// 숲 기둥: 짙은 반암 밑동 → 타원 마디 → 크림색 몸통 → 네 갈래 가지가 천장으로 퍼짐.
-// 제단 쪽(안쪽) 면이 밝고 바깥 면은 그늘. 벽과 같은 원근(가로 sx, 깊이 z)으로 놓음
-function forestColumn(g, side, sx, z, ceilY, groundAt) {
-  const cx = 200 + (side * sx * 170) / z;
-  const baseY = groundAt(cx) + 4; // 바닥(입자가 쌓이는 선)에 밑동이 닿음
-  const topY = 230 + (ceilY - 230) / z;
-  const w = 15 / z;
-  const knotY = baseY - (baseY - topY) * 0.3;
-  const splitY = baseY - (baseY - topY) * 0.6;
-  const wAt = (y) => w * (1 - 0.3 * ((baseY - y) / (baseY - splitY)));
-  const trunk = (y0, y1) => {
-    g.beginPath();
-    for (let y = y1; y >= y0; y -= 2) g.lineTo(cx - wAt(y) / 2, y);
-    for (let y = y0; y <= y1; y += 2) g.lineTo(cx + wAt(y) / 2, y);
-    g.closePath();
-  };
+// 숲 기둥: 크림색 몸통이 곧게 오르다 마디를 지나 가지가 갈라짐.
+// 가지는 3차원 2차 곡선(처음엔 거의 수직, 위로 갈수록 마디 쪽으로 기움)을 원근으로 옮겨 그림.
+// 굵기도 깊이에 맞춰 줄어듦. 소실점(가운데) 쪽 면이 밝음
+function forestColumn(g, P, groundAt, X, z, ceilY, targets) {
+  const RHO = 6; // 몸통 반지름(가로 px, z=1 기준)
+  const SPLIT_Y = 205; // 가지가 갈라지는 높이
+  const [cx, splitY] = P(X, SPLIT_Y, z);
+  const baseY = groundAt(cx) + 4;
+  const half = RHO / z;
+  const lightSide = X < 0 ? 1 : -1; // 가운데 쪽(+1이면 오른쪽)이 밝음
 
   g.save();
-  // 바닥에 떨어진 그림자: 밑동에서 바깥 앞쪽으로 번짐
-  g.save();
-  g.filter = "blur(4px)";
-  g.fillStyle = "rgba(70,45,20,0.35)";
+  // 몸통
+  const trunk = g.createLinearGradient(cx - half * lightSide, 0, cx + half * lightSide, 0);
+  trunk.addColorStop(0, "#a8957a");
+  trunk.addColorStop(0.55, "#e6d6b8");
+  trunk.addColorStop(0.8, "#fff6e4");
+  trunk.addColorStop(1, "#d9c6a4");
+  g.fillStyle = trunk;
   g.beginPath();
-  g.ellipse(cx - side * w * 0.6, baseY - 2, w * 1.3, w * 0.28, 0, 0, Math.PI * 2);
+  g.moveTo(cx - half, baseY);
+  g.lineTo(cx - half * 0.86, splitY);
+  g.lineTo(cx + half * 0.86, splitY);
+  g.lineTo(cx + half, baseY);
+  g.closePath();
   g.fill();
-  g.restore();
-
-  // 몸통 한 토막: 안쪽은 밝고 바깥쪽으로 둥글게 어두워짐
-  const paint = (y0, y1, hi, mid, lo) => {
-    g.save();
-    trunk(y0, y1);
-    g.clip();
-    const half = wAt(y1) / 2 + 2;
-    const inner = cx - side * half;
-    const outer = cx + side * half;
-    const round = g.createLinearGradient(inner, 0, outer, 0);
-    round.addColorStop(0, mid);
-    round.addColorStop(0.22, hi);
-    round.addColorStop(0.55, mid);
-    round.addColorStop(1, lo);
-    g.fillStyle = round;
-    g.fillRect(cx - half - 2, y0 - 2, half * 2 + 4, y1 - y0 + 4);
-    // 세로 홈: 몸통을 따라 옅게
-    g.lineWidth = 0.5;
-    for (const f of [-0.28, 0, 0.28]) {
-      g.strokeStyle = f * side < 0 ? "rgba(255,250,240,0.16)" : "rgba(40,30,20,0.12)";
-      g.beginPath();
-      for (let y = y1; y >= y0; y -= 4) g.lineTo(cx + f * wAt(y), y);
-      g.stroke();
-    }
-    g.restore();
-  };
-  paint(knotY, baseY, "#efe3cc", "#cbb896", "#8e7a5e");
-  paint(splitY, knotY, "#fff6e6", "#ddcaa6", "#9a8160");
-
-  // 마디: 몸통이 부풀어 오른 둥근 띠
-  const kw = wAt(knotY);
-  const knot = g.createLinearGradient(0, knotY - kw * 0.22, 0, knotY + kw * 0.22);
-  knot.addColorStop(0, "#fbf1dc");
-  knot.addColorStop(0.5, "#d8c6a4");
-  knot.addColorStop(1, "#9a8466");
-  g.fillStyle = knot;
+  // 마디: 몸통 3분의 1 높이의 둥근 띠
+  const knotY = baseY - (baseY - splitY) * 0.38;
+  g.fillStyle = "#f4e6c8";
   g.beginPath();
-  g.ellipse(cx, knotY, kw * 0.6, kw * 0.18, 0, 0, Math.PI * 2);
+  g.ellipse(cx, knotY, half * 1.15, half * 0.32, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "rgba(110,85,55,0.35)";
+  g.beginPath();
+  g.ellipse(cx, knotY + half * 0.3, half * 0.95, half * 0.14, 0, 0, Math.PI * 2);
   g.fill();
 
-  // 가지: 몸통 끝에서 네 갈래. 바깥 가지는 옆으로 눕고, 안쪽 가지는 소실점 쪽으로 기움
-  const sw = wAt(splitY);
-  const limb = (x0, y0, kx, ky, ex, ey, w0, w1) => {
-    const pt = (t) => {
+  // 가지: 몸통 끝 B에서 천장 마디 T까지. 조절점은 B 바로 위(수평으로 15%만 기움, 높이는 55% 올라감)
+  for (const [TX, Tz] of targets) {
+    const B = [X, SPLIT_Y, z];
+    const T = [TX, ceilY, Tz];
+    const C = [X + (TX - X) * 0.15, SPLIT_Y - (SPLIT_Y - ceilY) * 0.55, z + (Tz - z) * 0.15];
+    const at = (t) => {
       const u = 1 - t;
-      return [u * u * x0 + 2 * u * t * kx + t * t * ex, u * u * y0 + 2 * u * t * ky + t * t * ey];
+      return [0, 1, 2].map((i) => u * u * B[i] + 2 * u * t * C[i] + t * t * T[i]);
     };
     const L = [];
     const R = [];
-    for (let k = 0; k <= 12; k++) {
-      const t = k / 12;
-      const [px, py] = pt(t);
-      const [qx, qy] = pt(Math.min(1, t + 0.01));
-      const a = Math.atan2(qy - py, qx - px) + Math.PI / 2;
-      const h = (w0 + (w1 - w0) * t) / 2;
-      L.push([px + Math.cos(a) * h, py + Math.sin(a) * h]);
-      R.push([px - Math.cos(a) * h, py - Math.sin(a) * h]);
+    const steps = 18;
+    for (let k = 0; k <= steps; k++) {
+      const t = k / steps;
+      const [x3, y3, z3] = at(t);
+      const [px, py] = P(x3, y3, z3);
+      const [qx, qy] = P(...at(Math.min(1, t + 0.02)));
+      const [ox, oy] = P(...at(Math.max(0, t - 0.02)));
+      const ang = Math.atan2(qy - oy, qx - ox) + Math.PI / 2;
+      const w = ((RHO * 0.62) * (1 - 0.45 * t)) / z3;
+      L.push([px + Math.cos(ang) * w, py + Math.sin(ang) * w]);
+      R.push([px - Math.cos(ang) * w, py - Math.sin(ang) * w]);
     }
     g.beginPath();
-    L.forEach((q, i) => (i ? g.lineTo(...q) : g.moveTo(...q)));
+    L.forEach((pt, i) => (i ? g.lineTo(...pt) : g.moveTo(...pt)));
     for (let i = R.length - 1; i >= 0; i--) g.lineTo(...R[i]);
     g.closePath();
-    const body = g.createLinearGradient(cx - side * sw, 0, cx + side * sw, 0);
-    body.addColorStop(0, "#fff6e6");
-    body.addColorStop(0.5, "#e2d0ae");
-    body.addColorStop(1, "#a88f6c");
-    g.fillStyle = body;
+    g.fillStyle = "#eadbbd";
     g.fill();
-    g.strokeStyle = "rgba(110,85,55,0.3)";
-    g.lineWidth = 0.5;
+    g.strokeStyle = "rgba(120,92,60,0.4)";
+    g.lineWidth = 0.6;
     g.stroke();
-    return pt(1);
-  };
-  const ends = [];
-  for (const [dx, reach] of [[-1.5, 0.96], [-0.45, 1], [0.45, 1], [1.5, 0.96]]) {
-    const ex = cx + dx * sw * 2.6;
-    const ey = splitY - (splitY - topY) * reach;
-    ends.push(limb(cx + dx * sw * 0.2, splitY + 4, cx + dx * sw * 0.35, splitY - (splitY - ey) * 0.5, ex, ey, sw * 0.42, sw * 0.18));
-  }
-  // 가지 끝: 천장에 닿는 작은 꽃받침 원반 (아랫면 그늘)
-  for (const [ex, ey] of ends) {
-    g.fillStyle = "#f3e4c4";
+    // 빛 받는 결: 가운데 쪽 가장자리를 따라 밝은 줄
+    const lit = lightSide * (L[0][0] - R[0][0]) > 0 ? L : R;
+    g.strokeStyle = "rgba(255,250,236,0.85)";
+    g.lineWidth = 0.9;
     g.beginPath();
-    g.ellipse(ex, ey, sw * 0.42, sw * 0.12, 0, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = "rgba(120,90,50,0.35)";
+    lit.forEach((pt, i) => (i ? g.lineTo(...pt) : g.moveTo(...pt)));
+    g.stroke();
+    // 가지 끝이 천장에 닿는 자리: 천장 평면 위의 작은 원판
+    const cap = [];
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      cap.push(P(TX + 5 * Math.cos(a), ceilY, Tz + (5 * Math.sin(a)) / 400));
+    }
+    g.fillStyle = "#f6e9cc";
     g.beginPath();
-    g.ellipse(ex, ey + sw * 0.08, sw * 0.36, sw * 0.06, 0, 0, Math.PI * 2);
-    g.fill();
-  }
-  // 가지가 갈라지는 자리를 덮는 매끈한 어깨
-  g.fillStyle = "#e9d9bb";
-  g.beginPath();
-  g.ellipse(cx, splitY + 3, sw * 0.62, sw * 0.2, 0, 0, Math.PI * 2);
-  g.fill();
-  g.restore();
-}
-
-// 잎사귀 볼트: 쌍곡면 천장 칸. 둘레는 크림색 돌 잎이 톱니처럼 둘러싸고, 가운데는 움푹 들어가 그늘,
-// 맨 가운데 작은 금빛 등. 둘레에 아주 작은 금빛 점이 고리처럼 박힘
-function leafVault(g, cx, cy, rr, rnd) {
-  const leaves = 9;
-  for (let k = 0; k < leaves; k++) {
-    const a = (k / leaves) * Math.PI * 2 + rnd() * 0.2;
-    const grad = g.createLinearGradient(cx, cy, cx + Math.cos(a) * rr * 1.3, cy + Math.sin(a) * rr);
-    grad.addColorStop(0, "#c8781e");
-    grad.addColorStop(0.5, "#eeb052");
-    grad.addColorStop(1, "#fbe6bf");
-    g.fillStyle = grad;
-    g.beginPath();
-    g.moveTo(cx + Math.cos(a - 0.35) * rr * 0.45, cy + Math.sin(a - 0.35) * rr * 0.34);
-    g.lineTo(cx + Math.cos(a - 0.12) * rr * 1.15, cy + Math.sin(a - 0.12) * rr * 0.86);
-    g.lineTo(cx + Math.cos(a) * rr * 1.35, cy + Math.sin(a) * rr);
-    g.lineTo(cx + Math.cos(a + 0.12) * rr * 1.15, cy + Math.sin(a + 0.12) * rr * 0.86);
-    g.lineTo(cx + Math.cos(a + 0.35) * rr * 0.45, cy + Math.sin(a + 0.35) * rr * 0.34);
+    cap.forEach((pt, i) => (i ? g.lineTo(...pt) : g.moveTo(...pt)));
     g.closePath();
     g.fill();
   }
-  const hole = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 0.55);
-  hole.addColorStop(0, "#fff6c8");
-  hole.addColorStop(0.3, "#ffc23a");
-  hole.addColorStop(1, "#a85a14");
-  g.fillStyle = hole;
+  // 가지가 갈라지는 어깨
+  g.fillStyle = "#efe1c4";
   g.beginPath();
-  g.ellipse(cx, cy, rr * 0.55, rr * 0.42, 0, 0, Math.PI * 2);
+  g.ellipse(cx, splitY, half * 1.05, half * 0.3, 0, 0, Math.PI * 2);
   g.fill();
-  // 가운데에서 번지는 금빛
-  g.save();
-  g.globalCompositeOperation = "lighter";
-  const halo = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 1.6);
-  halo.addColorStop(0, "rgba(255,170,60,0.3)");
-  halo.addColorStop(1, "rgba(255,170,60,0)");
-  g.fillStyle = halo;
-  g.fillRect(cx - rr * 1.6, cy - rr * 1.6, rr * 3.2, rr * 3.2);
   g.restore();
-  g.fillStyle = "#fff3c4";
-  for (let k = 0; k < 8; k++) {
-    const a = (k / 8) * Math.PI * 2;
-    g.beginPath();
-    g.arc(cx + Math.cos(a) * rr * 0.72, cy + Math.sin(a) * rr * 0.55, Math.max(0.5, rr * 0.07), 0, Math.PI * 2);
-    g.fill();
-  }
-}
-
-// 금빛 별 천창: 주황 꽃잎이 뾰족하게 퍼지고 가운데는 노란 빛. 둘레로 크림색 돌 갈비뼈
-function starVault(g, cx, cy, rr) {
-  const glow = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 1.8);
-  glow.addColorStop(0, "rgba(255,220,120,0.95)");
-  glow.addColorStop(1, "rgba(255,210,110,0)");
-  g.fillStyle = glow;
-  g.fillRect(cx - rr * 1.8, cy - rr * 1.8, rr * 3.6, rr * 3.6);
-  const spikes = 12;
-  for (let k = 0; k < spikes; k++) {
-    const a = (k / spikes) * Math.PI * 2;
-    const len = rr * (k % 2 ? 1.25 : 0.95);
-    const grad = g.createLinearGradient(cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len * 0.75);
-    grad.addColorStop(0, "#ffb83a");
-    grad.addColorStop(1, "#fff0c8");
-    g.fillStyle = grad;
-    g.beginPath();
-    g.moveTo(cx + Math.cos(a - 0.22) * rr * 0.35, cy + Math.sin(a - 0.22) * rr * 0.26);
-    g.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len * 0.75);
-    g.lineTo(cx + Math.cos(a + 0.22) * rr * 0.35, cy + Math.sin(a + 0.22) * rr * 0.26);
-    g.closePath();
-    g.fill();
-  }
-  const core = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 0.42);
-  core.addColorStop(0, "#fff4c0");
-  core.addColorStop(0.6, "#ffcf4a");
-  core.addColorStop(1, "#d98a2a");
-  g.fillStyle = core;
-  g.beginPath();
-  g.ellipse(cx, cy, rr * 0.42, rr * 0.32, 0, 0, Math.PI * 2);
-  g.fill();
 }
 
 // 장미창: 바깥 돌 테, 방사형 색유리 꽃잎, 가운데 노란 빛, 납선
