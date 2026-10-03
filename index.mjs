@@ -341,6 +341,32 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let fadeFrom = null;
 let fadeStart = 0;
 
+// 공유 주소: ?landmark=paris 처럼 도시 이름으로 지금 보는 스노우볼을 가리킴.
+// 예전 주소(#france)나 나라 이름(?landmark=france)도 알아들음
+const SLUGS = {
+  japan: "fuji",
+  korea: "namsan",
+  canada: "quebec",
+  australia: "sydney",
+  finland: "rovaniemi",
+  china: "beijing",
+  egypt: "giza",
+  france: "paris",
+  turkey: "istanbul",
+  spain: "barcelona",
+};
+function idFromUrl(hashFirst = false) {
+  const query = new URLSearchParams(location.search).get("landmark") || "";
+  const hash = location.hash.slice(1);
+  const want = (hashFirst ? hash || query : query || hash).toLowerCase();
+  if (!want) return null;
+  if (SLUGS[want]) return want;
+  return Object.keys(SLUGS).find((id) => SLUGS[id] === want) || null;
+}
+function showInUrl(id) {
+  history.replaceState(null, "", `${location.pathname}?landmark=${SLUGS[id] || id}`);
+}
+
 function switchScene(id) {
   if (id === scene.id) return;
   sfx.whoosh();
@@ -351,7 +377,7 @@ function switchScene(id) {
     fadeFrom.getContext("2d").drawImage(canvas, 0, 0);
     fadeStart = performance.now();
   }
-  history.replaceState(null, "", `#${id}`);
+  showInUrl(id);
   loadScene(id);
   window.dispatchEvent(new Event("snowball:scene"));
 }
@@ -411,8 +437,11 @@ function firstGesture() {
 window.addEventListener("pointerdown", firstGesture);
 window.addEventListener("keydown", firstGesture);
 
-// 주소의 # 뒤를 직접 바꿔도 그 나라로 넘어감
-window.addEventListener("hashchange", () => switchScene(location.hash.slice(1)));
+// 예전 주소처럼 # 뒤를 직접 바꿔도 그 나라로 넘어감
+window.addEventListener("hashchange", () => {
+  const id = idFromUrl(true);
+  if (id) switchScene(id);
+});
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") stepScene(1);
@@ -804,11 +833,13 @@ function paintBaseFront(g) {
   g.fillText(look.plate, cx, plateY + 1);
 }
 
-// 주소에 나라가 없으면 한국부터
+// 주소에 나라가 없으면 한국부터. 있으면 주소를 ?landmark= 꼴로 맞춰 둠
 fillTicker(SCENES.map((s) => s.id));
 setupMetaToggle();
 setupKeepsakes({ capture: capturePostcard });
-loadScene(location.hash.slice(1) || "korea");
+const startId = idFromUrl();
+loadScene(startId || "korea");
+if (startId) showInUrl(startId);
 
 // 소리 켜기/끄기
 const soundButton = document.querySelector(".sound-toggle");
@@ -838,7 +869,7 @@ musicButton.addEventListener("click", () => {
 showMusic();
 
 // 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
-if (!location.hash) openPicker(SCENES, scene.id, switchScene, maybeTutorial);
+if (!startId) openPicker(SCENES, scene.id, switchScene, maybeTutorial);
 else maybeTutorial();
 
 function frame(t) {

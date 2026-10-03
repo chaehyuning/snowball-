@@ -273,6 +273,10 @@ function paintBarcelona(g, globe, groundAt) {
     g.restore();
   }
 
+  // 숲 기둥 두 그루: 소실점(200, 230)을 사이에 두고 좌우 같은 깊이에 섬. 세로선은 그대로 곧고,
+  // 위에서 가지가 갈라져 천장을 받침
+  for (const side of [-1, 1]) forestColumn(g, side, 0.56, 1.18, CEIL_Y, groundAt);
+
   // 바닥: 따뜻한 돌. 창빛이 색 웅덩이로 비침
   const floorTop = groundAt(globe.x);
   const floor = g.createLinearGradient(0, floorTop - 40, 0, globe.y + globe.r);
@@ -294,6 +298,130 @@ function paintBarcelona(g, globe, groundAt) {
   }
   g.restore();
 
+  g.restore();
+}
+
+// 숲 기둥: 짙은 반암 밑동 → 타원 마디 → 크림색 몸통 → 네 갈래 가지가 천장으로 퍼짐.
+// 제단 쪽(안쪽) 면이 밝고 바깥 면은 그늘. 벽과 같은 원근(가로 sx, 깊이 z)으로 놓음
+function forestColumn(g, side, sx, z, ceilY, groundAt) {
+  const cx = 200 + (side * sx * 170) / z;
+  const baseY = groundAt(cx) + 4; // 바닥(입자가 쌓이는 선)에 밑동이 닿음
+  const topY = 230 + (ceilY - 230) / z;
+  const w = 15 / z;
+  const knotY = baseY - (baseY - topY) * 0.3;
+  const splitY = baseY - (baseY - topY) * 0.6;
+  const wAt = (y) => w * (1 - 0.3 * ((baseY - y) / (baseY - splitY)));
+  const trunk = (y0, y1) => {
+    g.beginPath();
+    for (let y = y1; y >= y0; y -= 2) g.lineTo(cx - wAt(y) / 2, y);
+    for (let y = y0; y <= y1; y += 2) g.lineTo(cx + wAt(y) / 2, y);
+    g.closePath();
+  };
+
+  g.save();
+  // 바닥에 떨어진 그림자: 밑동에서 바깥 앞쪽으로 번짐
+  g.save();
+  g.filter = "blur(4px)";
+  g.fillStyle = "rgba(70,45,20,0.35)";
+  g.beginPath();
+  g.ellipse(cx - side * w * 0.6, baseY - 2, w * 1.3, w * 0.28, 0, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+
+  // 몸통 한 토막: 안쪽은 밝고 바깥쪽으로 둥글게 어두워짐
+  const paint = (y0, y1, hi, mid, lo) => {
+    g.save();
+    trunk(y0, y1);
+    g.clip();
+    const half = wAt(y1) / 2 + 2;
+    const inner = cx - side * half;
+    const outer = cx + side * half;
+    const round = g.createLinearGradient(inner, 0, outer, 0);
+    round.addColorStop(0, mid);
+    round.addColorStop(0.22, hi);
+    round.addColorStop(0.55, mid);
+    round.addColorStop(1, lo);
+    g.fillStyle = round;
+    g.fillRect(cx - half - 2, y0 - 2, half * 2 + 4, y1 - y0 + 4);
+    // 세로 홈: 몸통을 따라 옅게
+    g.lineWidth = 0.5;
+    for (const f of [-0.28, 0, 0.28]) {
+      g.strokeStyle = f * side < 0 ? "rgba(255,250,240,0.16)" : "rgba(40,30,20,0.12)";
+      g.beginPath();
+      for (let y = y1; y >= y0; y -= 4) g.lineTo(cx + f * wAt(y), y);
+      g.stroke();
+    }
+    g.restore();
+  };
+  paint(knotY, baseY, "#efe3cc", "#cbb896", "#8e7a5e");
+  paint(splitY, knotY, "#fff6e6", "#ddcaa6", "#9a8160");
+
+  // 마디: 몸통이 부풀어 오른 둥근 띠
+  const kw = wAt(knotY);
+  const knot = g.createLinearGradient(0, knotY - kw * 0.22, 0, knotY + kw * 0.22);
+  knot.addColorStop(0, "#fbf1dc");
+  knot.addColorStop(0.5, "#d8c6a4");
+  knot.addColorStop(1, "#9a8466");
+  g.fillStyle = knot;
+  g.beginPath();
+  g.ellipse(cx, knotY, kw * 0.6, kw * 0.18, 0, 0, Math.PI * 2);
+  g.fill();
+
+  // 가지: 몸통 끝에서 네 갈래. 바깥 가지는 옆으로 눕고, 안쪽 가지는 소실점 쪽으로 기움
+  const sw = wAt(splitY);
+  const limb = (x0, y0, kx, ky, ex, ey, w0, w1) => {
+    const pt = (t) => {
+      const u = 1 - t;
+      return [u * u * x0 + 2 * u * t * kx + t * t * ex, u * u * y0 + 2 * u * t * ky + t * t * ey];
+    };
+    const L = [];
+    const R = [];
+    for (let k = 0; k <= 12; k++) {
+      const t = k / 12;
+      const [px, py] = pt(t);
+      const [qx, qy] = pt(Math.min(1, t + 0.01));
+      const a = Math.atan2(qy - py, qx - px) + Math.PI / 2;
+      const h = (w0 + (w1 - w0) * t) / 2;
+      L.push([px + Math.cos(a) * h, py + Math.sin(a) * h]);
+      R.push([px - Math.cos(a) * h, py - Math.sin(a) * h]);
+    }
+    g.beginPath();
+    L.forEach((q, i) => (i ? g.lineTo(...q) : g.moveTo(...q)));
+    for (let i = R.length - 1; i >= 0; i--) g.lineTo(...R[i]);
+    g.closePath();
+    const body = g.createLinearGradient(cx - side * sw, 0, cx + side * sw, 0);
+    body.addColorStop(0, "#fff6e6");
+    body.addColorStop(0.5, "#e2d0ae");
+    body.addColorStop(1, "#a88f6c");
+    g.fillStyle = body;
+    g.fill();
+    g.strokeStyle = "rgba(110,85,55,0.3)";
+    g.lineWidth = 0.5;
+    g.stroke();
+    return pt(1);
+  };
+  const ends = [];
+  for (const [dx, reach] of [[-1.5, 0.96], [-0.45, 1], [0.45, 1], [1.5, 0.96]]) {
+    const ex = cx + dx * sw * 2.6;
+    const ey = splitY - (splitY - topY) * reach;
+    ends.push(limb(cx + dx * sw * 0.2, splitY + 4, cx + dx * sw * 0.35, splitY - (splitY - ey) * 0.5, ex, ey, sw * 0.42, sw * 0.18));
+  }
+  // 가지 끝: 천장에 닿는 작은 꽃받침 원반 (아랫면 그늘)
+  for (const [ex, ey] of ends) {
+    g.fillStyle = "#f3e4c4";
+    g.beginPath();
+    g.ellipse(ex, ey, sw * 0.42, sw * 0.12, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "rgba(120,90,50,0.35)";
+    g.beginPath();
+    g.ellipse(ex, ey + sw * 0.08, sw * 0.36, sw * 0.06, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  // 가지가 갈라지는 자리를 덮는 매끈한 어깨
+  g.fillStyle = "#e9d9bb";
+  g.beginPath();
+  g.ellipse(cx, splitY + 3, sw * 0.62, sw * 0.2, 0, 0, Math.PI * 2);
+  g.fill();
   g.restore();
 }
 
