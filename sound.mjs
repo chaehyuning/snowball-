@@ -222,6 +222,31 @@ function grains(start, { count, spread, lo, hi, dur = [0.01, 0.03], level = 0.12
 }
 
 // ── 나라별 "떼는 순간" 소리 ───────────────────────────────────────
+// 활로 긋는 현: 천천히 부풀었다 사라지는 낮은 음
+function bow(freq, start, { dur = 2, level = 0.06, pan = 0 } = {}) {
+  const o = ac.createOscillator();
+  o.type = "sawtooth";
+  o.frequency.value = freq;
+  const vib = ac.createOscillator();
+  vib.frequency.value = 5;
+  const vg = ac.createGain();
+  vg.gain.value = freq * 0.006;
+  vib.connect(vg).connect(o.frequency);
+  const f = ac.createBiquadFilter();
+  f.type = "lowpass";
+  f.frequency.value = freq * 4;
+  f.Q.value = 0.7;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, start);
+  g.gain.linearRampToValueAtTime(level, start + dur * 0.35);
+  g.gain.exponentialRampToValueAtTime(0.0008, start + dur);
+  o.connect(f).connect(g).connect(out(pan));
+  o.start(start);
+  vib.start(start);
+  o.stop(start + dur + 0.05);
+  vib.stop(start + dur + 0.05);
+}
+
 // 음계(반음 단위): 일본 인음계, 5음계, 중동 히자즈, 장음계
 const IN_SEN = [0, 1, 5, 7, 10, 12, 13, 17, 19];
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
@@ -247,10 +272,26 @@ const VOICES = {
     }
     for (let i = 0; i < 4; i++) bell(note(523.25, PENTA[i * 2]), t + 0.05 + i * 0.09, { level: 0.06, pan: rand(-0.4, 0.4) });
   },
-  // 단풍잎: 마른 낙엽 바스락 + 낮은 나무 실로폰
+  // 도깨비 소환: 촛불을 "후" 불면 불꽃이 꺼지고, 문 너머 퀘벡에서 바람이 밀려오며
+  // 단풍잎이 쏟아짐. 드라마 장면을 떠올리게 만든 소리이고 원곡을 옮긴 것은 아님.
   canada(t, p) {
-    grains(t + 0.02, { count: Math.round(30 + p * 40), spread: 0.9, lo: 1800, hi: 5200, level: 0.12 });
-    for (let i = 0; i < 4; i++) marimba(note(246.94, PENTA[i]), t + 0.05 + i * 0.12, { level: 0.14, pan: rand(-0.5, 0.5) });
+    // 촛불 부는 숨
+    noise(t, { dur: 0.45, type: "bandpass", freq: 1100, freqEnd: 450, q: 0.8, level: 0.14, attack: 0.06 });
+    // 불꽃이 꺼지는 작은 "툭"
+    noise(t + 0.38, { dur: 0.08, type: "lowpass", freq: 600, level: 0.12, attack: 0.002 });
+    // 문이 열리며 밀려오는 바람
+    noise(t + 0.35, { dur: 1.6, type: "lowpass", freq: 300, freqEnd: 2400, level: 0.09 + 0.04 * p, attack: 0.7 });
+    // 첼로처럼 낮게 부풀었다 사라지는 음
+    bow(note(146.83, 0), t + 0.4, { dur: 2.2, level: 0.07 });
+    bow(note(146.83, 7), t + 0.55, { dur: 2.0, level: 0.04 });
+    // 마법처럼 반짝이며 올라가는 종 (D 단조)
+    const MINOR = [0, 3, 7, 10, 14, 15, 19];
+    const n = Math.round(4 + p * 3);
+    for (let i = 0; i < n; i++) {
+      bell(note(587.33, MINOR[i]), t + 0.5 + i * 0.1, { level: 0.045, decay: 1.6, pan: -0.5 + (1.0 * i) / n });
+    }
+    // 마른 단풍잎 바스락
+    grains(t + 0.7, { count: Math.round(25 + p * 30), spread: 1.0, lo: 1800, hi: 5200, level: 0.1 });
   },
   // 물방울: 똑 또록 + 밀려오는 파도
   australia(t, p) {

@@ -6,20 +6,22 @@ const DONE_KEY = "snowball-tutorial-done";
 const STEPS = [
   {
     target: "#globe",
-    title: "꾹 눌렀다 떼 보세요",
-    text: "오래 누를수록 더 세게 터져요.",
+    title: "스노우볼을 눌러 보세요",
+    text: "한 번 누르면 입자가 흩날려요.",
     waitFor: "snowball:pop",
   },
   {
     target: "#globe",
-    title: "좌우로 밀어 보세요",
-    text: "다른 나라 스노우볼로 넘어가요.",
-    waitFor: "snowball:scene",
+    title: "이번엔 꾸욱 눌렀다 떼 보세요",
+    text: "오래 누를수록 세게 튕겨 나가요.",
+    waitFor: "snowball:pop",
+    // 충분히 오래 눌러서 세게 터졌을 때만 다음 단계로
+    accept: (e) => (e.detail?.power ?? 0) >= 0.85,
   },
   {
     target: ".scenes",
     title: "여기서 나라를 골라요",
-    text: "기호를 누르면 바로, 🌐를 누르면 지구본을 돌려 고를 수 있어요.",
+    text: "기호를 누르면 바로, 지구본을 누르면 돌려 가며 고를 수 있어요.",
   },
   {
     target: ".help-toggle",
@@ -94,8 +96,12 @@ function show() {
   ui.next.textContent = index === STEPS.length - 1 ? "시작하기" : "다음";
   if (s.waitFor) {
     // 직접 해 보면 잠깐 뒤 다음 단계로
-    const handler = () => setTimeout(next, 700);
-    window.addEventListener(s.waitFor, handler, { once: true });
+    const handler = (e) => {
+      if (s.accept && !s.accept(e)) return;
+      window.removeEventListener(s.waitFor, handler);
+      setTimeout(next, 700);
+    };
+    window.addEventListener(s.waitFor, handler);
     cleanup = () => window.removeEventListener(s.waitFor, handler);
   }
   place();
@@ -172,9 +178,10 @@ export function openHelp() {
       <div class="help-card">
         <p class="help-title">이렇게 즐겨요</p>
         <dl class="help-list">
-          <dt>꾹 눌렀다 떼기</dt><dd>팡! 입자가 솟아올라 흩날려요. 오래 누를수록 세게.</dd>
+          <dt>누르기</dt><dd>입자가 솟아올라 흩날려요.</dd>
+          <dt>꾸욱 눌렀다 떼기</dt><dd>오래 누를수록 세게 튕겨 나가요.</dd>
           <dt>좌우로 밀기</dt><dd>이전·다음 나라로 넘어가요.</dd>
-          <dt>오른쪽 기호</dt><dd>나라를 바로 골라요. 🌐는 지구본을 돌려 고르기.</dd>
+          <dt>오른쪽 기호</dt><dd>나라를 바로 골라요. 지구본을 누르면 돌려 가며 고르기.</dd>
           <dt>🔊 · ♪</dt><dd>효과음과 배경음악을 따로 켜고 꺼요.</dd>
           <dt>키보드</dt><dd>← → 나라 바꾸기, Space 팡.</dd>
         </dl>
