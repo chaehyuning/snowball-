@@ -470,11 +470,89 @@ function spruce(g, x, baseY, h, alpha) {
   g.globalAlpha = 1;
 }
 
+// 통나무집 옆면과 옆 지붕: 오른쪽 뒤로 물러나며 비스듬히 올라가 집이 입체로 보임.
+// 옆면은 정면보다 어둡고, 통나무 줄이 같은 기울기로 뒤로 모임
+function cabinSide(g, apexX, R, baseY, h, roofH, d) {
+  const k = d * 0.35;
+  const wall = g.createLinearGradient(R, 0, R + d, 0);
+  wall.addColorStop(0, "#4a2e20");
+  wall.addColorStop(1, "#2e1c14");
+  g.fillStyle = wall;
+  g.beginPath();
+  g.moveTo(R, baseY);
+  g.lineTo(R + d, baseY - k);
+  g.lineTo(R + d, baseY - h - k);
+  g.lineTo(R, baseY - h);
+  g.closePath();
+  g.fill();
+  g.strokeStyle = "rgba(15,8,5,0.55)";
+  g.lineWidth = 0.5;
+  for (let y = baseY - h + 3; y < baseY; y += 3) {
+    g.beginPath();
+    g.moveTo(R, y);
+    g.lineTo(R + d, y - k);
+    g.stroke();
+  }
+  // 옆면 창: 비스듬히 줄어든 사다리꼴, 안쪽 불빛
+  const wx0 = R + d * 0.3;
+  const wx1 = R + d * 0.62;
+  const wy = baseY - h * 0.62;
+  g.fillStyle = WINDOW;
+  g.globalAlpha = 0.85;
+  g.beginPath();
+  g.moveTo(wx0, wy - (wx0 - R) * (k / d));
+  g.lineTo(wx1, wy - (wx1 - R) * (k / d));
+  g.lineTo(wx1, wy + 6 - (wx1 - R) * (k / d));
+  g.lineTo(wx0, wy + 6 - (wx0 - R) * (k / d));
+  g.closePath();
+  g.fill();
+  g.globalAlpha = 1;
+  // 옆 지붕: 두껍게 쌓인 눈. 처마 쪽으로 갈수록 푸른 그늘
+  const eaveX = R + 4;
+  const eaveY = baseY - h;
+  const apexY = baseY - h - roofH;
+  g.fillStyle = "#3d2a20";
+  g.beginPath();
+  g.moveTo(eaveX, eaveY + 1);
+  g.lineTo(eaveX + d, eaveY + 1 - k);
+  g.lineTo(apexX + d, apexY - k);
+  g.lineTo(apexX, apexY);
+  g.closePath();
+  g.fill();
+  const snow = g.createLinearGradient(apexX, apexY, eaveX, eaveY);
+  snow.addColorStop(0, "#ffffff");
+  snow.addColorStop(0.75, "#e8eef8");
+  snow.addColorStop(1, "#bccbe2");
+  g.fillStyle = snow;
+  g.beginPath();
+  g.moveTo(eaveX + 1, eaveY - 1.5);
+  g.lineTo(eaveX + 1 + d, eaveY - 1.5 - k);
+  g.lineTo(apexX + d, apexY - 2.5 - k);
+  g.lineTo(apexX, apexY - 2.5);
+  g.closePath();
+  g.fill();
+  // 처마 끝으로 둥글게 처진 눈
+  g.strokeStyle = "#f4f7fc";
+  g.lineWidth = 2.2;
+  g.lineCap = "round";
+  g.beginPath();
+  g.moveTo(eaveX + 1, eaveY - 0.5);
+  g.lineTo(eaveX + 1 + d, eaveY - 0.5 - k);
+  g.stroke();
+  g.strokeStyle = "rgba(120,145,190,0.45)";
+  g.lineWidth = 0.8;
+  g.beginPath();
+  g.moveTo(eaveX + 1, eaveY + 0.9);
+  g.lineTo(eaveX + 1 + d, eaveY + 0.9 - k);
+  g.stroke();
+}
+
 // 통나무집: 둥근 통나무를 쌓은 벽(위는 밝고 아래 이음매는 그늘), 모서리로 삐져나온 통나무 끝,
 // 따뜻한 불빛이 새는 창, 두껍게 쌓인 지붕 눈과 고드름
 function cabin(g, x, baseY, w, h, roofH) {
   const left = x - w / 2;
   const logH = 3;
+  cabinSide(g, x, left + w, baseY, h, roofH, w * 0.32);
   for (let y = baseY - h, i = 0; y < baseY; y += logH, i++) {
     const log = g.createLinearGradient(0, y, 0, y + logH);
     log.addColorStop(0, "#7a5038");
@@ -585,7 +663,23 @@ function cabin(g, x, baseY, w, h, roofH) {
 // 산타 집무실: 가운데 뾰족탑이 있는 큰 통나무 건물과 빨간 문
 function santaOffice(g, x, baseY) {
   cabin(g, x, baseY, 70, 28, 26);
-  // 가운데 탑
+  // 가운데 탑: 정면과 오른쪽 옆면, 뾰족 지붕도 옆면이 보임
+  g.fillStyle = "#3a2418";
+  g.beginPath();
+  g.moveTo(x + 7, baseY - 48);
+  g.lineTo(x + 12, baseY - 50);
+  g.lineTo(x + 12, baseY - 64);
+  g.lineTo(x + 7, baseY - 62);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "#c9d6ea";
+  g.beginPath();
+  g.moveTo(x + 10, baseY - 62);
+  g.lineTo(x + 15, baseY - 64);
+  g.lineTo(x + 1.5, baseY - 85);
+  g.lineTo(x, baseY - 84);
+  g.closePath();
+  g.fill();
   g.fillStyle = "#5c3a28";
   g.fillRect(x - 7, baseY - 62, 14, 14);
   g.fillStyle = WINDOW;

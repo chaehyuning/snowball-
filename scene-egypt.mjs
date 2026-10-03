@@ -479,7 +479,7 @@ function sphinx(g) {
   g.fill();
 }
 
-// 사람을 태운 낙타 실루엣
+// 낙타 실루엣
 function camel(g, x, baseY) {
   // 해가 왼쪽 뒤에 있어 모래 위로 오른쪽으로 긴 그림자가 늘어짐
   g.fillStyle = "rgba(70,30,15,0.28)";
@@ -536,26 +536,6 @@ function camel(g, x, baseY) {
   g.quadraticCurveTo(x - 14.5, baseY - 11, x - 13.5, baseY - 8);
   g.stroke();
 
-  // 탄 사람: 펄럭이는 옷자락, 머리를 감싼 천
-  g.fillStyle = "#2e1a12";
-  g.beginPath();
-  g.moveTo(x - 4, baseY - 21);
-  g.quadraticCurveTo(x - 3.5, baseY - 27, x - 1, baseY - 28.5);
-  g.quadraticCurveTo(x + 1.6, baseY - 27, x + 2, baseY - 21);
-  g.quadraticCurveTo(x + 3.5, baseY - 17, x + 2.5, baseY - 15);
-  g.lineTo(x - 5, baseY - 15.5);
-  g.closePath();
-  g.fill();
-  g.beginPath();
-  g.ellipse(x - 0.8, baseY - 30, 1.8, 2.1, 0, 0, Math.PI * 2);
-  g.fill();
-  g.strokeStyle = "#2e1a12";
-  g.lineWidth = 0.8;
-  g.beginPath();
-  g.moveTo(x - 2.2, baseY - 30);
-  g.quadraticCurveTo(x - 4.5, baseY - 29, x - 5.5, baseY - 26);
-  g.stroke();
-
   // 등 뒤에서 비치는 노을빛: 위쪽 윤곽을 따라 가늘고 밝은 테
   g.save();
   body();
@@ -568,12 +548,6 @@ function camel(g, x, baseY) {
   g.quadraticCurveTo(x - 3, baseY - 26, x + 3, baseY - 18);
   g.stroke();
   g.restore();
-  g.strokeStyle = "rgba(255,190,120,0.5)";
-  g.lineWidth = 0.5;
-  g.beginPath();
-  g.moveTo(x - 1, baseY - 28.5);
-  g.quadraticCurveTo(x - 3.5, baseY - 27, x - 4, baseY - 21);
-  g.stroke();
 }
 
 // 모래알: 작은 알갱이. 가끔 햇빛을 받아 반짝임
