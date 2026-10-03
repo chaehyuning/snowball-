@@ -9,7 +9,7 @@ import { paris } from "./scene-paris.mjs";
 import { istanbul } from "./scene-istanbul.mjs";
 import { openPicker } from "./picker.mjs";
 import * as sfx from "./sound.mjs";
-import { showSceneInfo, fillTicker } from "./editorial.mjs";
+import { showSceneInfo, fillTicker, setupMetaToggle } from "./editorial.mjs";
 import { startTutorial, tutorialDone, openHelp } from "./tutorial.mjs";
 
 const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul];
@@ -635,6 +635,7 @@ function paintBaseFront(g) {
 
 // 주소에 나라가 없으면 한국부터
 fillTicker(SCENES.map((s) => s.id));
+setupMetaToggle();
 loadScene(location.hash.slice(1) || "korea");
 
 // 소리 켜기/끄기

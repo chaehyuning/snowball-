@@ -156,8 +156,14 @@
 
     <aside class="meta" aria-label="도시 소개">
       <p class="meta-num"><span class="meta-index"></span><span class="meta-total"></span></p>
-      <p class="meta-visit"></p>
+      <p class="meta-thisis">This is</p>
+      <h2 class="meta-city"></h2>
       <p class="meta-tagline"></p>
+      <button type="button" class="meta-toggle" aria-controls="meta-more" aria-expanded="false">
+        <span class="meta-toggle-label">자세히 보기</span>
+        <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+      </button>
+      <div class="meta-more" id="meta-more">
       <p class="meta-text"></p>
       <dl class="meta-list">
         <dt>Landmark</dt><dd class="meta-landmark"></dd>
@@ -165,6 +171,7 @@
         <dt>Location</dt><dd class="meta-coord"></dd>
         <dt>Falling</dt><dd class="meta-particle"></dd>
       </dl>
+      </div>
     </aside>
 
     <div class="ticker" aria-hidden="true"><div class="ticker-track"></div></div>
