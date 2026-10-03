@@ -364,6 +364,19 @@ export function pop(power, sceneId) {
   (VOICES[sceneId] || VOICES.korea)(t, power);
 }
 
+// 끌어서 흔드는 한 박자마다: 유리구 안 물이 출렁이며 입자가 사르르 쓸리는 소리
+const SHAKE_TONE = {
+  japan: 1800, korea: 3200, canada: 2600, australia: 900, finland: 2200,
+  china: 2800, egypt: 4200, france: 2000, turkey: 2400,
+};
+export function shake(level, sceneId) {
+  if (!ensure() || muted) return;
+  const t = ac.currentTime;
+  const f = SHAKE_TONE[sceneId] || 2400;
+  noise(t, { dur: 0.22, type: "bandpass", freq: f * 0.6, freqEnd: f, q: 0.9, level: 0.05 + 0.07 * level, attack: 0.04, pan: rand(-0.3, 0.3) });
+  noise(t, { dur: 0.3, type: "lowpass", freq: 500, freqEnd: 260, level: 0.04 * level, attack: 0.03 });
+}
+
 // 나라를 바꿀 때: 바람이 지나가는 "슉"
 export function whoosh() {
   if (!ensure() || muted) return;
