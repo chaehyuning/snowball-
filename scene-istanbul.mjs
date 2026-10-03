@@ -480,9 +480,16 @@ function animateIstanbul(ctx, t) {
 
 // 나비: 몸통과 두 쌍의 날개. 날 때는 날개를 접었다 폈다 하고, 앉으면 반쯤 편 채로 쉼
 // 날개 한 쪽(앞날개+뒷날개)을 색마다 한 번만 그려 둠.
-// 몸 쪽은 짙고 가운데는 선명한 색, 바깥 가장자리는 검은 띠에 흰 점, 잎맥은 가는 짙은 선
+// 검은 테 없이 밝게: 몸 쪽은 은은한 흰빛, 가운데는 선명한 색, 가장자리는 더 옅은 파스텔.
+// 잎맥은 흰 실선, 가장자리에 작은 흰 점, 윤곽은 같은 색의 짙은 톤으로 아주 가늘게
 const WING_U = 40;
 const wingSprites = new Map();
+function mixColor(hex, target, t) {
+  const n = parseInt(hex.slice(1), 16);
+  const m = parseInt(target.slice(1), 16);
+  const ch = (v, w, sh) => Math.round(((v >> sh) & 255) * (1 - t) + ((w >> sh) & 255) * t);
+  return `rgb(${ch(n, m, 16)},${ch(n, m, 8)},${ch(n, m, 0)})`;
+}
 function wingSprite(color) {
   if (wingSprites.has(color)) return wingSprites.get(color);
   const U = WING_U;
@@ -506,28 +513,31 @@ function wingSprite(color) {
     w.bezierCurveTo(0.05 * U, 0.55 * U, 0, 0.3 * U, 0, 0.02 * U);
     w.closePath();
   };
+  const pale = mixColor(color, "#ffffff", 0.55);
+  const deep = mixColor(color, "#0a3a4a", 0.35);
   for (const [shape, cx, cy] of [[hind, 0.1, 0.25], [fore, 0.15, -0.3]]) {
     const grad = w.createRadialGradient(cx * U, cy * U, 0, cx * U, cy * U, 1.2 * U);
-    grad.addColorStop(0, "#0c2230");
-    grad.addColorStop(0.28, color);
-    grad.addColorStop(0.62, color);
-    grad.addColorStop(0.78, "#14202a");
-    grad.addColorStop(1, "#0b141b");
+    grad.addColorStop(0, mixColor(color, "#ffffff", 0.7));
+    grad.addColorStop(0.35, color);
+    grad.addColorStop(0.7, color);
+    grad.addColorStop(1, pale);
     w.fillStyle = grad;
     shape();
     w.fill();
     w.save();
     shape();
     w.clip();
-    // 가운데 밝은 광택
-    const sheen = w.createRadialGradient(0.55 * U, (cy - 0.05) * U, 0, 0.55 * U, (cy - 0.05) * U, 0.45 * U);
-    sheen.addColorStop(0, "rgba(255,255,255,0.45)");
-    sheen.addColorStop(1, "rgba(255,255,255,0)");
+    // 비스듬히 비치는 무지갯빛 광택
+    const sheen = w.createLinearGradient(0, -U, 1.3 * U, 0.8 * U);
+    sheen.addColorStop(0.3, "rgba(255,255,255,0)");
+    sheen.addColorStop(0.5, "rgba(255,255,255,0.4)");
+    sheen.addColorStop(0.62, "rgba(220,200,255,0.2)");
+    sheen.addColorStop(0.75, "rgba(255,255,255,0)");
     w.fillStyle = sheen;
     w.fillRect(0, -U, 1.4 * U, 1.9 * U);
-    // 잎맥
-    w.strokeStyle = "rgba(8,25,35,0.45)";
-    w.lineWidth = U * 0.018;
+    // 흰 잎맥
+    w.strokeStyle = "rgba(255,255,255,0.45)";
+    w.lineWidth = U * 0.014;
     for (let k = 0; k < 6; k++) {
       const a = shape === fore ? -1.25 + k * 0.17 : -0.1 + k * 0.28;
       w.beginPath();
@@ -536,17 +546,22 @@ function wingSprite(color) {
       w.stroke();
     }
     w.restore();
+    // 아주 가는 윤곽
+    w.strokeStyle = deep;
+    w.globalAlpha = 0.5;
+    w.lineWidth = U * 0.02;
+    shape();
+    w.stroke();
+    w.globalAlpha = 1;
   }
-  // 가장자리 검은 띠 위 흰 점
-  w.fillStyle = "rgba(255,255,255,0.85)";
+  // 가장자리 흰 점
+  w.fillStyle = "rgba(255,255,255,0.9)";
   for (const [px, py, pr] of [
-    [1.12, -0.78, 0.045],
-    [1.17, -0.62, 0.04],
-    [1.1, -0.45, 0.035],
-    [0.95, -0.3, 0.03],
-    [0.78, 0.48, 0.035],
-    [0.6, 0.68, 0.035],
-    [0.38, 0.74, 0.03],
+    [1.1, -0.76, 0.035],
+    [1.15, -0.6, 0.03],
+    [1.08, -0.45, 0.028],
+    [0.76, 0.46, 0.03],
+    [0.58, 0.66, 0.03],
   ]) {
     w.beginPath();
     w.arc(px * U, py * U, pr * U, 0, Math.PI * 2);
@@ -572,15 +587,15 @@ function drawButterfly(ctx, p, t) {
     ctx.restore();
   }
   // 몸통: 가슴은 굵고 배는 가늘게 마디진 모양, 끝이 둥근 더듬이
-  ctx.fillStyle = "#14222b";
+  ctx.fillStyle = "#3d5f6b";
   ctx.beginPath();
-  ctx.ellipse(0, -s * 0.18, s * 0.09, s * 0.2, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -s * 0.18, s * 0.07, s * 0.18, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(0, s * 0.22, s * 0.06, s * 0.3, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, s * 0.2, s * 0.045, s * 0.27, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#14222b";
-  ctx.lineWidth = Math.max(0.5, s * 0.04);
+  ctx.strokeStyle = "#4f737f";
+  ctx.lineWidth = Math.max(0.4, s * 0.03);
   ctx.beginPath();
   ctx.moveTo(0, -s * 0.36);
   ctx.quadraticCurveTo(-s * 0.1, -s * 0.6, -s * 0.22, -s * 0.72);

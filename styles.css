@@ -163,7 +163,7 @@ body {
   left: 50%;
   top: 42%;
   z-index: -1;
-  width: 130%;
+  width: min(130%, 100vw);
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
@@ -779,11 +779,6 @@ body {
 
 /* 좁은 화면: 설정은 스노우볼 위 왼쪽에 가로로, 나라는 아래에 5열 2줄 */
 @media (max-width: 640px) {
-  /* 큰 필기체 지명이 화면 밖으로 넘쳐 가로 스크롤이 생기지 않게 */
-  .stage {
-    overflow-x: clip;
-  }
-
   .edition-coord,
   .brand em {
     display: none;

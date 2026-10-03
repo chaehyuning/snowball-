@@ -93,7 +93,23 @@ export function showSceneInfo(id, index, total) {
     ghost.textContent = info.word;
     ghost.classList.add("ghost-in");
   }
+  fitGhost();
 }
+
+// 좁은 화면에서는 배경 필기체 지명이 화면 폭 안에 다 들어오도록 글씨 크기를 줄임
+function fitGhost() {
+  const ghost = document.querySelector(".ghost");
+  if (!ghost) return;
+  ghost.style.fontSize = "";
+  const room = window.innerWidth - 24;
+  const width = ghost.scrollWidth;
+  if (width > room) {
+    const size = parseFloat(getComputedStyle(ghost).fontSize);
+    ghost.style.fontSize = `${Math.floor((size * room) / width)}px`;
+  }
+}
+window.addEventListener("resize", fitGhost);
+document.fonts?.ready.then(fitGhost);
 
 // 아래쪽에 천천히 흐르는 랜드마크 이름 띠. 끊김 없이 돌도록 같은 줄을 두 번 이어 붙임
 export function fillTicker(ids) {
