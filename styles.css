@@ -519,17 +519,43 @@ body {
   touch-action: none;
 }
 
+/* 오른쪽: 나라 3열 격자, 그 아래 'or' 구분선, 따로 떨어진 지구본 버튼 */
 .scenes {
   grid-area: scenes;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.scene-grid {
   display: grid;
   grid-template-columns: repeat(3, 46px);
   gap: 8px;
 }
 
-/* 지구본 버튼은 나라 격자 위에 넓게 */
+.scenes-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.scenes-or::before,
+.scenes-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
 .scenes .globe-open {
-  grid-column: 1 / -1;
   width: auto;
+  height: 40px;
+  padding: 0 14px 0 8px;
   border-radius: 999px;
   display: flex;
   gap: 6px;
@@ -776,21 +802,30 @@ body {
   }
 
   #globe {
-    width: min(calc(100vw - 32px), calc((100vh - 270px) / 1.5), 400px);
+    width: min(calc(100vw - 32px), calc((100vh - 320px) / 1.5), 400px);
   }
 
+  /* 나라는 5개·4개 두 줄, 그 아래 지구본 버튼을 따로 */
   .scenes {
-    grid-template-columns: repeat(5, 40px);
+    align-items: center;
+    gap: 12px;
+  }
+
+  .scene-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: calc(5 * 40px + 4 * 6px);
     gap: 6px;
   }
 
-  .scenes .globe-open {
-    grid-column: auto;
-    border-radius: 50%;
+  .scenes-or {
+    width: 180px;
   }
 
-  .globe-label {
-    display: none;
+  .scenes .globe-open {
+    width: auto;
+    height: 36px;
   }
 
   .scenes button,
