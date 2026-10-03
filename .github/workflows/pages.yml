@@ -1,0 +1,48 @@
+# GitHub Pages는 사이트를 하나만 배포할 수 있어서,
+# main은 사이트 루트에, preview 브랜치는 /preview/ 아래에 함께 올린다.
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main, preview]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: site
+
+      - name: Check out preview
+        uses: actions/checkout@v4
+        with:
+          ref: preview
+          path: site/preview
+
+      - name: Remove git metadata
+        run: rm -rf site/.git site/.github site/preview/.git site/preview/.github
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
