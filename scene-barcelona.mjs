@@ -190,10 +190,8 @@ function paintBarcelona(g, globe, groundAt) {
 
   // 나무 기둥: 아래에서 올려다봐서 위로 갈수록 가운데로 모임. 먼 것부터
   for (const [bx, tx, w, d] of [
-    [160, 172, 9, 0.2],
-    [134, 154, 15, 0.4],
-    [100, 130, 24, 0.7],
-    [46, 94, 34, 1],
+    [116, 142, 22, 0.6],
+    [50, 100, 34, 1],
   ]) {
     leaningColumn(g, bx, tx, 372, 110, w, -1, d);
     leaningColumn(g, 400 - bx, 400 - tx, 372, 110, w, 1, d);
@@ -484,11 +482,12 @@ function leaningColumn(g, bx, tx, baseY, topY, w, side, d) {
     g.stroke();
     return pt;
   };
-  for (const [dx, rise] of [[-1.5, 0.55], [-0.5, 0.95], [0.5, 0.95], [1.5, 0.55]]) {
+  for (const [dx, rise] of [[-1.2, 0.6], [0, 0.95], [1.2, 0.6]]) {
     const ex = sx + dx * sw * 1.4;
     const ey = splitY - (splitY - 50) * rise;
     const pt = limb(sx + dx * sw * 0.18, splitY + 2, sx + dx * sw * 0.55, splitY - (splitY - ey) * 0.4, ex, ey, sw * 0.34, sw * 0.16);
     const [fx, fy] = pt(1);
+    if (Math.abs(dx) < 0.5) continue; // 가운데 가지만 곧게, 바깥 가지만 끝에서 두 갈래
     for (const fork of [-1, 1]) {
       const tx2 = fx + (fork * 0.6 + dx * 0.4) * sw * 0.9;
       const ty2 = fy - (fy - 40) * 0.6 - 4;
