@@ -171,6 +171,7 @@ function loadScene(id) {
   for (const button of document.querySelectorAll("[data-scene]")) {
     button.setAttribute("aria-pressed", String(button.dataset.scene === scene.id));
   }
+  document.getElementById("scene-name").textContent = scene.label;
 }
 
 // 장면이 바뀔 때 직전 화면을 잠깐 겹쳐 그려 부드럽게 넘어가게 함
