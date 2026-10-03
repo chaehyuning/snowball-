@@ -6,13 +6,13 @@ import { PLACES } from "./picker.mjs";
 const INFO = {
   japan: {
     word: "Fuji", city: "Fujiyoshida", region: "Yamanashi, Japan", landmark: "Mount Fuji",
-    coord: "35°21′38″N  138°43′39″E", particle: "Cherry blossoms",
+    coord: "35°21′39″N  138°43′39″E", particle: "Cherry blossoms",
     tagline: "Where the mountain fills the sky",
     text: "후지산 북쪽 기슭의 도시. 해발 3,776m 후지산이 마을 어디서나 보이고, 4월 초에는 아라쿠라야마 공원의 벚꽃과 5층탑 너머로 산이 한 화면에 담긴다. 후지산은 2013년 유네스코 세계유산이 됐다.",
   },
   korea: {
     word: "Namsan", city: "Seoul", region: "Yongsan-gu, Korea", landmark: "N Seoul Tower",
-    coord: "37°33′05″N  126°59′17″E", particle: "City lights",
+    coord: "37°33′04″N  126°59′18″E", particle: "City lights",
     tagline: "The city lights up from the hilltop",
     text: "서울 한가운데 남산 꼭대기에 선 높이 236m 타워. 1980년 일반에 처음 열렸고, 전망대에서 도심과 한강을 360도로 내려다본다. 난간에는 연인들이 건 사랑의 자물쇠가 빼곡하다.",
   },
@@ -77,7 +77,7 @@ export function showSceneInfo(id, index, total) {
   set(".edition-coord", info.coord);
   set(".meta-index", pad(index + 1));
   set(".meta-total", `/ ${pad(total)}`);
-  set(".meta-visit", `Visit ${info.city}`);
+  set(".meta-city", info.city);
   set(".meta-tagline", info.tagline);
   set(".meta-text", info.text);
   set(".meta-landmark", info.landmark);
@@ -105,4 +105,29 @@ export function fillTicker(ids) {
     .map((name) => `<span>${name}</span><i aria-hidden="true">✦</i>`)
     .join("");
   track.innerHTML = line + line;
+}
+
+// 좁은 화면에서는 도시 소개를 접었다 펼 수 있음. 마지막 상태를 기억함
+const OPEN_KEY = "snowball-meta-open";
+export function setupMetaToggle() {
+  const meta = document.querySelector(".meta");
+  const button = document.querySelector(".meta-toggle");
+  if (!meta || !button) return;
+  let open = false;
+  try {
+    open = localStorage.getItem(OPEN_KEY) === "1";
+  } catch {}
+  const apply = () => {
+    meta.dataset.open = String(open);
+    button.setAttribute("aria-expanded", String(open));
+    button.querySelector(".meta-toggle-label").textContent = open ? "접기" : "자세히 보기";
+  };
+  button.addEventListener("click", () => {
+    open = !open;
+    try {
+      localStorage.setItem(OPEN_KEY, open ? "1" : "0");
+    } catch {}
+    apply();
+  });
+  apply();
 }
