@@ -21,6 +21,7 @@ ctx.scale(dpr, dpr);
 const globe = { x: 200, y: 210, r: 170 };
 const mound = { x: 200, y: 360, rx: 190, ry: 50 };
 const MAX_OFFSET = 50; // 흔들 수 있는 최대 거리
+const PARTICLE_SCALE = 1.5; // 모든 나라의 입자를 이만큼 크게 그림
 // 화면에서는 흔들림을 이만큼만 보여줌. 입자가 받는 힘은 그대로라 눈은 똑같이 날림
 const VISUAL_SHAKE = 0.35;
 
@@ -179,6 +180,7 @@ function loadScene(id) {
   particles = Array.from({ length: scene.particles.count }, () => {
     const p = { x: globe.x + rand(-120, 120), angle: 0, spin: 0, flip: 0, flipSpeed: 0 };
     Object.assign(p, scene.particles.make(rand));
+    p.size *= PARTICLE_SCALE;
     settle(p);
     return p;
   });
@@ -344,7 +346,7 @@ function drawParticles(t) {
   ctx.beginPath();
   ctx.arc(globe.x, globe.y, globe.r, 0, Math.PI * 2);
   ctx.clip();
-  scene.animate?.(ctx, t, globe);
+  scene.animate?.(ctx, t, globe, stir);
   ctx.globalCompositeOperation = scene.particles.blend;
   for (const p of particles) scene.particles.draw(ctx, p, t);
 
