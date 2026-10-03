@@ -237,38 +237,141 @@ function lampPost(g, x, baseY, h) {
 function paintTower(g) {
   const { cx, base, top } = TOWER;
   const archTop = towerAt(0.18);
-  const legInner = towerHalf(base) * 0.58;
+  const lvl1 = towerAt(0.25);
+  // 다리 한 쪽의 폭: 아래는 넓고 위로 갈수록 좁아져 둘이 하나로 모임
+  const legW = (y) => 1.4 + towerHalf(y) * 0.34;
+  const innerX = (y, side) => cx + side * Math.max(0, towerHalf(y) - legW(y));
 
+  // 탑 전체 윤곽 (아치 아래는 비움)
+  function outline() {
+    g.beginPath();
+    g.moveTo(cx - towerHalf(base), base);
+    for (let y = base; y >= top; y -= 2) g.lineTo(cx - towerHalf(y), y);
+    for (let y = top; y <= base; y += 2) g.lineTo(cx + towerHalf(y), y);
+  }
+
+  const leftIn = innerX(base, -1);
+  const rightIn = innerX(base, 1);
+  // 아치 곡선: 두 다리 안쪽 모서리에서 솟아 가운데에서 만남
+  function arch(fromRight) {
+    if (fromRight) {
+      g.lineTo(rightIn, base);
+      g.quadraticCurveTo(cx + (rightIn - cx) * 0.15, archTop - 6, cx, archTop);
+      g.quadraticCurveTo(cx - (cx - leftIn) * 0.15, archTop - 6, leftIn, base);
+    }
+  }
+
+  // 1) 다리 사이 빈 곳: 철골이 성글어 하늘이 비침. 아주 옅은 빛과 가는 격자만 (아치 아래는 뚫림)
   g.save();
-  g.beginPath();
-  g.moveTo(cx - towerHalf(base), base);
-  for (let y = base; y >= top; y -= 2) g.lineTo(cx - towerHalf(y), y);
-  for (let y = top; y <= base; y += 2) g.lineTo(cx + towerHalf(y), y);
-  g.lineTo(cx + legInner, base);
-  g.quadraticCurveTo(cx + legInner * 0.8, archTop, cx, archTop);
-  g.quadraticCurveTo(cx - legInner * 0.8, archTop, cx - legInner, base);
+  outline();
+  arch(true);
   g.closePath();
-  const iron = g.createLinearGradient(cx - 60, 0, cx + 60, 0);
-  iron.addColorStop(0, IRON[2]);
-  iron.addColorStop(0.45, IRON[0]);
-  iron.addColorStop(1, IRON[1]);
-  g.fillStyle = iron;
+  g.fillStyle = "rgba(255,205,130,0.1)";
   g.fill();
   g.clip();
-
-  // X자 철골 격자
-  g.strokeStyle = "rgba(70,40,10,0.55)";
-  g.lineWidth = 0.6;
-  for (let y = top; y < base; y += 6) {
-    const w1 = towerHalf(y);
-    const w2 = towerHalf(y + 6);
+  g.strokeStyle = "rgba(255,214,150,0.16)";
+  g.lineWidth = 0.4;
+  for (let d = -120; d < 120; d += 2.6) {
     g.beginPath();
-    g.moveTo(cx - w1, y);
-    g.lineTo(cx + w2, y + 6);
-    g.moveTo(cx + w1, y);
-    g.lineTo(cx - w2, y + 6);
+    g.moveTo(cx + d, top);
+    g.lineTo(cx + d + (base - top) * 0.55, base);
+    g.moveTo(cx + d, top);
+    g.lineTo(cx + d - (base - top) * 0.55, base);
     g.stroke();
   }
+  g.restore();
+
+  // 2) 네 다리 가운데 앞에 보이는 두 다리: 촘촘한 X 철골로 채운 띠
+  for (const side of [-1, 1]) {
+    g.save();
+    g.beginPath();
+    g.moveTo(cx + side * towerHalf(base), base);
+    for (let y = base; y >= top; y -= 2) g.lineTo(cx + side * towerHalf(y), y);
+    for (let y = top; y <= base; y += 2) g.lineTo(innerX(y, side), y);
+    g.closePath();
+    const iron = g.createLinearGradient(cx + side * 60, 0, cx, 0);
+    iron.addColorStop(0, side < 0 ? IRON[0] : IRON[1]);
+    iron.addColorStop(1, IRON[2]);
+    g.fillStyle = iron;
+    g.globalAlpha = 0.55;
+    g.fill();
+    g.globalAlpha = 1;
+    g.clip();
+    // 다리 안의 X 철골: 칸 크기가 다리 폭을 따라 줄어듦
+    g.strokeStyle = side < 0 ? "rgba(255,226,160,0.85)" : "rgba(240,190,110,0.75)";
+    g.lineWidth = 0.5;
+    for (let y = top; y < base; ) {
+      const step = Math.max(2, legW(y) * 0.7);
+      const o1 = cx + side * towerHalf(y);
+      const i1 = innerX(y, side);
+      const o2 = cx + side * towerHalf(y + step);
+      const i2 = innerX(y + step, side);
+      g.beginPath();
+      g.moveTo(o1, y);
+      g.lineTo(i2, y + step);
+      g.moveTo(i1, y);
+      g.lineTo(o2, y + step);
+      g.moveTo(o1, y);
+      g.lineTo(i1, y);
+      g.stroke();
+      y += step;
+    }
+    g.restore();
+
+    // 다리 바깥 모서리와 안쪽 모서리: 조명을 가장 많이 받는 굵은 기둥
+    g.strokeStyle = side < 0 ? "#ffe2a0" : "#e8b45c";
+    g.lineWidth = 1.1;
+    g.beginPath();
+    for (let y = base; y >= top; y -= 2) {
+      const x = cx + side * towerHalf(y);
+      if (y === base) g.moveTo(x, y);
+      else g.lineTo(x, y);
+    }
+    g.stroke();
+    g.strokeStyle = "rgba(230,170,80,0.8)";
+    g.lineWidth = 0.7;
+    g.beginPath();
+    let started = false;
+    for (let y = base; y >= top; y -= 2) {
+      const x = innerX(y, side);
+      if (!started) {
+        g.moveTo(x, y);
+        started = true;
+      } else g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+
+  // 3) 아래 큰 아치와 1층 전망대 밑 철골 띠
+  g.strokeStyle = IRON[1];
+  g.lineWidth = 1.6;
+  g.beginPath();
+  g.moveTo(leftIn, base);
+  g.quadraticCurveTo(cx - (cx - leftIn) * 0.15, archTop - 6, cx, archTop);
+  g.quadraticCurveTo(cx + (rightIn - cx) * 0.15, archTop - 6, rightIn, base);
+  g.stroke();
+  const gl = innerX(lvl1 + 4, -1);
+  const gr = innerX(lvl1 + 4, 1);
+  g.strokeStyle = "rgba(240,190,110,0.7)";
+  g.lineWidth = 0.5;
+  g.beginPath();
+  for (let x = gl; x < gr - 2; x += 3) {
+    g.moveTo(x, lvl1);
+    g.lineTo(x + 3, lvl1 + 4);
+    g.moveTo(x + 3, lvl1);
+    g.lineTo(x, lvl1 + 4);
+  }
+  g.stroke();
+
+  // 4) 탑 둘레로 번지는 조명
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  outline();
+  g.closePath();
+  g.shadowColor = "rgba(255,190,100,0.55)";
+  g.shadowBlur = 10;
+  g.fillStyle = "rgba(255,190,100,0.04)";
+  g.fill();
   g.restore();
 
   // 전망대 두 층
