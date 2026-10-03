@@ -2,7 +2,7 @@
 
 import { seeded, fillSilhouette, paintTree } from "./util.mjs";
 
-const SAKURA_COLORS = ["#fff0f4", "#ffe3ea", "#ffd0dc", "#fbb9cb", "#f6a3ba"];
+const SAKURA_COLORS = ["#fff2f6", "#ffd9e5", "#ffbcd2", "#fb9dbd", "#f27aa6"];
 
 function paintFuji(g, globe, groundAt) {
   const rnd = seeded(2026);
@@ -19,10 +19,11 @@ function paintFuji(g, globe, groundAt) {
 
   // 하늘: 위는 푸르고 지평선으로 갈수록 분홍빛
   const sky = g.createLinearGradient(0, top, 0, 300);
-  sky.addColorStop(0, "#7ea3d3");
-  sky.addColorStop(0.5, "#c3cfe8");
-  sky.addColorStop(0.82, "#f3d6e0");
-  sky.addColorStop(1, "#fbe7e6");
+  // 맑은 코발트 블루에서 지평선의 파스텔 핑크 노을로
+  sky.addColorStop(0, "#2f62c4");
+  sky.addColorStop(0.45, "#7aa2e6");
+  sky.addColorStop(0.75, "#f2b6cf");
+  sky.addColorStop(1, "#ffc9c4");
   g.fillStyle = sky;
   g.fillRect(left, top, size, size);
 
@@ -48,14 +49,14 @@ function paintFuji(g, globe, groundAt) {
 
   // 산기슭 안개
   const mist = g.createLinearGradient(0, 235, 0, 295);
-  mist.addColorStop(0, "rgba(250,232,237,0)");
-  mist.addColorStop(1, "rgba(250,232,237,0.95)");
+  mist.addColorStop(0, "rgba(252,214,226,0)");
+  mist.addColorStop(1, "rgba(252,214,226,0.6)");
   g.fillStyle = mist;
   g.fillRect(left, 235, size, 90);
 
   // 먼 산줄기
   const farY = (x) => 280 + 7 * Math.sin(x * 0.03 + 1) + 3 * Math.sin(x * 0.09);
-  g.fillStyle = "rgba(128,146,172,0.8)";
+  g.fillStyle = "rgba(108,112,170,0.85)";
   fillSilhouette(g, farY, left, right, 400);
 
   const mist2 = g.createLinearGradient(0, 275, 0, 305);
@@ -156,9 +157,9 @@ function paintMountain(g, r, left, right, size) {
   g.clip();
 
   const body = g.createLinearGradient(0, peak, 0, foot);
-  body.addColorStop(0, "#4b5e8c");
-  body.addColorStop(0.55, "#7184ae");
-  body.addColorStop(1, "#bcc5dd");
+  body.addColorStop(0, "#2e3f78");
+  body.addColorStop(0.55, "#5a6aa8");
+  body.addColorStop(1, "#b9a8d0");
   g.fillStyle = body;
   g.fillRect(left, peak - 5, size, foot - peak + 30);
 
@@ -249,6 +250,18 @@ function paintMountain(g, r, left, right, size) {
   g.fillRect(left, peak - 5, size, foot - peak + 30);
 
   g.restore();
+
+  // 만년설과 하늘 경계가 또렷하도록 산꼭대기 윤곽에 가는 밝은 테와 그늘선
+  g.strokeStyle = "rgba(255,255,255,0.9)";
+  g.lineWidth = 1;
+  g.beginPath();
+  for (let x = cx - 70; x <= cx + 70; x += 2) g.lineTo(x, fujiY(x) + 0.4);
+  g.stroke();
+  g.strokeStyle = "rgba(40,50,110,0.35)";
+  g.lineWidth = 0.8;
+  g.beginPath();
+  for (let x = cx - 150; x <= cx + 150; x += 2) g.lineTo(x, fujiY(x) - 0.4);
+  g.stroke();
 }
 
 // 오층탑 (주레이토 탑을 본뜬 모양): 층마다 붉은 벽, 흰 난간, 끝이 들린 검은 지붕.
@@ -350,6 +363,7 @@ function drawPetal(ctx, p) {
 }
 
 export const fuji = {
+  grade: { saturation: 1.05, tint: 0.08 },
   id: "japan",
   label: "일본 · 후지산",
   title: "富士山",

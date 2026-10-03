@@ -11,6 +11,7 @@ import { barcelona } from "./scene-barcelona.mjs";
 import { openPicker } from "./picker.mjs";
 import * as sfx from "./sound.mjs";
 import { showSceneInfo, fillTicker, setupMetaToggle } from "./editorial.mjs";
+import { setupKeepsakes, stampVisit } from "./keepsake.mjs";
 import { startTutorial, tutorialDone, openHelp } from "./tutorial.mjs";
 
 const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul, barcelona];
@@ -183,7 +184,8 @@ const GRADE = {
 function gradeLayer(g, w, h) {
   const img = g.getImageData(0, 0, w, h);
   const d = img.data;
-  const { saturation, shadow, highlight, tint, floor, ceiling, grain } = GRADE;
+  // 장면마다 grade로 일부 값을 바꿀 수 있음 (예: 후지산은 채도를 살리고, 퀘벡은 따뜻한 골든아워 필터)
+  const { saturation, shadow, highlight, tint, floor, ceiling, grain } = { ...GRADE, ...(scene?.grade || {}) };
   const range = (ceiling - floor) / 255;
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3] === 0) continue;
@@ -205,6 +207,97 @@ function gradeLayer(g, w, h) {
     d[i + 2] = floor + b * range + n;
   }
   g.putImageData(img, 0, 0);
+}
+
+function makeParticle() {
+  const p = {
+    x: globe.x + rand(-120, 120),
+    angle: 0,
+    spin: 0,
+    flip: 0,
+    flipSpeed: 0,
+  };
+  Object.assign(p, scene.particles.make(rand));
+  p.size *= PARTICLE_SCALE;
+  p.swayFreq = rand(0.0015, 0.004); // 좌우로 살랑이는 박자
+  p.swayPhase = rand(0, Math.PI * 2);
+  p.swayAmp = rand(0.2, 0.6) * (1 + p.flutter * 15);
+  return p;
+}
+
+// Let it snow: 유리구 전체가 크게 흔들리며 입자가 평소의 3배로 터졌다가, 슬로우모션으로 천천히 가라앉음.
+// 덤으로 생긴 입자는 바닥에 닿으면 작아지며 스며들듯 사라짐
+const SLOW_MS = 6000;
+let slowStart = -Infinity;
+function fallScale(now) {
+  const k = (now - slowStart) / SLOW_MS;
+  if (k >= 1) return 1;
+  return 0.28 + 0.72 * k * k;
+}
+export function letItSnow() {
+  const now = performance.now();
+  const extra = scene.particles.count * 2;
+  for (let i = 0; i < extra; i++) {
+    const p = makeParticle();
+    p.temp = true;
+    p.x = globe.x + rand(-60, 60);
+    p.y = groundAt(p.x) - rand(2, 20);
+    p.vx = 0;
+    p.vy = 0;
+    p.settled = true;
+    particles.push(p);
+  }
+  pressPoint = { x: globe.x, y: globe.y + 70 };
+  burst(pressPoint.x, pressPoint.y, 1);
+  for (const p of particles) if (p.temp) p.launchAt = now + rand(0, 260);
+  startAutoShake(1.5);
+  squashVel += 0.3;
+  slowStart = now + 500;
+  stir = 5;
+  sfx.pop(1, scene.id);
+  if (!reduceMotion.matches) flashStart = now;
+  rings.push({ x: pressPoint.x, y: pressPoint.y, start: now, power: 1.6 });
+  rings.push({ x: pressPoint.x, y: pressPoint.y, start: now + 120, power: 2.2 });
+  window.dispatchEvent(new CustomEvent("snowball:pop", { detail: { power: 1 } }));
+}
+
+// 엽서용 한 장면: 명판에 원하는 글을 새긴 채 지금 화면을 그대로 떠 옴
+export async function capturePostcard(text) {
+  const original = scene.base;
+  if (text) {
+    scene.base = { ...original, plate: text, plateFont: "600 14px Pretendard, 'Apple SD Gothic Neo', sans-serif" };
+    layers.baseFront = makeLayer(paintBaseFront, true);
+  }
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const snap = document.createElement("canvas");
+  snap.width = canvas.width;
+  snap.height = canvas.height;
+  snap.getContext("2d").drawImage(canvas, 0, 0);
+  if (text) {
+    scene.base = original;
+    layers.baseFront = makeLayer(paintBaseFront, true);
+  }
+  return { snap, id: scene.id };
+}
+
+export const currentSceneId = () => scene.id;
+
+// 폰을 손으로 흔들면: 바닥의 입자가 거세게 떠오르고 유리구가 출렁임
+export function motionShake(power) {
+  const k = Math.min(1, power);
+  for (const p of particles) {
+    if (p.settled && Math.random() < 0.25 + 0.5 * k) {
+      p.settled = false;
+      p.vy = -rand(3, 8) * (0.6 + k);
+      p.vx = rand(-4, 4) * (0.6 + k);
+    } else if (!p.settled) {
+      p.vx += rand(-3, 3) * k;
+      p.vy += rand(-3, 1) * k;
+    }
+  }
+  stir = Math.min(5, stir + 2 * k);
+  startAutoShake(0.5 + 0.5 * k);
+  sfx.shake(k, scene.id);
 }
 
 function settle(p) {
@@ -230,18 +323,7 @@ function loadScene(id) {
     baseFront: makeLayer(paintBaseFront, true),
   };
   particles = Array.from({ length: scene.particles.count }, () => {
-    const p = {
-      x: globe.x + rand(-120, 120),
-      angle: 0,
-      spin: 0,
-      flip: 0,
-      flipSpeed: 0,
-    };
-    Object.assign(p, scene.particles.make(rand));
-    p.size *= PARTICLE_SCALE;
-    p.swayFreq = rand(0.0015, 0.004); // 좌우로 살랑이는 박자
-    p.swayPhase = rand(0, Math.PI * 2);
-    p.swayAmp = rand(0.2, 0.6) * (1 + p.flutter * 15);
+    const p = makeParticle();
     settle(p);
     return p;
   });
@@ -252,6 +334,7 @@ function loadScene(id) {
   }
   document.getElementById("scene-name").textContent = scene.label;
   showSceneInfo(scene.id, SCENES.indexOf(scene), SCENES.length);
+  stampVisit(scene.id);
 }
 
 // 장면이 바뀔 때 직전 화면을 잠깐 겹쳐 그려 부드럽게 넘어가게 함
@@ -294,10 +377,37 @@ function maybeTutorial() {
 }
 
 document.querySelector(".help-toggle").addEventListener("click", openHelp);
+document.querySelector(".let-snow")?.addEventListener("click", letItSnow);
+
+// 폰 가속도 센서: 손으로 흔들면 입자가 소용돌이침. iOS는 첫 탭에서 권한을 물음
+let lastMotion = 0;
+function onMotion(e) {
+  const a = e.acceleration || e.accelerationIncludingGravity;
+  if (!a) return;
+  const g = e.acceleration ? 0 : 9.8;
+  const mag = Math.abs(Math.hypot(a.x || 0, a.y || 0, a.z || 0) - g);
+  const now = performance.now();
+  if (mag > 12 && now - lastMotion > 220) {
+    lastMotion = now;
+    motionShake((mag - 12) / 15 + 0.3);
+  }
+}
+function enableMotion() {
+  const D = window.DeviceMotionEvent;
+  if (!D) return;
+  if (typeof D.requestPermission === "function") {
+    D.requestPermission()
+      .then((state) => state === "granted" && window.addEventListener("devicemotion", onMotion))
+      .catch(() => {});
+  } else {
+    window.addEventListener("devicemotion", onMotion);
+  }
+}
 
 // 배경음악은 화면을 처음 누르거나 키를 누른 뒤 시작 (브라우저 정책)
 function firstGesture() {
   sfx.startMusic();
+  enableMotion();
   window.removeEventListener("pointerdown", firstGesture);
   window.removeEventListener("keydown", firstGesture);
 }
@@ -396,7 +506,12 @@ function update(t, accel) {
       p.goal = p.target;
       p.target = null;
     }
-    if (p.settled) continue;
+    if (p.settled) {
+      // 덤으로 생긴 입자는 바닥에 닿은 뒤 작아지며 사라짐
+      if (p.temp && !p.target && p.launched) p.size *= 0.93;
+      continue;
+    }
+    if (p.temp) p.launched = true;
 
     if (p.rising) {
       // 목적지로 날아가며 물속처럼 감속. 무거운 입자(drag가 작은)일수록 느긋하게 도착
@@ -407,9 +522,10 @@ function update(t, accel) {
       if (Math.hypot(p.goal.x - p.x, p.goal.y - p.y) < 6 || p.riseFrames > 70) p.rising = false;
     } else {
       // 천천히 떨어지며 입자마다 자기 박자로 좌우로 살랑임 (떨어지는 눈송이·꽃잎의 진자 운동)
-      const sway = Math.sin(t * p.swayFreq + p.swayPhase) * p.swayAmp;
+      const slow = fallScale(now);
+      const sway = Math.sin(t * p.swayFreq + p.swayPhase) * p.swayAmp * slow;
       p.vx += (sway - p.vx) * p.drag;
-      p.vy += (p.sink * FALL_SPEED - p.vy) * p.drag;
+      p.vy += (p.sink * FALL_SPEED * slow - p.vy) * p.drag;
     }
 
     // 유리구를 흔들면 입자가 물을 따라 출렁임. 무거울수록 뒤처지고, 입자마다 옆으로 조금씩 다르게 튐
@@ -445,6 +561,7 @@ function update(t, accel) {
     // 바닥에 닿으면 내려앉음
     if (!p.rising && p.y >= groundAt(p.x) - 1 && p.vy >= 0) settle(p);
   }
+  if (particles.some((p) => p.temp && p.size < 0.4)) particles = particles.filter((p) => !(p.temp && p.size < 0.4));
 }
 
 function drawParticles(t) {
@@ -454,7 +571,29 @@ function drawParticles(t) {
   ctx.clip();
   scene.animate?.(ctx, t, globe, stir);
   ctx.globalCompositeOperation = scene.particles.blend;
-  for (const p of particles) scene.particles.draw(ctx, p, t);
+  const lensStart = globe.r * 0.7;
+  for (const p of particles) {
+    const dx = p.x - globe.x;
+    const dy = p.y - globe.y;
+    const d = Math.hypot(dx, dy);
+    if (d <= lensStart || d === 0) {
+      scene.particles.draw(ctx, p, t);
+      continue;
+    }
+    // 유리 곡면 가까이에서는 굴절로 바깥쪽으로 살짝 당겨지고 납작·작게 보임
+    const k = Math.min(1, (d - lensStart) / (globe.r - lensStart));
+    const ox = p.x;
+    const oy = p.y;
+    const os = p.size;
+    const push = 1 + 0.06 * k * k;
+    p.x = globe.x + dx * push;
+    p.y = globe.y + dy * push;
+    p.size = os * (1 - 0.35 * k * k);
+    scene.particles.draw(ctx, p, t);
+    p.x = ox;
+    p.y = oy;
+    p.size = os;
+  }
 
   const now = performance.now();
 
@@ -567,6 +706,31 @@ function paintGlass(g) {
   g.beginPath();
   g.arc(x, y, r - 4, 0, Math.PI * 2);
   g.stroke();
+  // 배경 밝기와 상관없이 늘 보이는 앰비언트 반사: 위쪽은 밝은 테, 아래쪽은 은은한 테, 바깥으로 번지는 빛
+  const rim = g.createLinearGradient(0, y - r, 0, y + r);
+  rim.addColorStop(0, "rgba(255,255,255,0.75)");
+  rim.addColorStop(0.5, "rgba(255,255,255,0.18)");
+  rim.addColorStop(1, "rgba(255,255,255,0.45)");
+  g.strokeStyle = rim;
+  g.lineWidth = 1.4;
+  g.beginPath();
+  g.arc(x, y, r - 1.5, 0, Math.PI * 2);
+  g.stroke();
+  g.save();
+  g.shadowColor = "rgba(255,255,255,0.35)";
+  g.shadowBlur = 10;
+  g.strokeStyle = "rgba(255,255,255,0.18)";
+  g.lineWidth = 1;
+  g.beginPath();
+  g.arc(x, y, r + 0.5, 0, Math.PI * 2);
+  g.stroke();
+  g.restore();
+  // 아래쪽 안쪽 가장자리에 받침대에서 올라온 반사
+  g.strokeStyle = "rgba(255,240,220,0.22)";
+  g.lineWidth = 4;
+  g.beginPath();
+  g.arc(x, y, r - 6, Math.PI * 0.62, Math.PI * 0.95);
+  g.stroke();
 }
 
 // 받침대: 유리구가 꽂히는 윗면(뒤쪽)과 몸통(앞쪽)을 나눠 그린다
@@ -637,6 +801,7 @@ function paintBaseFront(g) {
 // 주소에 나라가 없으면 한국부터
 fillTicker(SCENES.map((s) => s.id));
 setupMetaToggle();
+setupKeepsakes({ capture: capturePostcard, ids: SCENES.map((s) => s.id) });
 loadScene(location.hash.slice(1) || "korea");
 
 // 소리 켜기/끄기

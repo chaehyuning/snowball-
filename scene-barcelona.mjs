@@ -30,43 +30,39 @@ function paintBarcelona(g, globe, groundAt) {
   g.fillStyle = base;
   g.fillRect(left, top, size, size);
 
-  // 천장 원근: 가까운 위쪽은 크고 성글게, 제단 쪽(아래)으로 갈수록 작고 촘촘하게 모이는 잎사귀 볼트
-  const rc = seeded(1926);
-  for (let row = 0; row < 7; row++) {
-    const t = row / 6;
-    const y = 44 + 108 * Math.pow(t, 0.85);
-    const spread = 170 - 120 * t;
-    const n = 7 - Math.round(t * 3);
-    for (let i = 0; i < n; i++) {
-      const u = n === 1 ? 0.5 : i / (n - 1);
-      const x = 200 + (u - 0.5) * 2 * spread;
-      const rr = (13 - 8 * t) * (0.85 + rc() * 0.3);
-      leafVault(g, x, y + (rc() - 0.5) * 4, rr, rc);
-    }
-  }
-  // 천장 가운데 줄을 따라 이어지는 갈비뼈 두 줄 (소실점으로 모임)
-  g.strokeStyle = "rgba(150,110,60,0.35)";
-  g.lineWidth = 1.2;
-  for (const side of [-1, 1]) {
+  // 천장: 양옆 벽 윗선과 같은 소실점(200, 230)으로 모이는 평면. 높이(worldY)는 벽 꼭대기와 같음.
+  // 가로 s(-1 왼쪽 벽 ~ 1 오른쪽 벽), 깊이 z(작을수록 가까움)로 놓고 화면에 옮김
+  const CEIL_Y = 64 + 0.15 * 373;
+  const ceil = (sx, z) => [200 + (sx * 170) / z, 230 + (CEIL_Y - 230) / z];
+  const zs = [0.5, 0.62, 0.78, 1, 1.3, 1.7, 2.07];
+  // 세로 갈비뼈: 벽과 나란히 소실점으로 모이는 선
+  g.strokeStyle = "rgba(160,110,50,0.35)";
+  g.lineCap = "round";
+  for (const sx of [-1, -0.5, 0, 0.5, 1]) {
+    g.lineWidth = sx === 0 ? 1.4 : 1;
     g.beginPath();
-    g.moveTo(200 + side * 40, 40);
-    g.quadraticCurveTo(200 + side * 22, 100, 200 + side * 8, 160);
+    g.moveTo(...ceil(sx, 0.45));
+    g.lineTo(...ceil(sx, 2.07));
     g.stroke();
   }
-
-  // 천장: 가운데 줄로 이어지는 금빛 별 천창과 양옆의 작은 별들
-  for (const [cx, cy, rr] of [
-    [200, 56, 26],
-    [200, 94, 20],
-    [200, 126, 15],
-    [146, 72, 17],
-    [254, 72, 17],
-    [160, 112, 12],
-    [240, 112, 12],
-    [104, 60, 14],
-    [296, 60, 14],
-  ]) {
-    starVault(g, cx, cy, rr);
+  // 가로 갈비뼈: 깊이마다 한 줄, 멀수록 촘촘
+  for (const z of zs) {
+    g.lineWidth = 1.4 / z;
+    g.beginPath();
+    g.moveTo(...ceil(-1, z));
+    g.lineTo(...ceil(1, z));
+    g.stroke();
+  }
+  // 칸마다 잎사귀 볼트 하나. 가운데 줄은 금빛 별 천창
+  const rc = seeded(1926);
+  for (let k = 0; k < zs.length - 1; k++) {
+    const z = (zs[k] + zs[k + 1]) / 2;
+    for (const sx of [-0.75, -0.25, 0.25, 0.75]) {
+      const [x, y] = ceil(sx, z);
+      leafVault(g, x, y, 11 / z, rc);
+    }
+    const [cx, cy] = ceil(0, zs[k]);
+    starVault(g, cx, cy, 16 / zs[k]);
   }
 
   // 천장 전체에 쏟아지는 금빛: 가운데 줄을 따라 밝게 번지고 반짝이는 작은 빛점

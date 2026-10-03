@@ -2,9 +2,9 @@
 
 import { seeded, fillSilhouette, paintTree } from "./util.mjs";
 
-const LEAF_COLORS = ["#c8321e", "#e0531f", "#f08a24", "#f2b233", "#a8231a"];
+const LEAF_COLORS = ["#c8321e", "#e0601a", "#f0901a", "#f6b81e", "#a8231a"];
 const COPPER = ["#5fae94", "#3f8a74", "#2c6655"]; // 녹청이 슨 구리 지붕
-const BRICK = ["#a4543c", "#8c4330", "#743524"];
+const BRICK = ["#b8502e", "#9a3e24", "#7a2e1a"];
 const SLATE = ["#5a4a52", "#43363f", "#2e252c"]; // 가운데 탑의 짙은 슬레이트 지붕
 
 // 「도깨비」에 나온 구도: 단풍나무가 선 언덕 위에서
@@ -24,10 +24,11 @@ function paintQuebec(g, globe, groundAt) {
 
   // 가을 노을 하늘
   const sky = g.createLinearGradient(0, top, 0, 235);
-  sky.addColorStop(0, "#5f7fb8");
-  sky.addColorStop(0.45, "#c9a7b4");
-  sky.addColorStop(0.8, "#f2bf8c");
-  sky.addColorStop(1, "#f6a368");
+  // 가을 골든아워: 위는 따뜻한 보랏빛 청색, 아래로 앰버와 골드
+  sky.addColorStop(0, "#4a5fa8");
+  sky.addColorStop(0.4, "#d98a6a");
+  sky.addColorStop(0.75, "#f6b04a");
+  sky.addColorStop(1, "#ffcf62");
   g.fillStyle = sky;
   g.fillRect(left, top, size, size);
 
@@ -53,20 +54,21 @@ function paintQuebec(g, globe, groundAt) {
 
   // 강 건너편 레비 기슭
   const shoreY = (x) => 229 + 3 * Math.sin(x * 0.04 + 1) + 2 * Math.sin(x * 0.13);
-  g.fillStyle = "#857a9c";
+  g.fillStyle = "#9a6a6a";
   fillSilhouette(g, shoreY, left, right, 400);
 
   // 세인트로렌스강과 해 반사
   const river = g.createLinearGradient(0, 234, 0, 310);
-  river.addColorStop(0, "#e0ad90");
-  river.addColorStop(1, "#66708f");
+  river.addColorStop(0, "#f2b060");
+  river.addColorStop(0.5, "#c47850");
+  river.addColorStop(1, "#5a4a6a");
   g.fillStyle = river;
   g.fillRect(left, 234, size, 90);
   g.globalCompositeOperation = "lighter";
   for (let i = 0; i < 50; i++) {
     const y = r(236, 300);
     const w = r(8, 34) * (1 - (y - 236) / 90);
-    g.fillStyle = `rgba(255,215,165,${r(0.12, 0.35)})`;
+    g.fillStyle = `rgba(255,205,120,${r(0.2, 0.5)})`;
     g.fillRect(sunX - w / 2 + r(-12, 12), y, w, 0.8);
   }
   g.globalCompositeOperation = "source-over";
@@ -364,6 +366,8 @@ function drawLeaf(ctx, p) {
 }
 
 export const quebec = {
+  // 따뜻한 골든아워 필터: 그늘은 와인빛, 밝은 곳은 금빛
+  grade: { saturation: 1.0, shadow: [70, 30, 40], highlight: [255, 214, 150], tint: 0.18 },
   id: "canada",
   label: "캐나다 · 퀘벡",
   title: "Château Frontenac",

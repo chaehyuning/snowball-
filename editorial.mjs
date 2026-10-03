@@ -66,7 +66,85 @@ const INFO = {
   },
 };
 
+// 여행자에게 와닿는 정보: 현지 시간대, 가장 아름다운 순간, 스노우볼 속 상징물, 장면처럼 읽히는 이야기
+const TRAVEL = {
+  "japan": {
+    "tz": "Asia/Tokyo",
+    "best": "4월 초 맑은 아침 · 공기가 찰수록 산이 또렷",
+    "symbol": "벚꽃잎 — 짧게 피고 지는 봄",
+    "story": "4월 초 이른 아침, 아라쿠라야마 공원의 398개 계단을 오르면 숨이 찰 즈음 시야가 확 열립니다. 분홍 벚꽃과 붉은 5층탑 너머로 눈 덮인 후지산이 한 장의 엽서처럼 겹쳐 서요. 바람이 한 번 불면 꽃잎이 산을 가로질러 흩날립니다."
+  },
+  "korea": {
+    "tz": "Asia/Seoul",
+    "best": "해 진 직후 블루아워 · 도시 불빛이 하나둘 켜질 때",
+    "symbol": "반짝이는 불빛 — 잠들지 않는 서울",
+    "story": "해가 넘어가면 서울 한가운데 남산 위 타워에 불이 들어옵니다. 산책로를 따라 천천히 오르면 발아래로 도심과 한강의 불빛이 번져 가고, 난간마다 걸린 사랑의 자물쇠가 바람에 달그락거려요."
+  },
+  "canada": {
+    "tz": "America/Toronto",
+    "best": "10월 초중순 해 질 녘 · 단풍이 가장 붉을 때",
+    "symbol": "단풍잎 — 캐나다 국기의 잎",
+    "story": "10월의 퀘벡은 도시 전체가 붉고 노랗게 물듭니다. 언덕 위 단풍나무 아래 앉아 강 쪽을 내려다보면, 금빛 노을 속에 샤토 프롱트낙의 녹색 지붕이 동화처럼 서 있어요. 드라마 〈도깨비〉의 그 언덕이 바로 이 풍경입니다."
+  },
+  "australia": {
+    "tz": "Australia/Sydney",
+    "best": "해 질 녘 · 서큘러 키에서 지붕이 분홍빛으로 물들 때",
+    "symbol": "물방울 — 항구를 가르는 물보라",
+    "title": "Sydney Opera House",
+    "story": "1957년, 덴마크 건축가 예른 웃손의 스케치가 국제 공모에서 뽑혔습니다. 조가비 같기도, 바람을 품은 돛 같기도 한 지붕은 너무 어려워 몇 년을 헤매다, 모든 곡면을 하나의 구에서 잘라내는 방법으로 풀었어요. 그 위를 100만 장이 넘는 흰 타일이 덮습니다. 바로 뒤 강철 아치의 하버 브리지와 나란히 서면, 곧은 다리와 둥근 돛이 항구를 함께 완성해요."
+  },
+  "finland": {
+    "tz": "Europe/Helsinki",
+    "best": "12월~3월 맑은 밤 · 오로라가 뜨는 시간",
+    "symbol": "눈꽃 — 북극권의 겨울",
+    "story": "산타클로스 마을 한가운데 그어진 흰 선을 한 발로 넘으면, 그 순간 북극권 안에 들어섭니다. 산타 우체국에서 엽서를 부치고 나오면 하늘에서 초록빛 오로라가 커튼처럼 흔들리고, 발밑에서 눈이 뽀드득 울려요."
+  },
+  "china": {
+    "tz": "Asia/Shanghai",
+    "best": "10월 말~11월 초 오후 · 은행잎이 노랗게 물들 때",
+    "symbol": "은행잎과 붉은 등 — 가을의 궁궐",
+    "story": "늦은 오후 북쪽 징산 공원 언덕에 오르면, 자금성의 노란 기와지붕이 끝없이 이어진 금빛 바다처럼 펼쳐집니다. 500년 동안 황제만 걷던 붉은 담장 사이로 은행잎이 쏟아지고, 처마 밑 붉은 등이 하나둘 켜져요."
+  },
+  "egypt": {
+    "tz": "Africa/Cairo",
+    "best": "해 뜰 무렵과 해 질 녘 · 한낮 더위를 피해",
+    "symbol": "모래알 — 4,500년의 시간",
+    "story": "해가 지평선에 닿을 무렵 기자 고원에 서면, 4,500년 된 돌이 분홍빛에서 금빛으로 천천히 색을 바꿉니다. 사막 바람에 모래가 사르르 흩날리고, 스핑크스는 오늘도 같은 쪽을 바라보고 있어요."
+  },
+  "france": {
+    "tz": "Europe/Paris",
+    "best": "해 진 뒤 매시 정각 · 5분 동안 반짝임",
+    "symbol": "장미 꽃잎 — 사랑의 도시",
+    "story": "해가 지고 정각이 되면 철탑 전체가 5분 동안 수만 개의 불빛으로 반짝입니다. 트로카데로 광장 계단에 앉아 분수 너머로 그 순간을 기다리면, 주위 사람들이 동시에 작은 탄성을 지르는 소리가 들려요."
+  },
+  "turkey": {
+    "tz": "Europe/Istanbul",
+    "best": "저녁 기도 뒤 조명이 켜질 때 · 예배 시간에는 입장 제한",
+    "symbol": "나비 — 푸른 타일 정원의 날개",
+    "story": "여섯 첨탑에서 기도 시간을 알리는 소리가 울려 퍼지면, 광장의 공기가 잠시 고요해집니다. 안으로 들어서면 2만여 장의 푸른 이즈니크 타일이 둥근 천장 아래서 은은하게 빛나고, 정원의 튤립 위로 나비가 날아올라요."
+  },
+  "spain": {
+    "tz": "Europe/Madrid",
+    "best": "늦은 오후 · 서쪽 창의 붉은 빛이 가득할 때",
+    "symbol": "스테인드글라스 조각 — 빛으로 그린 그림",
+    "story": "오전에는 차분한 푸른빛이, 늦은 오후에는 타오르는 붉은 노을빛이 성당 안을 가득 채웁니다. 가우디가 왜 숲을 닮은 기둥을 세웠는지, 그 빛 아래 서면 온몸으로 느끼게 돼요. 지금도 공사 중인, 시간이 함께 짓는 성당입니다."
+  }
+};
+
 const pad = (n) => String(n).padStart(2, "0");
+
+// 현지 시각: 1분마다 다시 씀
+let clockId = null;
+let clockTz = null;
+function tickClock() {
+  const el = document.querySelector(".meta-time");
+  if (!el || !clockTz) return;
+  try {
+    el.textContent = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: clockTz }).format(new Date());
+  } catch {
+    el.textContent = "";
+  }
+}
 
 export function showSceneInfo(id, index, total) {
   const info = INFO[id];
@@ -83,13 +161,20 @@ export function showSceneInfo(id, index, total) {
   set(".edition-coord", info.coord);
   set(".meta-index", pad(index + 1));
   set(".meta-total", `/ ${pad(total)}`);
-  set(".meta-city", info.city);
+  const travel = TRAVEL[id] || {};
+  set(".meta-city", travel.title || info.city);
+  set(".sheet-title", travel.title || info.landmark);
   set(".meta-tagline", info.tagline);
-  set(".meta-text", info.text);
+  set(".meta-text", travel.story || info.text);
   set(".meta-landmark", info.landmark);
   set(".meta-region", info.region);
-  set(".meta-coord", info.coord);
-  set(".meta-particle", info.particle);
+  set(".meta-best", travel.best || "");
+  set(".meta-symbol", travel.symbol || info.particle);
+  set(".meta-place", info.city);
+  clockTz = travel.tz;
+  tickClock();
+  clearInterval(clockId);
+  clockId = setInterval(tickClock, 30000);
 
   // 배경 필기체 지명은 살짝 사라졌다 바뀌어 나타남
   const ghost = document.querySelector(".ghost");
@@ -129,27 +214,46 @@ export function fillTicker(ids) {
   track.innerHTML = line + line;
 }
 
-// 좁은 화면에서는 도시 소개를 접었다 펼 수 있음. 마지막 상태를 기억함
-const OPEN_KEY = "snowball-meta-open";
+// 기본은 한 줄 카피와 현지 시각만. '자세히 보기'를 누르면 이야기와 여행 정보가 펼쳐짐.
+// 좁은 화면에서는 현재 장면 카드 하나만 바텀 시트로 올라오고, 닫으면 스노우볼로 돌아옴
 export function setupMetaToggle() {
   const meta = document.querySelector(".meta");
   const button = document.querySelector(".meta-toggle");
-  if (!meta || !button) return;
+  const more = document.querySelector(".meta-more");
+  if (!meta || !button || !more) return;
+  const backdrop = document.createElement("div");
+  backdrop.className = "sheet-backdrop";
+  backdrop.hidden = true;
+  document.body.append(backdrop);
+  const narrow = () => window.matchMedia("(max-width: 1180px)").matches;
   let open = false;
-  try {
-    open = localStorage.getItem(OPEN_KEY) === "1";
-  } catch {}
   const apply = () => {
     meta.dataset.open = String(open);
     button.setAttribute("aria-expanded", String(open));
     button.querySelector(".meta-toggle-label").textContent = open ? "접기" : "자세히 보기";
+    const sheet = open && narrow();
+    document.body.classList.toggle("sheet-open", sheet);
+    backdrop.hidden = !sheet;
+  };
+  const close = () => {
+    open = false;
+    apply();
   };
   button.addEventListener("click", () => {
     open = !open;
-    try {
-      localStorage.setItem(OPEN_KEY, open ? "1" : "0");
-    } catch {}
     apply();
   });
+  backdrop.addEventListener("click", close);
+  more.querySelector(".sheet-close")?.addEventListener("click", close);
+  window.addEventListener("keydown", (e) => e.key === "Escape" && open && close());
+  window.addEventListener("snowball:scene", () => narrow() && open && close());
+  window.addEventListener("resize", apply);
   apply();
+}
+
+// 엽서·여권에서 쓰는 장면 정보
+export function sceneInfo(id) {
+  const info = INFO[id] || {};
+  const travel = TRAVEL[id] || {};
+  return { ...info, ...travel, color: PLACES[id]?.color };
 }
