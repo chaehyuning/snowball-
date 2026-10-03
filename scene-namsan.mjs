@@ -312,8 +312,8 @@ function pavilion(g, x, baseY) {
 
 // 사랑의 자물쇠 울타리: 화면 맨 앞을 가로지르는 난간에 알록달록한 자물쇠가 빼곡함
 function loveLocks(g, rnd, left, right) {
-  const LOCK = ["#ff5a7a", "#ffd34a", "#5ab8ff", "#7ee08a", "#c77dff", "#ff9a4a", "#ffffff"];
-  const railY = [296, 304, 312];
+  const LOCK = ["#e8a0b0", "#e8c870", "#9cc0e0", "#d8d8e0"];
+  const railY = [300, 310];
   g.strokeStyle = "#7c8496";
   g.lineWidth = 1.6;
   for (const y of railY) {
@@ -325,7 +325,7 @@ function loveLocks(g, rnd, left, right) {
   g.fillStyle = "#5c6476";
   for (let x = left + 10; x < right; x += 40) g.fillRect(x - 1.6, 290, 3.2, 30);
   for (const y of railY) {
-    for (let x = left; x < right; x += 2.6 + rnd() * 2.2) {
+    for (let x = left; x < right; x += 4 + rnd() * 5) {
       const w = 2.6 + rnd() * 1.8;
       const h = 3 + rnd() * 1.6;
       const dy = rnd() * 1.5;
@@ -406,8 +406,6 @@ export const namsan = {
   animate: animateNamsan,
   glare: 0.45, // 밤이라 유리 반사광을 약하게
   base: {
-    body: ["#05070f", "#1c2440", "#283258", "#141a33", "#04060d"],
-    collar: "#0b0f1e",
     trim: ["#5d6475", "#e9edf5", "#a7afc0", "#4f5666"],
     plate: "N서울타워",
     plateFont: "700 15px 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif",
