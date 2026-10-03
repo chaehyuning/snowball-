@@ -64,6 +64,18 @@ const INFO = {
     tagline: "Light through a forest of stone",
     text: "안토니 가우디가 1883년부터 설계를 맡은 성당. 2010년 축성됐고 지금도 공사 중이다. 동쪽 창은 파랑·초록, 서쪽 창은 주황·빨강 스테인드글라스라 해가 움직이면 실내 빛깔이 바뀌고, 나무처럼 갈라지는 기둥이 천장을 받친다.",
   },
+  bolivia: {
+    word: "Bolivia", city: "Uyuni", region: "Potosí, Bolivia", landmark: "Salar de Uyuni",
+    coord: "20°08′02″S  67°29′21″W", particle: "Salt crystals",
+    tagline: "The sky beneath your feet",
+    text: "안데스 고원 해발 3,656m에 펼쳐진 넓이 10,582㎢의 세계 최대 소금 평원. 전체 높낮이 차이가 1m도 안 될 만큼 평평해서, 12월~4월 우기에 얕은 물이 고이면 하늘을 그대로 비추는 거울이 된다.",
+  },
+  hongkong: {
+    word: "Hong Kong", city: "Hong Kong", region: "Mong Kok, Kowloon, Hong Kong", landmark: "Mong Kok neon streets",
+    coord: "22°19′09″N  114°10′10″E", particle: "Neon rain",
+    tagline: "Neon after the rain",
+    text: "주룽반도 몽콕은 좁은 길 위로 간판이 겹겹이 튀어나온 홍콩의 밤거리다. 2010년 말 간판 관리 제도가 생긴 뒤 허가받지 않은 간판이 해마다 수천 개씩 철거돼, 남은 네온은 점점 귀해지고 있다.",
+  },
 };
 
 // 여행자에게 와닿는 정보: 현지 시간대, 가장 아름다운 순간, 스노우볼 속 상징물, 장면처럼 읽히는 이야기
@@ -129,6 +141,20 @@ const TRAVEL = {
     "best": "늦은 오후 · 서쪽 창의 붉은 빛이 가득할 때",
     "symbol": "스테인드글라스 조각 — 빛으로 그린 그림",
     "story": "오전에는 차분한 푸른빛이, 늦은 오후에는 타오르는 붉은 노을빛이 성당 안을 가득 채웁니다. 가우디가 왜 숲을 닮은 기둥을 세웠는지, 그 빛 아래 서면 온몸으로 느끼게 돼요. 2035년 완공을 목표로 지금도 공사 중인, 시간이 함께 짓는 성당입니다."
+  },
+  "bolivia": {
+    "tz": "America/La_Paz",
+    "best": "12월~4월 우기의 해 뜰 무렵 · 물이 얕게 고이고 바람이 멎을 때",
+    "symbol": "소금 결정 — 정육면체로 자라는 소금",
+    "story": "해 뜨기 전 차를 타고 하얀 평원 한가운데로 들어서면, 발목까지 고인 물 위로 하늘이 한 장 더 펼쳐집니다. 바람이 멎는 순간 지평선이 사라지고 구름이 발아래로 흘러가요. 물이 빠진 자리에는 소금 껍질이 육각형으로 갈라져 끝없이 이어집니다."
+  },
+  "hongkong": {
+    "tz": "Asia/Hong_Kong",
+    "best": "비 갠 밤 9시 이후 · 젖은 길에 간판 빛이 번질 때",
+    "symbol": "네온 빗방울 — 간판 빛을 머금은 비",
+    "title": "Mong Kok, Hong Kong",
+    "titleNarrow": "Mong Kok",
+    "story": "비가 그친 밤 몽콕 골목에 들어서면, 머리 위로 분홍·하늘·호박빛 간판이 겹겹이 튀어나와 하늘을 가립니다. 젖은 아스팔트에 간판 불빛이 길게 번지고, 빨간 택시가 그 빛을 가르며 지나가요. 건물 끝에서 떨어지는 빗방울마저 네온 색으로 물듭니다."
   }
 };
 

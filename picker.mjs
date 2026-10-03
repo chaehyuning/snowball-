@@ -15,6 +15,8 @@ export const PLACES = {
   france: { lat: 48.86, lon: 2.29, landmark: "에펠탑", particle: "장미 꽃잎", color: "#d81b4a", stem: 22, dx: -24 },
   turkey: { lat: 41.01, lon: 28.98, landmark: "블루 모스크", particle: "나비", color: "#2ec4c9", stem: -14, dx: 36 },
   spain: { lat: 41.4, lon: 2.17, landmark: "사그라다 파밀리아", particle: "스테인드글라스 조각", color: "#3cbf6a", stem: 12, dx: -34 },
+  bolivia: { lat: -20.13, lon: -67.49, landmark: "우유니 소금사막", particle: "소금 결정", color: "#8fe0c8", stem: 22, dx: 0 },
+  hongkong: { lat: 22.32, lon: 114.17, landmark: "몽콕 네온 거리", particle: "네온 빗방울", color: "#ff3fa4", stem: -22, dx: 18 },
 };
 
 const RAD = Math.PI / 180;

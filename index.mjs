@@ -8,13 +8,15 @@ import { egypt } from "./scene-egypt.mjs";
 import { paris } from "./scene-paris.mjs";
 import { istanbul } from "./scene-istanbul.mjs";
 import { barcelona } from "./scene-barcelona.mjs";
+import { uyuni } from "./scene-uyuni.mjs";
+import { hongkong } from "./scene-hongkong.mjs";
 import { openPicker } from "./picker.mjs";
 import * as sfx from "./sound.mjs";
 import { showSceneInfo, fillTicker, setupMetaToggle } from "./editorial.mjs";
 import { setupKeepsakes } from "./keepsake.mjs";
 import { startTutorial, tutorialDone, openHelp } from "./tutorial.mjs";
 
-const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul, barcelona];
+const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul, barcelona, uyuni, hongkong];
 
 const canvas = document.getElementById("globe");
 const ctx = canvas.getContext("2d");
@@ -155,12 +157,14 @@ function groundAt(x) {
 }
 
 // 움직이지 않는 그림은 한 번만 그려 두고 매 프레임 복사해서 씀
+// 고정 그림 층은 해상도를 2배까지만: 3배 화면(최신 폰)에서 픽셀 수가 절반 아래로 줄어 나라 전환이 빨라짐
+const LAYER_DPR = Math.min(dpr, 2);
 function makeLayer(paint, grade = false) {
   const layer = document.createElement("canvas");
-  layer.width = W * dpr;
-  layer.height = H * dpr;
+  layer.width = W * LAYER_DPR;
+  layer.height = H * LAYER_DPR;
   const g = layer.getContext("2d", { willReadFrequently: grade });
-  g.scale(dpr, dpr);
+  g.scale(LAYER_DPR, LAYER_DPR);
   paint(g);
   if (grade) gradeLayer(g, layer.width, layer.height);
   return layer;
@@ -181,6 +185,8 @@ const GRADE = {
   grain: 5,
 };
 
+// 종이 질감 잡음: 픽셀마다 Math.random을 부르지 않고 미리 만든 표를 돌려 씀
+const NOISE = Float32Array.from({ length: 4093 }, () => Math.random() - 0.5);
 function gradeLayer(g, w, h) {
   const img = g.getImageData(0, 0, w, h);
   const d = img.data;
@@ -201,7 +207,7 @@ function gradeLayer(g, w, h) {
     r += (shadow[0] + (highlight[0] - shadow[0]) * k - r) * tint;
     gg += (shadow[1] + (highlight[1] - shadow[1]) * k - gg) * tint;
     b += (shadow[2] + (highlight[2] - shadow[2]) * k - b) * tint;
-    const n = (Math.random() - 0.5) * grain;
+    const n = NOISE[(i >> 2) % 4093] * grain;
     d[i] = floor + r * range + n;
     d[i + 1] = floor + gg * range + n;
     d[i + 2] = floor + b * range + n;
@@ -264,6 +270,7 @@ export function letItSnow() {
 // 엽서용 한 장면: 명판에 원하는 글을 새긴 채 지금 화면을 그대로 떠 옴
 export async function capturePostcard(text) {
   const original = scene.base;
+  const keepFront = layers.baseFront;
   if (text) {
     scene.base = { ...original, plate: text, plateFont: "600 14px Pretendard, 'Apple SD Gothic Neo', sans-serif" };
     layers.baseFront = makeLayer(paintBaseFront, true);
@@ -275,7 +282,7 @@ export async function capturePostcard(text) {
   snap.getContext("2d").drawImage(canvas, 0, 0);
   if (text) {
     scene.base = original;
-    layers.baseFront = makeLayer(paintBaseFront, true);
+    layers.baseFront = keepFront;
   }
   return { snap, id: scene.id };
 }
@@ -314,14 +321,57 @@ let layers = {};
 
 // 장면을 바꾸면 고정 그림을 다시 그리고 입자를 새로 만든다.
 // 입자마다 무게·저항·떠오르기 쉬운 정도는 장면 파일이 정한다.
-function loadScene(id) {
-  scene = SCENES.find((s) => s.id === id) || SCENES[0];
-  layers = {
+// 나라마다 고정 그림 층(받침·장면·유리)을 한 번 만들면 기억해 둠. 최근 4곳까지만 들고 있음
+const layerCache = new Map();
+const CACHE_SIZE = 4;
+function buildLayers(target) {
+  const prev = scene;
+  scene = target; // 받침 색·명판·색 보정이 지금 장면 값을 읽으므로 잠시 바꿔 둠
+  const built = {
     baseBack: makeLayer(paintBaseBack, true),
-    scene: makeLayer((g) => scene.paint(g, globe, groundAt), true),
+    scene: makeLayer((g) => target.paint(g, globe, groundAt), true),
     glass: makeLayer(paintGlass),
     baseFront: makeLayer(paintBaseFront, true),
   };
+  scene = prev;
+  return built;
+}
+function layersFor(target) {
+  let built = layerCache.get(target.id);
+  if (built) layerCache.delete(target.id);
+  else built = buildLayers(target);
+  layerCache.set(target.id, built);
+  while (layerCache.size > CACHE_SIZE) layerCache.delete(layerCache.keys().next().value);
+  return built;
+}
+// 지금 나라를 보는 동안 쉬는 틈에 앞뒤 나라 그림을 미리 만들어 둠 → 화살표·옆 버튼으로 넘길 때 바로 바뀜
+let warmTimer = 0;
+const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+function warmNeighbours() {
+  clearTimeout(warmTimer);
+  const i = SCENES.indexOf(scene);
+  const queue = [SCENES[(i + 1) % SCENES.length], SCENES[(i - 1 + SCENES.length) % SCENES.length]];
+  const current = scene.id;
+  const next = () => {
+    const target = queue.shift();
+    if (!target || scene.id !== current) return;
+    if (!layerCache.has(target.id)) {
+      layerCache.set(target.id, buildLayers(target));
+      // 지금 장면이 가장 최근 것으로 남도록 다시 맨 뒤로
+      const mine = layerCache.get(current);
+      layerCache.delete(current);
+      layerCache.set(current, mine);
+      while (layerCache.size > CACHE_SIZE) layerCache.delete(layerCache.keys().next().value);
+    }
+    warmTimer = setTimeout(() => idle(next, { timeout: 2000 }), 300);
+  };
+  warmTimer = setTimeout(() => idle(next, { timeout: 2000 }), 1200);
+}
+
+function loadScene(id) {
+  scene = SCENES.find((s) => s.id === id) || SCENES[0];
+  layers = layersFor(scene);
+  warmNeighbours();
   particles = Array.from({ length: scene.particles.count }, () => {
     const p = makeParticle();
     settle(p);
@@ -354,6 +404,8 @@ const SLUGS = {
   france: "paris",
   turkey: "istanbul",
   spain: "barcelona",
+  bolivia: "uyuni",
+  hongkong: "hongkong",
 };
 function idFromUrl(hashFirst = false) {
   const query = new URLSearchParams(location.search).get("landmark") || "";
