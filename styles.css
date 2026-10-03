@@ -281,3 +281,12 @@ body {
     height: 22px;
   }
 }
+
+.sound-toggle .sound-off,
+.sound-toggle[data-muted="true"] .sound-on {
+  display: none;
+}
+
+.sound-toggle[data-muted="true"] .sound-off {
+  display: inline;
+}

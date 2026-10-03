@@ -8,6 +8,7 @@ import { egypt } from "./scene-egypt.mjs";
 import { paris } from "./scene-paris.mjs";
 import { istanbul } from "./scene-istanbul.mjs";
 import { openPicker } from "./picker.mjs";
+import * as sfx from "./sound.mjs";
 
 const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul];
 
@@ -55,6 +56,8 @@ let pressPoint = { x: 200, y: 300 };
 let squash = 0; // 음수면 납작하게 눌림, 양수면 위로 늘어남
 let squashVel = 0;
 let rings = []; // 누른 자리에서 퍼지는 충격파 고리
+let sparks = []; // 터질 때 사방으로 튀는 불꽃 줄기
+let flashStart = -Infinity; // 터지는 순간 유리구 안이 번쩍임
 
 function startAutoShake(power = 1) {
   autoShakeStart = performance.now();
@@ -109,6 +112,26 @@ function pop(power) {
   burst(pressPoint.x, pressPoint.y, power);
   startAutoShake(power);
   squashVel += 0.16 * power;
+  sfx.pop(power, scene.id);
+
+  // 번쩍임, 두 번째 고리, 불꽃 줄기
+  const now = performance.now();
+  if (!reduceMotion.matches) flashStart = now;
+  rings.push({ x: pressPoint.x, y: pressPoint.y, start: now + 90, power: power * 1.4 });
+  const n = Math.round(14 + 22 * power);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + rand(-0.15, 0.15);
+    const speed = rand(4, 9) * (0.6 + power * 0.6);
+    sparks.push({
+      x: pressPoint.x,
+      y: pressPoint.y,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed,
+      start: now,
+      life: rand(380, 620),
+      color: Math.random() < 0.5 ? "#fff6dc" : "#ffffff",
+    });
+  }
 }
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -229,6 +252,7 @@ let fadeStart = 0;
 
 function switchScene(id) {
   if (id === scene.id) return;
+  sfx.whoosh();
   if (!reduceMotion.matches) {
     fadeFrom = document.createElement("canvas");
     fadeFrom.width = canvas.width;
@@ -275,12 +299,16 @@ canvas.addEventListener("pointerdown", (e) => {
   startX = e.clientX;
   startY = e.clientY;
   canvas.setPointerCapture(e.pointerId);
+  sfx.chargeStart();
 });
 
 canvas.addEventListener("pointermove", (e) => {
   if (!dragging) return;
   // 손가락이 움직이면 누르기가 아니라 밀기·끌기로 봄
-  if (Math.hypot(e.clientX - startX, e.clientY - startY) > 10) pressing = false;
+  if (pressing && Math.hypot(e.clientX - startX, e.clientY - startY) > 10) {
+    pressing = false;
+    sfx.chargeStop();
+  }
   const scale = H / canvas.getBoundingClientRect().height;
   target = clamp((e.clientY - startY) * scale, -MAX_OFFSET, MAX_OFFSET);
 });
@@ -298,8 +326,12 @@ canvas.addEventListener("pointerup", (e) => {
   release();
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) stepScene(dx < 0 ? 1 : -1);
   else if (wasPress) pop(0.45 + 0.55 * held); // 오래 눌렀다 뗄수록 세게 터짐
+  else sfx.chargeStop();
 });
-canvas.addEventListener("pointercancel", release);
+canvas.addEventListener("pointercancel", () => {
+  release();
+  sfx.chargeStop();
+});
 
 function update(t, accel) {
   stir *= 0.985;
@@ -372,12 +404,56 @@ function drawParticles(t) {
   ctx.globalCompositeOperation = scene.particles.blend;
   for (const p of particles) scene.particles.draw(ctx, p, t);
 
-  // 충격파 고리: 0.6초 동안 커지며 사라짐
   const now = performance.now();
+
+  // 누르는 동안 누른 자리에 빛이 모이며 점점 커짐
+  if (pressing) {
+    const held = Math.min(1, (now - pressStart) / SQUEEZE_MS);
+    const pulse = 0.85 + 0.15 * Math.sin(now * 0.02);
+    const radius = (14 + 46 * held) * pulse;
+    const charge = ctx.createRadialGradient(pressPoint.x, pressPoint.y, 0, pressPoint.x, pressPoint.y, radius);
+    charge.addColorStop(0, `rgba(255,250,235,${0.35 + 0.4 * held})`);
+    charge.addColorStop(1, "rgba(255,250,235,0)");
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = charge;
+    ctx.fillRect(pressPoint.x - radius, pressPoint.y - radius, radius * 2, radius * 2);
+  }
+
+  // 터지는 순간 유리구 안 전체가 0.25초 동안 번쩍임
+  const fk = (now - flashStart) / 250;
+  if (fk >= 0 && fk < 1) {
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = (1 - fk) * 0.35;
+    ctx.fillStyle = "#fff6e6";
+    ctx.fillRect(globe.x - globe.r, globe.y - globe.r, globe.r * 2, globe.r * 2);
+  }
+
+  // 불꽃 줄기: 빠르게 튀어 나가며 느려지고 사라짐
+  sparks = sparks.filter((sp) => now - sp.start < sp.life);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.lineCap = "round";
+  for (const sp of sparks) {
+    const k = (now - sp.start) / sp.life;
+    sp.x += sp.vx;
+    sp.y += sp.vy;
+    sp.vx *= 0.9;
+    sp.vy = sp.vy * 0.9 + 0.08;
+    ctx.globalAlpha = 1 - k;
+    ctx.strokeStyle = sp.color;
+    ctx.lineWidth = 2 * (1 - k) + 0.4;
+    ctx.beginPath();
+    ctx.moveTo(sp.x, sp.y);
+    ctx.lineTo(sp.x - sp.vx * 2.2, sp.y - sp.vy * 2.2);
+    ctx.stroke();
+  }
+
+  // 충격파 고리: 0.6초 동안 커지며 사라짐
   rings = rings.filter((ring) => now - ring.start < 600);
   ctx.globalCompositeOperation = "source-over";
   for (const ring of rings) {
     const k = (now - ring.start) / 600;
+    if (k < 0) continue;
     ctx.globalAlpha = (1 - k) * 0.6;
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 3 * (1 - k) + 0.5;
@@ -506,7 +582,22 @@ function paintBaseFront(g) {
   g.fillText(look.plate, cx, plateY + 1);
 }
 
-loadScene(location.hash.slice(1));
+// 주소에 나라가 없으면 한국부터
+loadScene(location.hash.slice(1) || "korea");
+
+// 소리 켜기/끄기
+const soundButton = document.querySelector(".sound-toggle");
+function showSound() {
+  const off = sfx.isMuted();
+  soundButton.dataset.muted = String(off);
+  soundButton.setAttribute("aria-label", off ? "소리 켜기" : "소리 끄기");
+  soundButton.title = off ? "소리 켜기" : "소리 끄기";
+}
+soundButton.addEventListener("click", () => {
+  sfx.setMuted(!sfx.isMuted());
+  showSound();
+});
+showSound();
 
 // 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
 if (!location.hash) openPicker(SCENES, scene.id, switchScene);
