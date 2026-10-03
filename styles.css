@@ -87,25 +87,20 @@ body {
   pointer-events: none;
 }
 
-.silk-drift-a {
-  animation: drift-a 26s ease-in-out infinite alternate;
-}
-
-.silk-drift-b {
-  animation: drift-b 34s ease-in-out infinite alternate;
+/* 비단 빛줄기는 SVG 블러라 안쪽을 움직이면 매 프레임 블러를 다시 계산함 → 휴대폰에서 스크롤·시트가 끊김.
+   그림 전체를 한 덩어리로 옮기면 한 번 그린 것을 그대로 밀기만 함 */
+.silk {
+  transform: scale(1.08);
+  will-change: transform;
+  animation: drift-a 30s ease-in-out infinite alternate;
 }
 
 @keyframes drift-a {
   to {
-    transform: translate(-40px, 30px) rotate(-2deg);
+    transform: translate(-30px, 20px) scale(1.08) rotate(-1deg);
   }
 }
 
-@keyframes drift-b {
-  to {
-    transform: translate(50px, -20px) rotate(3deg);
-  }
-}
 
 .masthead {
   position: absolute;
@@ -137,19 +132,6 @@ body {
 
 .edition-index {
   color: var(--ink);
-}
-
-/* 가는 기준선: 세로 네 칸 + 머리·발 가로줄 */
-.rules {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    linear-gradient(var(--line-faint), var(--line-faint)) 0 48px / 100% 1px no-repeat,
-    linear-gradient(var(--line-faint), var(--line-faint)) 0 calc(100% - 64px) / 100% 1px no-repeat,
-    linear-gradient(90deg, var(--line-faint) 1px, transparent 1px) 0 0 / 25% 100%;
-  background-position-x: 0, 0, 25%;
 }
 
 /* 스노우볼 뒤에 장면 색으로 번지는 빛 */
@@ -419,6 +401,7 @@ body {
   white-space: nowrap;
   color: var(--ink-faint);
   animation: ticker 70s linear infinite;
+  will-change: transform;
 }
 
 .ticker-track i {
@@ -535,6 +518,7 @@ body {
     box-shadow: 0 -20px 40px -20px rgba(0, 0, 0, 0.8);
     transform: translateY(105%);
     transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: transform;
   }
 
   body.sheet-open .meta .meta-more {
@@ -836,8 +820,7 @@ body {
     transition: none;
   }
 
-  .silk-drift-a,
-  .silk-drift-b,
+  .silk,
   .ticker-track,
   .ghost-in {
     animation: none;
