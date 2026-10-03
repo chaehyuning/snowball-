@@ -458,6 +458,9 @@ function paintBaseFront(g) {
 
 loadScene(location.hash.slice(1));
 
+// 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
+if (!location.hash) openPicker(SCENES, scene.id, switchScene);
+
 function frame(t) {
   // 스노우볼이 손을 스프링처럼 따라가고, 놓으면 살짝 출렁이며 제자리로 돌아감
   // 클릭 흔들기 중에는 정해진 박자로 오르내리며 점점 약해짐
