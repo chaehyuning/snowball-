@@ -212,14 +212,35 @@ function dome(g, x, baseY, rx, ry, finial) {
   g.ellipse(x, baseY, rx, ry, 0, Math.PI, 0);
   g.closePath();
   g.fill();
-  g.strokeStyle = "rgba(40,60,80,0.3)";
-  g.lineWidth = 0.5;
-  for (let k = -3; k <= 3; k++) {
-    g.beginPath();
-    g.moveTo(x, baseY - ry);
-    g.quadraticCurveTo(x + (k * rx) / 3.2, baseY - ry * 0.6, x + (k * rx) / 3.5, baseY);
-    g.stroke();
+  // 납판 이음매: 꼭대기 쪽은 가늘고 흐리게, 아래로 갈수록 굵고 또렷하게
+  g.save();
+  g.clip();
+  for (let k = -4; k <= 4; k++) {
+    if (k === 0) continue;
+    const ex = x + (k * rx) / 4.4;
+    for (let seg = 0; seg < 3; seg++) {
+      const t0 = seg / 3;
+      const t1 = (seg + 1) / 3;
+      const px = (t) => x + (ex - x) * Math.sin((t * Math.PI) / 2);
+      const py = (t) => baseY - ry + ry * t;
+      g.strokeStyle = `rgba(40,60,85,${0.12 + t1 * 0.2})`;
+      g.lineWidth = 0.25 + t1 * 0.45;
+      g.beginPath();
+      g.moveTo(px(t0), py(t0));
+      g.lineTo(px(t1), py(t1));
+      g.stroke();
+    }
   }
+  // 노을이 비친 왼쪽 위 반짝임
+  const sheen = g.createRadialGradient(x - rx * 0.45, baseY - ry * 0.75, 0, x - rx * 0.45, baseY - ry * 0.75, rx * 0.6);
+  sheen.addColorStop(0, "rgba(255,236,210,0.35)");
+  sheen.addColorStop(1, "rgba(255,236,210,0)");
+  g.fillStyle = sheen;
+  g.fillRect(x - rx, baseY - ry, rx * 2, ry);
+  g.restore();
+  // 돔 아래 밝은 돌 테
+  g.fillStyle = "#efe4cf";
+  g.fillRect(x - rx - 0.5, baseY - 1.2, rx * 2 + 1, 1.4);
   if (finial) {
     g.fillStyle = "#e0b040";
     g.fillRect(x - 0.6, baseY - ry - 7, 1.2, 7);
@@ -231,26 +252,51 @@ function dome(g, x, baseY, rx, ry, finial) {
   }
 }
 
-// 첨탑: 가는 원기둥, 발코니 고리, 뾰족한 납 지붕
+// 첨탑: 세로 홈이 파인 가는 원기둥, 그늘이 진 발코니, 뾰족한 납 지붕
 // far: 뒤쪽 첨탑일수록 1에 가까움. 저녁 공기에 묻혀 흐리게 그림
 function minaret(g, x, baseY, h, balconies, far = 0) {
   g.save();
   g.globalAlpha = 1 - far * 0.45;
   const w = 5 - far * 1.5;
   const grad = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
-  grad.addColorStop(0, "#c9bba2");
-  grad.addColorStop(0.5, "#f4ead8");
-  grad.addColorStop(1, "#bfae94");
+  grad.addColorStop(0, "#f7eedd");
+  grad.addColorStop(0.35, "#efe3cc");
+  grad.addColorStop(1, "#ad9a80");
   g.fillStyle = grad;
   g.fillRect(x - w / 2, baseY - h, w, h);
+  // 세로 홈
+  g.fillStyle = "rgba(120,100,80,0.18)";
+  for (let k = 1; k < 4; k++) g.fillRect(x - w / 2 + (w * k) / 4 - 0.15, baseY - h, 0.3, h);
+  // 바닥 쪽 굵은 받침
+  g.fillStyle = "rgba(120,100,80,0.25)";
+  g.fillRect(x - w / 2 - 0.6, baseY - 10, w + 1.2, 10);
   for (let i = 0; i < balconies; i++) {
     const y = baseY - h * (0.45 + i * 0.18);
-    g.fillStyle = "#d8ccb4";
+    // 발코니 밑 받침의 그늘 → 발코니 판 → 난간
+    const under = g.createLinearGradient(0, y + 2, 0, y + 5);
+    under.addColorStop(0, "rgba(70,55,40,0.5)");
+    under.addColorStop(1, "rgba(70,55,40,0)");
+    g.fillStyle = under;
+    g.beginPath();
+    g.moveTo(x - w / 2 - 1.8, y + 2);
+    g.lineTo(x + w / 2 + 1.8, y + 2);
+    g.lineTo(x + w / 2, y + 5);
+    g.lineTo(x - w / 2, y + 5);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "#e6dac2";
     g.fillRect(x - w / 2 - 1.8, y, w + 3.6, 2);
-    g.fillStyle = "rgba(60,50,40,0.4)";
-    g.fillRect(x - w / 2 - 1.8, y + 2, w + 3.6, 0.6);
+    g.fillStyle = "rgba(255,248,235,0.7)";
+    g.fillRect(x - w / 2 - 1.8, y, w + 3.6, 0.5);
+    g.fillStyle = "rgba(90,75,60,0.45)";
+    for (let px = x - w / 2 - 1.4; px < x + w / 2 + 1.6; px += 1.2) g.fillRect(px, y - 1.2, 0.35, 1.2);
+    g.fillRect(x - w / 2 - 1.8, y - 1.4, w + 3.6, 0.35);
   }
-  g.fillStyle = LEAD[1];
+  const cone = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+  cone.addColorStop(0, LEAD[0]);
+  cone.addColorStop(0.45, LEAD[1]);
+  cone.addColorStop(1, LEAD[2]);
+  g.fillStyle = cone;
   g.beginPath();
   g.moveTo(x - w / 2 - 0.5, baseY - h);
   g.lineTo(x, baseY - h - 22);
@@ -262,51 +308,107 @@ function minaret(g, x, baseY, h, balconies, far = 0) {
   g.restore();
 }
 
+// 돌벽: 노을을 받는 왼쪽이 따뜻하게 밝고, 위 처마 밑은 그늘, 가로 돌단은 밝기 차이로만 보임
+function stoneWall(g, x, y, w, h) {
+  const wall = g.createLinearGradient(x, 0, x + w, 0);
+  wall.addColorStop(0, "#f3e6cb");
+  wall.addColorStop(0.5, STONE);
+  wall.addColorStop(1, "#cbbb9e");
+  g.fillStyle = wall;
+  g.fillRect(x, y, w, h);
+  let odd = false;
+  for (let by = y + 3; by < y + h; by += 3.4) {
+    g.fillStyle = odd ? "rgba(255,250,235,0.12)" : "rgba(120,100,75,0.08)";
+    g.fillRect(x, by, w, 1.7);
+    odd = !odd;
+  }
+  const eave = g.createLinearGradient(0, y, 0, y + 4);
+  eave.addColorStop(0, "rgba(80,60,40,0.4)");
+  eave.addColorStop(1, "rgba(80,60,40,0)");
+  g.fillStyle = eave;
+  g.fillRect(x, y, w, 4);
+}
+
+// 아치 창: 밝은 돌 테두리 안에 깊게 들어간 어두운 유리. lit이면 안쪽 등불이 비침
+function archWindow(g, wx, wy, ww, wh, lit) {
+  g.fillStyle = "#f6ecd8";
+  g.beginPath();
+  g.moveTo(wx - ww / 2 - 0.7, wy + wh);
+  g.lineTo(wx - ww / 2 - 0.7, wy + ww * 0.5);
+  g.quadraticCurveTo(wx, wy - ww * 0.6, wx + ww / 2 + 0.7, wy + ww * 0.5);
+  g.lineTo(wx + ww / 2 + 0.7, wy + wh);
+  g.closePath();
+  g.fill();
+  const glass = g.createLinearGradient(0, wy, 0, wy + wh);
+  glass.addColorStop(0, lit ? "#f2c27a" : "#24394d");
+  glass.addColorStop(1, lit ? "#b8743a" : "#3e5d78");
+  g.fillStyle = glass;
+  g.beginPath();
+  g.moveTo(wx - ww / 2, wy + wh);
+  g.lineTo(wx - ww / 2, wy + ww * 0.5);
+  g.quadraticCurveTo(wx, wy - ww * 0.4, wx + ww / 2, wy + ww * 0.5);
+  g.lineTo(wx + ww / 2, wy + wh);
+  g.closePath();
+  g.fill();
+  // 깊이: 왼쪽 안쪽 벽의 그늘
+  g.fillStyle = "rgba(20,25,35,0.35)";
+  g.fillRect(wx - ww / 2, wy + ww * 0.4, ww * 0.25, wh - ww * 0.4);
+}
+
 // 블루 모스크: 작은 돔 → 반돔 → 큰 돔이 층층이 쌓이고, 첨탑 여섯 개가 둘러섬
 function paintMosque(g, cx, baseY) {
-  // 바깥 첨탑 두 개(뒤쪽, 조금 낮게)
   // 마당 바깥쪽 첨탑 두 개 (가장 멀어서 흐리게)
   minaret(g, cx - 128, baseY, 118, 2, 0.8);
   minaret(g, cx + 128, baseY, 118, 2, 0.8);
 
-  // 아래 벽과 아치 창
-  g.fillStyle = STONE;
-  g.fillRect(cx - 84, baseY - 34, 168, 34);
-  g.fillStyle = "rgba(120,100,80,0.25)";
-  g.fillRect(cx - 84, baseY - 34, 168, 2);
-  for (const [row, n, wy] of [[0, 14, baseY - 26], [1, 12, baseY - 14]]) {
+  // 아래 벽: 돌단, 벽기둥, 두 줄 아치 창
+  stoneWall(g, cx - 84, baseY - 34, 168, 34);
+  for (let i = 0; i <= 7; i++) {
+    const px = cx - 84 + (i * 168) / 7;
+    g.fillStyle = "rgba(255,250,235,0.35)";
+    g.fillRect(px - 1.6, baseY - 32, 1, 32);
+    g.fillStyle = "rgba(110,90,65,0.22)";
+    g.fillRect(px - 0.6, baseY - 32, 1.4, 32);
+  }
+  for (const [n, wy, wh] of [[14, baseY - 27, 7], [12, baseY - 15, 9]]) {
     for (let i = 0; i < n; i++) {
       const wx = cx - 78 + (i * 156) / (n - 1);
-      g.fillStyle = "#3b5870";
-      g.beginPath();
-      g.moveTo(wx - 2, wy + 6);
-      g.lineTo(wx - 2, wy + 1);
-      g.quadraticCurveTo(wx, wy - 2, wx + 2, wy + 1);
-      g.lineTo(wx + 2, wy + 6);
-      g.closePath();
-      g.fill();
+      archWindow(g, wx, wy, 3.6, wh, (i * 7 + n) % 5 === 0);
     }
   }
+  // 처마 돌림띠
+  g.fillStyle = "#f4ead6";
+  g.fillRect(cx - 85, baseY - 35, 170, 1.4);
 
   // 모서리 작은 돔들
   for (const dx of [-70, -46, 46, 70]) dome(g, cx + dx, baseY - 34, 11, 10, true);
   // 반돔 두 개와 그 아래 벽
-  g.fillStyle = STONE;
-  g.fillRect(cx - 58, baseY - 46, 116, 12);
+  stoneWall(g, cx - 58, baseY - 46, 116, 12);
+  for (let i = 0; i < 9; i++) archWindow(g, cx - 48 + i * 12, baseY - 43, 2.6, 6, i % 4 === 1);
   dome(g, cx - 34, baseY - 46, 24, 20, false);
   dome(g, cx + 34, baseY - 46, 24, 20, false);
-  // 큰 돔의 드럼(창이 둘린 원통)
-  g.fillStyle = STONE;
-  g.fillRect(cx - 34, baseY - 64, 68, 16);
-  g.fillStyle = "#3b5870";
+  // 큰 돔의 드럼: 아치 창이 빙 둘리고, 가장자리 창은 비스듬해서 좁게 보임
+  stoneWall(g, cx - 34, baseY - 64, 68, 16);
   for (let i = 0; i < 11; i++) {
-    const wx = cx - 30 + i * 6;
-    g.fillRect(wx, baseY - 60, 2.4, 6);
+    const a = ((i + 0.5) / 11) * Math.PI;
+    const wx = cx - Math.cos(a) * 31;
+    archWindow(g, wx, baseY - 61, 2.6 * Math.sin(a) + 0.6, 8, i === 5);
+  }
+  // 드럼을 받치는 작은 탑(버팀벽 위 뾰족 지붕)
+  for (const dx of [-36, 36]) {
+    g.fillStyle = "#e6d9bf";
+    g.fillRect(cx + dx - 2, baseY - 70, 4, 10);
+    g.fillStyle = LEAD[1];
+    g.beginPath();
+    g.moveTo(cx + dx - 2.6, baseY - 70);
+    g.lineTo(cx + dx, baseY - 76);
+    g.lineTo(cx + dx + 2.6, baseY - 70);
+    g.closePath();
+    g.fill();
   }
   // 가운데 큰 돔
   dome(g, cx, baseY - 64, 38, 32, true);
 
-  // 안쪽 첨탑 네 개
   // 안쪽 첨탑 네 개: 뒤쪽 두 개는 조금 작고 흐리게, 앞쪽 두 개는 크고 진하게
   minaret(g, cx - 82, baseY, 126, 3, 0.5);
   minaret(g, cx + 82, baseY, 126, 3, 0.5);
