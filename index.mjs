@@ -18,6 +18,8 @@ ctx.scale(dpr, dpr);
 const globe = { x: 200, y: 210, r: 170 };
 const mound = { x: 200, y: 360, rx: 190, ry: 50 };
 const MAX_OFFSET = 50; // 흔들 수 있는 최대 거리
+// 화면에서는 흔들림을 이만큼만 보여줌. 입자가 받는 힘은 그대로라 눈은 똑같이 날림
+const VISUAL_SHAKE = 0.45;
 
 // 흔들기 상태 (스노우볼은 손을 스프링처럼 따라감)
 let dragging = false;
@@ -414,7 +416,7 @@ function frame(t) {
 
   // 바닥 그림자. 들어 올리면 옅어짐
   ctx.save();
-  ctx.globalAlpha = clamp(0.5 + offset / 120, 0.15, 0.7);
+  ctx.globalAlpha = clamp(0.5 + (offset * VISUAL_SHAKE) / 120, 0.15, 0.7);
   const shadow = ctx.createRadialGradient(200, PAD + 462, 0, 200, PAD + 462, 150);
   shadow.addColorStop(0, "rgba(0,0,0,0.6)");
   shadow.addColorStop(1, "rgba(0,0,0,0)");
@@ -425,7 +427,7 @@ function frame(t) {
   ctx.restore();
 
   ctx.save();
-  ctx.translate(0, PAD + offset);
+  ctx.translate(0, PAD + offset * VISUAL_SHAKE);
   ctx.drawImage(layers.baseBack, 0, 0, W, H);
   ctx.drawImage(layers.scene, 0, 0, W, H);
   drawParticles(t);
