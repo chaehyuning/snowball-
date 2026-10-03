@@ -31,6 +31,16 @@ let prevGlobeVel = 0;
 // 물이 휘젓는 세기. 흔들면 커지고 시간이 지나면 잦아든다
 let stir = 0;
 
+// 클릭하면 스노우볼이 저절로 위아래로 몇 번 흔들림
+const AUTO_SHAKE_MS = 900;
+const AUTO_SHAKE_PERIOD = 250; // 한 번 오르내리는 시간
+const AUTO_SHAKE_HEIGHT = 45;
+let autoShakeStart = -Infinity;
+
+function startAutoShake() {
+  autoShakeStart = performance.now();
+}
+
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const rand = (min, max) => min + Math.random() * (max - min);
 
@@ -150,6 +160,10 @@ for (const button of document.querySelectorAll("[data-scene]")) {
 window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") stepScene(1);
   if (e.key === "ArrowLeft") stepScene(-1);
+  if (e.key === " " && e.target === document.body) {
+    e.preventDefault();
+    startAutoShake();
+  }
 });
 
 // 위아래로 끌면 흔들기, 좌우로 밀면 나라 바꾸기
@@ -158,7 +172,6 @@ canvas.addEventListener("pointerdown", (e) => {
   startX = e.clientX;
   startY = e.clientY;
   canvas.setPointerCapture(e.pointerId);
-  canvas.style.cursor = "grabbing";
 });
 
 canvas.addEventListener("pointermove", (e) => {
@@ -170,13 +183,13 @@ canvas.addEventListener("pointermove", (e) => {
 function release() {
   dragging = false;
   target = 0;
-  canvas.style.cursor = "grab";
 }
 canvas.addEventListener("pointerup", (e) => {
   const dx = e.clientX - startX;
   const dy = e.clientY - startY;
   release();
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) stepScene(dx < 0 ? 1 : -1);
+  else if (Math.hypot(dx, dy) < 10) startAutoShake(); // 거의 움직이지 않았으면 클릭
 });
 canvas.addEventListener("pointercancel", release);
 
@@ -381,6 +394,14 @@ loadScene(location.hash.slice(1));
 
 function frame(t) {
   // 스노우볼이 손을 스프링처럼 따라가고, 놓으면 살짝 출렁이며 제자리로 돌아감
+  // 클릭 흔들기 중에는 정해진 박자로 오르내리며 점점 약해짐
+  const shakeT = performance.now() - autoShakeStart;
+  if (shakeT < AUTO_SHAKE_MS) {
+    target = AUTO_SHAKE_HEIGHT * Math.sin((2 * Math.PI * shakeT) / AUTO_SHAKE_PERIOD) * (1 - shakeT / AUTO_SHAKE_MS);
+  } else if (!dragging) {
+    target = 0;
+  }
+
   globeVel += (target - offset) * 0.2;
   globeVel *= 0.75;
   offset += globeVel;

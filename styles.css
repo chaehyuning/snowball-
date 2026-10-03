@@ -29,7 +29,7 @@ body {
 canvas {
   width: min(90vw, 400px);
   aspect-ratio: 2 / 3;
-  cursor: grab;
+  cursor: pointer;
   touch-action: none;
 }
 
