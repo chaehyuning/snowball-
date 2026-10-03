@@ -479,33 +479,118 @@ function animateIstanbul(ctx, t) {
 }
 
 // 나비: 몸통과 두 쌍의 날개. 날 때는 날개를 접었다 폈다 하고, 앉으면 반쯤 편 채로 쉼
+// 날개 한 쪽(앞날개+뒷날개)을 색마다 한 번만 그려 둠.
+// 몸 쪽은 짙고 가운데는 선명한 색, 바깥 가장자리는 검은 띠에 흰 점, 잎맥은 가는 짙은 선
+const WING_U = 40;
+const wingSprites = new Map();
+function wingSprite(color) {
+  if (wingSprites.has(color)) return wingSprites.get(color);
+  const U = WING_U;
+  const c = document.createElement("canvas");
+  c.width = Math.ceil(U * 1.4);
+  c.height = Math.ceil(U * 1.9);
+  const w = c.getContext("2d");
+  w.translate(0, U);
+  const fore = () => {
+    w.beginPath();
+    w.moveTo(0, -0.05 * U);
+    w.bezierCurveTo(0.2 * U, -0.75 * U, 0.9 * U, -1.0 * U, 1.25 * U, -0.8 * U);
+    w.bezierCurveTo(1.3 * U, -0.45 * U, 1.0 * U, -0.1 * U, 0.55 * U, 0.02 * U);
+    w.closePath();
+  };
+  const hind = () => {
+    w.beginPath();
+    w.moveTo(0, 0.02 * U);
+    w.bezierCurveTo(0.45 * U, -0.02 * U, 0.95 * U, 0.15 * U, 0.85 * U, 0.5 * U);
+    w.bezierCurveTo(0.75 * U, 0.75 * U, 0.4 * U, 0.85 * U, 0.15 * U, 0.75 * U);
+    w.bezierCurveTo(0.05 * U, 0.55 * U, 0, 0.3 * U, 0, 0.02 * U);
+    w.closePath();
+  };
+  for (const [shape, cx, cy] of [[hind, 0.1, 0.25], [fore, 0.15, -0.3]]) {
+    const grad = w.createRadialGradient(cx * U, cy * U, 0, cx * U, cy * U, 1.2 * U);
+    grad.addColorStop(0, "#0c2230");
+    grad.addColorStop(0.28, color);
+    grad.addColorStop(0.62, color);
+    grad.addColorStop(0.78, "#14202a");
+    grad.addColorStop(1, "#0b141b");
+    w.fillStyle = grad;
+    shape();
+    w.fill();
+    w.save();
+    shape();
+    w.clip();
+    // 가운데 밝은 광택
+    const sheen = w.createRadialGradient(0.55 * U, (cy - 0.05) * U, 0, 0.55 * U, (cy - 0.05) * U, 0.45 * U);
+    sheen.addColorStop(0, "rgba(255,255,255,0.45)");
+    sheen.addColorStop(1, "rgba(255,255,255,0)");
+    w.fillStyle = sheen;
+    w.fillRect(0, -U, 1.4 * U, 1.9 * U);
+    // 잎맥
+    w.strokeStyle = "rgba(8,25,35,0.45)";
+    w.lineWidth = U * 0.018;
+    for (let k = 0; k < 6; k++) {
+      const a = shape === fore ? -1.25 + k * 0.17 : -0.1 + k * 0.28;
+      w.beginPath();
+      w.moveTo(0.04 * U, 0);
+      w.quadraticCurveTo(0.5 * U * Math.cos(a), 0.5 * U * Math.sin(a) - 0.05 * U, 1.3 * U * Math.cos(a), 1.3 * U * Math.sin(a));
+      w.stroke();
+    }
+    w.restore();
+  }
+  // 가장자리 검은 띠 위 흰 점
+  w.fillStyle = "rgba(255,255,255,0.85)";
+  for (const [px, py, pr] of [
+    [1.12, -0.78, 0.045],
+    [1.17, -0.62, 0.04],
+    [1.1, -0.45, 0.035],
+    [0.95, -0.3, 0.03],
+    [0.78, 0.48, 0.035],
+    [0.6, 0.68, 0.035],
+    [0.38, 0.74, 0.03],
+  ]) {
+    w.beginPath();
+    w.arc(px * U, py * U, pr * U, 0, Math.PI * 2);
+    w.fill();
+  }
+  wingSprites.set(color, c);
+  return c;
+}
+
 function drawButterfly(ctx, p, t) {
   const s = p.size;
   const open = p.settled ? 0.55 : 0.2 + 0.8 * Math.abs(Math.sin(t * p.flap + p.phase));
-  ctx.globalAlpha = 0.95;
+  const sprite = wingSprite(p.color);
+  const k = s / (WING_U * 1.1); // 날개 한 쪽 폭이 예전과 같은 s * 1.2 정도
+  ctx.globalAlpha = 0.97;
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.rotate(p.settled ? p.angle * 0.2 : Math.sin(t * 0.002 + p.phase) * 0.4);
   for (const side of [-1, 1]) {
     ctx.save();
-    ctx.scale(side * open, 1);
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.ellipse(s * 0.55, -s * 0.35, s * 0.6, s * 0.48, -0.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    ctx.ellipse(s * 0.45, s * 0.35, s * 0.42, s * 0.34, 0.5, 0, Math.PI * 2);
-    ctx.fill();
-    // 날개 끝 무늬
-    ctx.fillStyle = "rgba(10,40,60,0.55)";
-    ctx.beginPath();
-    ctx.ellipse(s * 0.85, -s * 0.5, s * 0.18, s * 0.14, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.scale(side * open * k, k);
+    ctx.drawImage(sprite, 0, -WING_U);
     ctx.restore();
   }
-  ctx.fillStyle = "#1a2a33";
-  ctx.fillRect(-s * 0.08, -s * 0.55, s * 0.16, s * 1.1);
+  // 몸통: 가슴은 굵고 배는 가늘게 마디진 모양, 끝이 둥근 더듬이
+  ctx.fillStyle = "#14222b";
+  ctx.beginPath();
+  ctx.ellipse(0, -s * 0.18, s * 0.09, s * 0.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(0, s * 0.22, s * 0.06, s * 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#14222b";
+  ctx.lineWidth = Math.max(0.5, s * 0.04);
+  ctx.beginPath();
+  ctx.moveTo(0, -s * 0.36);
+  ctx.quadraticCurveTo(-s * 0.1, -s * 0.6, -s * 0.22, -s * 0.72);
+  ctx.moveTo(0, -s * 0.36);
+  ctx.quadraticCurveTo(s * 0.1, -s * 0.6, s * 0.22, -s * 0.72);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(-s * 0.22, -s * 0.72, s * 0.04, 0, Math.PI * 2);
+  ctx.arc(s * 0.22, -s * 0.72, s * 0.04, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
