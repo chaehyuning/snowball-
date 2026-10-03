@@ -318,23 +318,32 @@ body {
   display: none;
 }
 
-/* PC에서 펼치면 큰 제목은 줄이고 이야기는 정해진 높이 안에서 스크롤 → 위쪽 Let it snow 버튼과 겹치지 않음 */
+/* PC는 자리가 넓어 접지 않고 이야기와 랜드마크 정보를 모두 늘어놓음.
+   위쪽 Let it snow 글씨와 겹치지 않게 제목은 조금 줄이고, 이야기는 화면 높이에 맞춰 스크롤 */
 @media (min-width: 1181px) {
-  .meta[data-open="true"] .meta-thisis,
-  .meta[data-open="true"] .meta-tagline {
+  .meta-toggle {
     display: none;
   }
 
-  .meta[data-open="true"] .meta-city {
+  .meta[data-open] .meta-more {
+    display: block;
+  }
+
+  .meta-thisis {
+    display: none;
+  }
+
+  .meta-num {
     font-size: 30px;
   }
 
-  .meta[data-open="true"] .meta-num {
-    font-size: 28px;
+  .meta-city {
+    margin-top: 10px;
+    font-size: 34px;
   }
 
   .meta-more .meta-text {
-    max-height: 26vh;
+    max-height: clamp(54px, calc(100vh - 640px), 220px);
     overflow-y: auto;
   }
 }
@@ -669,6 +678,11 @@ body {
   .meta .meta-toggle {
     grid-area: toggle;
     margin: 0;
+  }
+
+  /* 띠(.meta)가 시트를 품고 있어서, 시트가 열리면 띠째로 어두운 배경 위로 올림 */
+  body.sheet-open .meta {
+    z-index: 31;
   }
 }
 
