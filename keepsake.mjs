@@ -145,11 +145,22 @@ function openPostcard() {
       e.stopPropagation();
     });
   }
+  resetPostcard();
   postcard.hidden = false;
   postcard.querySelector("input").focus();
+}
+
+// 엽서 창을 열 때마다, 그리고 나라를 바꿀 때마다 전에 만든 미리 보기를 지움 → 늘 지금 나라로 새로 만듦
+function resetPostcard() {
+  if (!postcard) return;
+  lastBlob = null;
+  postcard.querySelector(".postcard-preview").innerHTML = "";
+  postcard.querySelector(".postcard-save").disabled = true;
+  postcard.querySelector(".postcard-share").hidden = true;
 }
 
 export function setupKeepsakes(opts) {
   capture = opts.capture;
   document.querySelector(".postcard-toggle")?.addEventListener("click", openPostcard);
+  window.addEventListener("snowball:scene", resetPostcard);
 }

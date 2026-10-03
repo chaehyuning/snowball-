@@ -639,25 +639,28 @@ function drawGrain(ctx, p, t) {
 let veils = null;
 let grains = null;
 function makeVeil(seed, w, h, tint) {
-  const scale = 2;
   const c = document.createElement("canvas");
-  c.width = w * scale;
-  c.height = h * scale;
+  c.width = w;
+  c.height = h;
   const g = c.getContext("2d");
-  g.scale(scale, scale);
   const rnd = seeded(seed);
-  g.filter = "blur(7px)";
+  // 흐린 덩어리: 블러 필터 대신 가장자리가 투명해지는 둥근 그라데이션을 납작하게 눌러 찍음 (훨씬 빠름)
   for (let i = 0; i < 46; i++) {
     const x = rnd() * w;
     const y = h * (0.3 + rnd() * 0.45);
     const rx = 30 + rnd() * 70;
-    const ry = 5 + rnd() * 12;
-    g.fillStyle = `rgba(${tint},${0.18 + rnd() * 0.3})`;
-    // 가로로 이어 붙여도 끊기지 않게 양 끝에서 한 번 더 그림
+    const ry = 6 + rnd() * 14;
+    const a = 0.18 + rnd() * 0.3;
     for (const off of [-w, 0, w]) {
-      g.beginPath();
-      g.ellipse(x + off, y, rx, ry, (rnd() - 0.5) * 0.12, 0, Math.PI * 2);
-      g.fill();
+      g.save();
+      g.translate(x + off, y);
+      g.scale(rx / ry, 1);
+      const puff = g.createRadialGradient(0, 0, 0, 0, 0, ry);
+      puff.addColorStop(0, `rgba(${tint},${a})`);
+      puff.addColorStop(1, `rgba(${tint},0)`);
+      g.fillStyle = puff;
+      g.fillRect(-ry, -ry, ry * 2, ry * 2);
+      g.restore();
     }
   }
   return { c, w, h };

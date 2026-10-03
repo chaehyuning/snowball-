@@ -341,6 +341,37 @@ const VOICES = {
       pluck(note(164.81, strum[i] + 12), t + 0.05 + i * 0.022, { level: 0.08, decay: 1.2, bright: 2600, wave: "triangle", pan: -0.3 + i * 0.12 });
     }
   },
+  // 소금 결정: 안데스 팬파이프(시쿠)처럼 숨이 섞인 5음계 + 맑은 유리 결정 소리
+  bolivia(t, p) {
+    noise(t, { dur: 1.4, type: "lowpass", freq: 500, freqEnd: 1200, level: 0.05, attack: 0.4 });
+    const n = Math.round(4 + p * 3);
+    for (let i = 0; i < n; i++) {
+      const f = note(392, PENTA[(i * 2) % PENTA.length]);
+      const s = t + 0.05 + i * 0.16;
+      pluck(f, s, { level: 0.07, decay: 0.9, bright: 1500, wave: "sine", pan: rand(-0.4, 0.4) });
+      noise(s, { dur: 0.25, type: "bandpass", freq: f * 2, q: 6, level: 0.05, attack: 0.03 });
+    }
+    for (let i = 0; i < 6; i++) bell(rand(3000, 5600), t + 0.1 + rand(0, 0.8), { level: 0.02, decay: 0.3, pan: rand(-0.8, 0.8) });
+  },
+  // 네온 빗방울: 간판 형광등의 낮은 웅 소리 + 후드득 빗소리 + 트램 "땡땡"
+  hongkong(t, p) {
+    const o = ac.createOscillator();
+    o.type = "sawtooth";
+    o.frequency.value = 100;
+    const f = ac.createBiquadFilter();
+    f.type = "lowpass";
+    f.frequency.value = 700;
+    const gg = ac.createGain();
+    gg.gain.setValueAtTime(0.0001, t);
+    gg.gain.linearRampToValueAtTime(0.03, t + 0.08);
+    gg.gain.exponentialRampToValueAtTime(0.0005, t + 1.1);
+    o.connect(f).connect(gg).connect(out(0));
+    o.start(t);
+    o.stop(t + 1.2);
+    grains(t + 0.05, { count: Math.round(30 + p * 30), spread: 1.1, lo: 2500, hi: 7000, dur: [0.004, 0.012], level: 0.07, q: 1.5 });
+    bell(1318.5, t + 0.2, { level: 0.05, decay: 0.6 });
+    bell(1318.5, t + 0.42, { level: 0.05, decay: 0.8 });
+  },
   // 나비: 파르르 날갯짓 + 카눈처럼 반짝이는 중동 음계
   turkey(t, p) {
     const flaps = Math.round(2 + p * 2);
@@ -376,7 +407,7 @@ export function pop(power, sceneId) {
 // 끌어서 흔드는 한 박자마다: 유리구 안 물이 출렁이며 입자가 사르르 쓸리는 소리
 const SHAKE_TONE = {
   japan: 1800, korea: 3200, canada: 2600, australia: 900, finland: 2200,
-  china: 2800, egypt: 4200, france: 2000, turkey: 2400, spain: 3600,
+  china: 2800, egypt: 4200, france: 2000, turkey: 2400, spain: 3600, bolivia: 3000, hongkong: 1500,
 };
 export function shake(level, sceneId) {
   if (!ensure() || muted) return;
