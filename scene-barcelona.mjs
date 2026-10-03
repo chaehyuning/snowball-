@@ -22,8 +22,9 @@ function paintBarcelona(g, globe, groundAt) {
 
   // 햇빛이 스며든 따뜻한 돌빛: 천장은 금빛, 아래는 크림색
   const base = g.createLinearGradient(0, top, 0, globe.y + globe.r);
-  base.addColorStop(0, "#efbf78");
-  base.addColorStop(0.35, "#efd9b4");
+  base.addColorStop(0, "#e8962e");
+  base.addColorStop(0.2, "#f3b85a");
+  base.addColorStop(0.38, "#f1d6a6");
   base.addColorStop(0.7, "#cfb48c");
   base.addColorStop(1, "#8e7556");
   g.fillStyle = base;
@@ -67,6 +68,26 @@ function paintBarcelona(g, globe, groundAt) {
   ]) {
     starVault(g, cx, cy, rr);
   }
+
+  // 천장 전체에 쏟아지는 금빛: 가운데 줄을 따라 밝게 번지고 반짝이는 작은 빛점
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  const gold = g.createRadialGradient(200, 80, 0, 200, 80, 170);
+  gold.addColorStop(0, "rgba(255,170,60,0.28)");
+  gold.addColorStop(0.5, "rgba(255,160,50,0.1)");
+  gold.addColorStop(1, "rgba(255,160,50,0)");
+  g.fillStyle = gold;
+  g.fillRect(left, top, size, 260);
+  const rs = seeded(2010);
+  for (let i = 0; i < 70; i++) {
+    const x = 60 + rs() * 280;
+    const y = 40 + rs() * 120;
+    g.fillStyle = `rgba(255,240,190,${0.3 + rs() * 0.6})`;
+    g.beginPath();
+    g.arc(x, y, 0.4 + rs() * 1.1, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
 
   // 제단 쪽 벽: 크림색 돌, 세로 기둥띠와 위쪽 아치
   const wall = g.createLinearGradient(0, 150, 0, 330);
@@ -208,8 +229,9 @@ function leafVault(g, cx, cy, rr, rnd) {
   for (let k = 0; k < leaves; k++) {
     const a = (k / leaves) * Math.PI * 2 + rnd() * 0.2;
     const grad = g.createLinearGradient(cx, cy, cx + Math.cos(a) * rr * 1.3, cy + Math.sin(a) * rr);
-    grad.addColorStop(0, "#c9a678");
-    grad.addColorStop(1, "#f4e4c6");
+    grad.addColorStop(0, "#c8781e");
+    grad.addColorStop(0.5, "#eeb052");
+    grad.addColorStop(1, "#fbe6bf");
     g.fillStyle = grad;
     g.beginPath();
     g.moveTo(cx + Math.cos(a - 0.35) * rr * 0.45, cy + Math.sin(a - 0.35) * rr * 0.34);
@@ -221,18 +243,27 @@ function leafVault(g, cx, cy, rr, rnd) {
     g.fill();
   }
   const hole = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 0.55);
-  hole.addColorStop(0, "#ffe7a0");
-  hole.addColorStop(0.3, "#b8864a");
-  hole.addColorStop(1, "#8a6238");
+  hole.addColorStop(0, "#fff6c8");
+  hole.addColorStop(0.3, "#ffc23a");
+  hole.addColorStop(1, "#a85a14");
   g.fillStyle = hole;
   g.beginPath();
   g.ellipse(cx, cy, rr * 0.55, rr * 0.42, 0, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = "rgba(255,226,150,0.9)";
+  // 가운데에서 번지는 금빛
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  const halo = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 1.6);
+  halo.addColorStop(0, "rgba(255,170,60,0.3)");
+  halo.addColorStop(1, "rgba(255,170,60,0)");
+  g.fillStyle = halo;
+  g.fillRect(cx - rr * 1.6, cy - rr * 1.6, rr * 3.2, rr * 3.2);
+  g.restore();
+  g.fillStyle = "#fff3c4";
   for (let k = 0; k < 8; k++) {
     const a = (k / 8) * Math.PI * 2;
     g.beginPath();
-    g.arc(cx + Math.cos(a) * rr * 0.72, cy + Math.sin(a) * rr * 0.55, Math.max(0.4, rr * 0.05), 0, Math.PI * 2);
+    g.arc(cx + Math.cos(a) * rr * 0.72, cy + Math.sin(a) * rr * 0.55, Math.max(0.5, rr * 0.07), 0, Math.PI * 2);
     g.fill();
   }
 }
@@ -240,7 +271,7 @@ function leafVault(g, cx, cy, rr, rnd) {
 // 금빛 별 천창: 주황 꽃잎이 뾰족하게 퍼지고 가운데는 노란 빛. 둘레로 크림색 돌 갈비뼈
 function starVault(g, cx, cy, rr) {
   const glow = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 1.8);
-  glow.addColorStop(0, "rgba(255,210,110,0.7)");
+  glow.addColorStop(0, "rgba(255,220,120,0.95)");
   glow.addColorStop(1, "rgba(255,210,110,0)");
   g.fillStyle = glow;
   g.fillRect(cx - rr * 1.8, cy - rr * 1.8, rr * 3.6, rr * 3.6);
@@ -249,8 +280,8 @@ function starVault(g, cx, cy, rr) {
     const a = (k / spikes) * Math.PI * 2;
     const len = rr * (k % 2 ? 1.25 : 0.95);
     const grad = g.createLinearGradient(cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len * 0.75);
-    grad.addColorStop(0, "#f39a2e");
-    grad.addColorStop(1, "#efd9b4");
+    grad.addColorStop(0, "#ffb83a");
+    grad.addColorStop(1, "#fff0c8");
     g.fillStyle = grad;
     g.beginPath();
     g.moveTo(cx + Math.cos(a - 0.22) * rr * 0.35, cy + Math.sin(a - 0.22) * rr * 0.26);
@@ -413,7 +444,7 @@ function leaningColumn(g, bx, tx, baseY, topY, w, side, d) {
   const sx = xAt(splitY);
   const sw = wAt(splitY);
   const ao = g.createRadialGradient(sx, splitY - 30, 0, sx, splitY - 30, 70);
-  ao.addColorStop(0, "rgba(90,60,30,0.25)");
+  ao.addColorStop(0, "rgba(120,80,30,0.12)");
   ao.addColorStop(1, "rgba(90,60,30,0)");
   g.fillStyle = ao;
   g.fillRect(sx - 70, splitY - 100, 140, 140);
