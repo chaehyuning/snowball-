@@ -143,13 +143,46 @@ function paintBarcelona(g, globe, groundAt) {
   lip.addColorStop(1, "rgba(140,100,55,0)");
   g.fillStyle = lip;
   g.fillRect(118, wallTop + 2, 164, 8);
-  // 세로 띠(벽기둥): 창 사이에만
+  // 세로 띠(벽기둥): 양끝에만
   g.fillStyle = "rgba(150,120,85,0.18)";
-  for (const px of [121, 172, 226, 277]) g.fillRect(px, wallTop + 2, 2, 330 - wallTop - 2);
+  for (const px of [121, 277]) g.fillRect(px, wallTop + 2, 2, 330 - wallTop - 2);
+
+  // 뾰족 아치: 돌 테 안쪽은 살짝 움푹한 그늘, 테는 밝은 윗선과 그늘진 아랫선 두 겹
+  const arch = (x0, x1, base, spring, apex) => {
+    const mid = (x0 + x1) / 2;
+    const ctl = spring - (spring - apex) * 0.62;
+    g.beginPath();
+    g.moveTo(x0, base);
+    g.lineTo(x0, spring);
+    g.quadraticCurveTo(x0, ctl, mid, apex);
+    g.quadraticCurveTo(x1, ctl, x1, spring);
+    g.lineTo(x1, base);
+  };
+  const archFrame = (x0, x1, base, spring, apex, lw) => {
+    arch(x0, x1, base, spring, apex);
+    g.closePath();
+    g.fillStyle = "rgba(160,125,85,0.12)";
+    g.fill();
+    arch(x0, x1, base, spring, apex);
+    g.lineJoin = "round";
+    g.strokeStyle = "rgba(150,112,72,0.6)";
+    g.lineWidth = lw + 1.2;
+    g.stroke();
+    g.strokeStyle = "#fbf2e0";
+    g.lineWidth = lw;
+    g.stroke();
+    arch(x0 + lw, x1 - lw, base, spring + lw * 0.5, apex + lw * 1.6);
+    g.strokeStyle = "rgba(150,112,72,0.35)";
+    g.lineWidth = 0.6;
+    g.stroke();
+  };
+
+  // 큰 뾰족 아치 하나가 장미창과 아래 두 창 묶음을 감쌈 (사진처럼)
+  archFrame(134, 266, 268, 226, wallTop + 3, 2.6);
 
   // 큰 장미창: 둘레에 돌 테두리와 방사형 돌살 테를 두르고, 꽃잎은 파랑·초록·노랑
-  const RC = [200, wallTop + 33];
-  const ring = 34;
+  const RC = [200, wallTop + 30];
+  const ring = 25;
   for (let k = 0; k < 24; k++) {
     const a0 = (k / 24) * Math.PI * 2;
     const a1 = ((k + 1) / 24) * Math.PI * 2;
@@ -165,16 +198,19 @@ function paintBarcelona(g, globe, groundAt) {
   g.beginPath();
   g.arc(RC[0], RC[1], ring, 0, Math.PI * 2);
   g.stroke();
-  roseWindow(g, RC[0], RC[1], 26, ["#1f5fc9", "#2f86e0", "#3cbf6a", "#1aa3a0", "#9ad84a", "#f2c232"]);
+  roseWindow(g, RC[0], RC[1], 20, ["#1f5fc9", "#2f86e0", "#3cbf6a", "#1aa3a0", "#9ad84a", "#f2c232"]);
 
-  // 장미창 양옆: 작은 장미창과 그 아래 긴 창 한 쌍. 가운데 아래에는 짧은 창 셋
+  // 장미창 아래 두 묶음: 묶음마다 작은 뾰족 아치 안에 작은 장미창 하나와 긴 창 둘
   const mixed = ["#2f6fd6", "#3cbf6a", "#f2b632", "#f06a2a", "#d8324a", "#7fd0f0", "#ffd86a"];
-  for (const cx of [147, 253]) {
-    roseWindow(g, cx, wallTop + 22, 9, ["#3cbf6a", "#f2b632", "#2f86e0", "#f06a2a", "#d8324a"]);
-    stainedWindow(g, rnd, cx - 9, wallTop + 36, 11, 44, mixed, 1);
-    stainedWindow(g, rnd, cx + 9, wallTop + 36, 11, 44, mixed, 1);
+  for (const [x0, x1] of [[143, 197], [203, 257]]) {
+    const mid = (x0 + x1) / 2;
+    archFrame(x0, x1, 268, 247, RC[1] + ring + 2, 1.6);
+    roseWindow(g, mid, 244, 7, ["#3cbf6a", "#f2b632", "#2f86e0", "#f06a2a", "#d8324a"]);
+    stainedWindow(g, rnd, mid - 10, 251, 13, 17, mixed, 1);
+    stainedWindow(g, rnd, mid + 10, 251, 13, 17, mixed, 1);
   }
-  for (const cx of [186, 200, 214]) stainedWindow(g, rnd, cx, RC[1] + ring + 4, 9, 20, mixed, 1);
+  // 큰 아치 바깥 양옆: 가늘고 긴 창 하나씩
+  for (const cx of [127, 273]) stainedWindow(g, rnd, cx, wallTop + 26, 7, 56, mixed, 1);
 
   // 성가대 회랑: 따뜻한 불빛이 비치는 작은 아치가 줄지어 있음
   g.fillStyle = "#e9cfa3";
