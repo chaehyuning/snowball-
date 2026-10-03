@@ -28,6 +28,29 @@ const GLYPHS = {
 };
 const GLYPH_KEYS = Object.keys(GLYPHS);
 
+// 간판 색 짝: 테두리와 글자가 서로 받쳐 주는 두 색
+const PAIRS = [
+  ["#ff3fa4", "#3ff0ff"],
+  ["#ffb03a", "#ff4b4b"],
+  ["#3ff0ff", "#4dff8a"],
+  ["#b46bff", "#ff3fa4"],
+  ["#4dff8a", "#ffb03a"],
+  ["#ff4b4b", "#ffd36a"],
+];
+// 가로 간판 아래 영문 상호
+const WORDS = ["HOTEL", "KARAOKE", "NOODLES", "JEWELLERY", "PAWN", "BAR", "SAUNA", "TEA HOUSE", "MAHJONG", "OPTICAL"];
+
+// 네온관 글자 한 자: 칸 (x, y, size) 안에 획을 긋고 빛을 입힘
+function drawGlyph(g, key, x, y, size, color, width, k) {
+  g.beginPath();
+  for (const stroke of GLYPHS[key]) {
+    stroke.forEach(([u, v], j) => (j ? g.lineTo(x + u * size, y + v * size) : g.moveTo(x + u * size, y + v * size)));
+  }
+  g.lineCap = "round";
+  g.lineJoin = "round";
+  neonStroke(g, color, width, 9 * k);
+}
+
 // 그려 둔 간판 자리: animate에서 깜빡임을 덧그릴 때 씀
 let signs = [];
 
@@ -159,49 +182,172 @@ function paintHongKong(g, globe, groundAt) {
   const SIGN_Z = [5.6, 4.6, 3.8, 3.1, 2.55, 2.1, 1.72, 1.4, 1.15];
   for (const z of SIGN_Z) {
     for (const s of [-1, 1]) {
-      if (rnd() < 0.15) continue;
-      const vertical = rnd() < 0.6;
-      const w = vertical ? r(26, 38) : r(60, 100);
-      const h = vertical ? r(90, 160) : r(30, 46);
-      const y0 = r(-60, 170);
-      const x0 = s < 0 ? -WALL_X + r(0, 8) : WALL_X - r(0, 8) - w;
-      signs.push({ x0, y0, w, h, z, vertical, color: pick(NEON), color2: pick(NEON), n: vertical ? Math.max(2, Math.round(h / w) - 1) : 3 });
+      // 높이 칸 두 개(위·아래)에 하나씩: 몽콕처럼 간판이 위아래로 겹겹이
+      for (const [lo, hi] of [[-110, -10], [40, 170]]) {
+        if (rnd() < 0.25) continue;
+        const vertical = rnd() < 0.55;
+        const w = vertical ? r(26, 36) : r(64, 100);
+        const h = vertical ? r(100, 150) : r(42, 58);
+        const y0 = r(lo, hi - (vertical ? 60 : 10));
+        const x0 = s < 0 ? -WALL_X + r(0, 8) : WALL_X - r(0, 8) - w;
+        const [color, color2] = pick(PAIRS);
+        const style = pick(["double", "double", "bulbs", "single"]);
+        const words = !vertical && rnd() < 0.7 ? pick(WORDS) : "";
+        const logo = !vertical && rnd() < 0.5;
+        const n = vertical ? Math.max(2, Math.round(h / w) - 1) : logo ? 2 : 3;
+        const chars = Array.from({ length: n }, () => pick(GLYPH_KEYS));
+        signs.push({ x0, y0, w, h, z, vertical, color, color2, style, words, logo, chars, side: s });
+      }
     }
   }
   for (const sg of signs) {
     const [ax, ay] = P(sg.x0, sg.y0, sg.z);
     const [bx, by] = P(sg.x0 + sg.w, sg.y0 + sg.h, sg.z);
-    sg.rect = [ax, ay, bx - ax, by - ay];
-    // 매다는 쇠막대
-    g.strokeStyle = "rgba(60,60,70,0.8)";
-    g.lineWidth = 1 / sg.z;
-    g.beginPath();
-    const wallX = sg.x0 < 0 ? -WALL_X : WALL_X;
-    g.moveTo(...P(wallX, sg.y0 - 6, sg.z));
-    g.lineTo(...P(sg.x0 + sg.w / 2, sg.y0, sg.z));
-    g.stroke();
-    // 간판 바탕
-    g.fillStyle = "rgba(18,8,26,0.88)";
-    g.fillRect(ax, ay, bx - ax, by - ay);
-    // 테두리 네온관
-    const lw = Math.max(0.7, 2.2 / sg.z);
-    g.beginPath();
-    g.rect(ax + lw * 1.5, ay + lw * 1.5, bx - ax - lw * 3, by - ay - lw * 3);
-    neonStroke(g, sg.color, lw, 10 / sg.z);
-    // 글자
-    const cell = sg.vertical ? (bx - ax) * 0.72 : (by - ay) * 0.62;
-    for (let i = 0; i < sg.n; i++) {
-      const key = pick(GLYPH_KEYS);
-      const gx = sg.vertical ? ax + (bx - ax - cell) / 2 : ax + (bx - ax) * ((i + 0.5) / sg.n) - cell / 2;
-      const gy = sg.vertical ? ay + (by - ay) * ((i + 0.5) / sg.n) - cell / 2 : ay + (by - ay - cell) / 2;
+    const w = bx - ax;
+    const h = by - ay;
+    sg.rect = [ax, ay, w, h];
+    const k = 1 / sg.z; // 가까울수록 굵게
+    const wallX = sg.side < 0 ? -WALL_X : WALL_X;
+
+    // 간판 빛이 둘레 벽과 옆 간판에 번짐
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    const cx = ax + w / 2;
+    const cy = ay + h / 2;
+    const reach = Math.max(w, h) * 0.9 + 10 * k;
+    const halo = g.createRadialGradient(cx, cy, 0, cx, cy, reach);
+    halo.addColorStop(0, sg.color + "40");
+    halo.addColorStop(1, sg.color + "00");
+    g.fillStyle = halo;
+    g.fillRect(cx - reach, cy - reach, reach * 2, reach * 2);
+    g.restore();
+
+    // 벽에서 뻗은 쇠 받침 두 개
+    g.strokeStyle = "rgba(70,66,80,0.9)";
+    g.lineWidth = Math.max(0.6, 1.4 * k);
+    for (const yy of [sg.y0 + sg.h * 0.12, sg.y0 + sg.h * 0.88]) {
       g.beginPath();
-      for (const stroke of GLYPHS[key]) {
-        stroke.forEach(([u, v], j) => (j ? g.lineTo(gx + u * cell, gy + v * cell) : g.moveTo(gx + u * cell, gy + v * cell)));
-      }
-      g.lineCap = "round";
-      g.lineJoin = "round";
-      neonStroke(g, sg.color2, Math.max(0.6, 1.8 / sg.z), 8 / sg.z);
+      g.moveTo(...P(wallX, yy - 8, sg.z));
+      g.lineTo(...P(sg.side < 0 ? sg.x0 + sg.w : sg.x0, yy, sg.z));
+      g.stroke();
     }
+
+    // 간판 두께: 길 가운데 쪽 옆면이 소실점 방향으로 살짝 보임
+    const edgeX = sg.side < 0 ? sg.x0 + sg.w : sg.x0;
+    const dz = 0.06;
+    g.fillStyle = "#0b0710";
+    g.beginPath();
+    g.moveTo(...P(edgeX, sg.y0, sg.z));
+    g.lineTo(...P(edgeX, sg.y0, sg.z + dz));
+    g.lineTo(...P(edgeX, sg.y0 + sg.h, sg.z + dz));
+    g.lineTo(...P(edgeX, sg.y0 + sg.h, sg.z));
+    g.closePath();
+    g.fill();
+
+    // 바탕: 어두운 철판, 모서리는 살짝 둥글고 안쪽에 철골 격자가 비침
+    const radius = Math.min(w, h) * 0.08;
+    const plate = g.createLinearGradient(0, ay, 0, by);
+    plate.addColorStop(0, "#1d1028");
+    plate.addColorStop(1, "#0e0716");
+    g.fillStyle = plate;
+    g.beginPath();
+    g.roundRect(ax, ay, w, h, radius);
+    g.fill();
+    g.strokeStyle = "rgba(255,255,255,0.05)";
+    g.lineWidth = 0.5;
+    const step = Math.max(4, 9 * k);
+    for (let gx = ax + step; gx < bx; gx += step) {
+      g.beginPath();
+      g.moveTo(gx, ay + 1);
+      g.lineTo(gx, by - 1);
+      g.stroke();
+    }
+
+    // 테두리: 두 겹 네온관 / 전구가 줄지은 테 / 한 겹
+    const lw = Math.max(0.7, 2 * k);
+    const inset = lw * 1.6;
+    if (sg.style === "bulbs") {
+      g.save();
+      g.globalCompositeOperation = "lighter";
+      const gap = Math.max(2.4, 5 * k);
+      const dot = (x, y) => {
+        const bulb = g.createRadialGradient(x, y, 0, x, y, lw * 1.6);
+        bulb.addColorStop(0, "#fff6d8");
+        bulb.addColorStop(0.4, "#ffc34a");
+        bulb.addColorStop(1, "rgba(255,170,40,0)");
+        g.fillStyle = bulb;
+        g.fillRect(x - lw * 1.6, y - lw * 1.6, lw * 3.2, lw * 3.2);
+      };
+      for (let x = ax + inset; x <= bx - inset; x += gap) {
+        dot(x, ay + inset);
+        dot(x, by - inset);
+      }
+      for (let y = ay + inset + gap; y <= by - inset - gap; y += gap) {
+        dot(ax + inset, y);
+        dot(bx - inset, y);
+      }
+      g.restore();
+    } else {
+      g.beginPath();
+      g.roundRect(ax + inset, ay + inset, w - inset * 2, h - inset * 2, radius);
+      neonStroke(g, sg.color, lw, 12 * k);
+      if (sg.style === "double") {
+        const in2 = inset + lw * 2.4;
+        g.beginPath();
+        g.roundRect(ax + in2, ay + in2, w - in2 * 2, h - in2 * 2, radius * 0.6);
+        neonStroke(g, sg.color2, lw * 0.6, 8 * k);
+      }
+    }
+
+    // 글자 영역: 가로 간판은 위쪽에 한자, 아래쪽에 영문 상호. 왼쪽에 둥근 로고가 붙기도 함
+    const pad = inset + lw * (sg.style === "double" ? 3.4 : 1.8);
+    let gx0 = ax + pad;
+    let gy0 = ay + pad;
+    let gw = w - pad * 2;
+    let gh = h - pad * 2;
+    if (sg.logo) {
+      const lr = gh * (sg.words ? 0.42 : 0.46);
+      const lx = gx0 + lr;
+      const ly = gy0 + gh / 2;
+      g.beginPath();
+      g.arc(lx, ly, lr, 0, Math.PI * 2);
+      neonStroke(g, sg.color2, lw * 0.8, 8 * k);
+      drawGlyph(g, pick(GLYPH_KEYS), lx - lr * 0.6, ly - lr * 0.6, lr * 1.2, sg.color, lw * 0.7, k);
+      gx0 += lr * 2 + lw * 3;
+      gw -= lr * 2 + lw * 3;
+    }
+    if (sg.words) {
+      const th = gh * 0.32;
+      g.save();
+      g.font = `700 ${th}px 'Helvetica Neue', Arial, sans-serif`;
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      let fs = th;
+      while (g.measureText(sg.words).width > gw && fs > 3) {
+        fs -= 0.5;
+        g.font = `700 ${fs}px 'Helvetica Neue', Arial, sans-serif`;
+      }
+      g.shadowColor = sg.color2;
+      g.shadowBlur = 8 * k;
+      g.fillStyle = sg.color2;
+      g.fillText(sg.words, gx0 + gw / 2, gy0 + gh - th / 2);
+      g.shadowBlur = 0;
+      g.globalAlpha = 0.6;
+      g.fillStyle = "#ffffff";
+      g.fillText(sg.words, gx0 + gw / 2, gy0 + gh - th / 2);
+      g.restore();
+      gh -= th + lw * 2;
+    }
+    const n = sg.chars.length;
+    const cell = sg.vertical ? Math.min(gw * 1.05, (gh / n) * 0.95) : Math.min(gh, gw / n) * 0.92;
+    sg.chars.forEach((key, i) => {
+      const cxg = sg.vertical ? gx0 + gw / 2 : gx0 + gw * ((i + 0.5) / n);
+      const cyg = sg.vertical ? gy0 + gh * ((i + 0.5) / n) : gy0 + gh / 2;
+      // 한 간판 안에서 글자 색을 번갈아
+      const color = sg.style === "double" && i % 2 ? sg.color2 : sg.color;
+      drawGlyph(g, key, cxg - cell / 2, cyg - cell / 2, cell, color, Math.max(0.8, cell * 0.1), k);
+    });
+
     // 젖은 길에 비친 간판 빛: 간판 아래 길바닥에서 아래로 길게 번지는 세로 띠
     const [rx, ry] = P(sg.x0 + sg.w / 2, STREET_Y, sg.z);
     // 물결에 끊긴 가로 획을 아래로 쌓아, 흐릿하게 일렁이는 빛기둥처럼 보이게 함
@@ -318,34 +464,31 @@ function animateHongKong(ctx, t) {
   ctx.restore();
 }
 
-// 네온 빗방울: 떨어질 때는 가는 빛줄기, 바닥에 닿으면 납작한 빛 웅덩이
+// 네온 빗방울: 동그란 물방울. 둘레로 간판 빛이 번지고, 속은 맑고, 왼쪽 위에 하얀 반사점.
+// 바닥에 닿으면 살짝 눌린 물방울로 남음
 function drawRain(ctx, p) {
+  const s = p.size * 1.25;
+  const squash = p.settled ? 0.7 : 1;
   ctx.save();
-  if (p.settled) {
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.ellipse(p.x, p.y, p.size * 1.6, p.size * 0.45, 0, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    const len = p.size * 5 + Math.min(10, Math.abs(p.vy || 0) * 1.5);
-    const dx = (p.vx || 0) * 0.6;
-    const streak = ctx.createLinearGradient(p.x - dx, p.y - len, p.x, p.y);
-    streak.addColorStop(0, p.color + "00");
-    streak.addColorStop(1, p.color);
-    ctx.strokeStyle = streak;
-    ctx.lineWidth = p.size * 0.7;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(p.x - dx, p.y - len);
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    ctx.fillStyle = "#ffffff";
-    ctx.globalAlpha = 0.8;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 0.45, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.translate(p.x, p.y);
+  ctx.scale(1, squash);
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2.4);
+  glow.addColorStop(0, p.color + "55");
+  glow.addColorStop(1, p.color + "00");
+  ctx.fillStyle = glow;
+  ctx.fillRect(-s * 2.4, -s * 2.4, s * 4.8, s * 4.8);
+  const body = ctx.createRadialGradient(-s * 0.3, -s * 0.35, s * 0.1, 0, 0, s);
+  body.addColorStop(0, "rgba(255,255,255,0.9)");
+  body.addColorStop(0.35, p.color + "cc");
+  body.addColorStop(1, p.color + "55");
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.arc(0, 0, s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(-s * 0.35, -s * 0.4, s * 0.22, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
