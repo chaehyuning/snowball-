@@ -483,7 +483,7 @@ function animateLanterns(ctx, t, globe, stir) {
 }
 
 // 은행잎: 가운데가 살짝 갈라진 부채꼴 잎과 잎자루
-function drawGinkgo(ctx, p) {
+function drawGinkgo(ctx, p, t = 0) {
   const s = p.size;
   ctx.globalAlpha = p.settled ? 0.95 : 0.92;
   ctx.save();
@@ -509,6 +509,43 @@ function drawGinkgo(ctx, p) {
   ctx.lineTo(0, s * 0.7);
   ctx.stroke();
   ctx.restore();
+  // 금박 가루: 날리는 잎 둘레로 작은 금빛 조각이 찰랑이며 번쩍임 (바닥에 내려앉으면 은은하게만)
+  const n = p.settled ? 1 : 3;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < n; i++) {
+    const ph = p.foil + i * 2.1;
+    const glint = Math.max(0, Math.sin(t * 0.006 + ph));
+    if (glint < 0.35) continue;
+    const ang = t * 0.002 * (i % 2 ? 1 : -1) + ph;
+    const dist = s * (0.9 + 0.5 * Math.sin(ph * 1.7));
+    const gx = p.x + Math.cos(ang) * dist;
+    const gy = p.y + Math.sin(ang) * dist;
+    const a = (glint - 0.35) / 0.65;
+    const halo = ctx.createRadialGradient(gx, gy, 0, gx, gy, s * 0.6);
+    halo.addColorStop(0, `rgba(255,226,120,${0.55 * a})`);
+    halo.addColorStop(1, "rgba(255,200,60,0)");
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = halo;
+    ctx.fillRect(gx - s * 0.6, gy - s * 0.6, s * 1.2, s * 1.2);
+    // 네모난 금박 조각이 회전하며 빛을 받음
+    ctx.save();
+    ctx.translate(gx, gy);
+    ctx.rotate(ang * 3);
+    ctx.globalAlpha = 0.9 * a;
+    ctx.fillStyle = i % 2 ? "#fff3b0" : "#ffd24a";
+    const f = Math.max(0.6, s * 0.16);
+    ctx.fillRect(-f, -f * 0.6, f * 2, f * 1.2);
+    // 가장 밝을 때 십자 빛
+    if (a > 0.8) {
+      ctx.globalAlpha = (a - 0.8) * 4;
+      ctx.fillStyle = "#fffbe8";
+      ctx.fillRect(-f * 3, -0.25, f * 6, 0.5);
+      ctx.fillRect(-0.25, -f * 3, 0.5, f * 6);
+    }
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 export const forbidden = {
@@ -533,6 +570,7 @@ export const forbidden = {
       return {
         size,
         color: GINKGO[Math.floor(rand(0, GINKGO.length))],
+        foil: rand(0, Math.PI * 2),
         sink: 0.13 + size * 0.03 + rand(-0.03, 0.03),
         drag: rand(0.08, 0.12),
         inertia: rand(0.3, 0.6),

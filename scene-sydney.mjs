@@ -2,7 +2,7 @@
 
 import { seeded, fillSilhouette } from "./util.mjs";
 
-const DROP_COLORS = ["#ffffff", "#c8ecff", "#8fd3f7", "#4fb0e8", "#2b8fd6"];
+const DROP_COLORS = ["rgba(255,214,236,0.55)", "rgba(200,236,255,0.55)", "rgba(190,250,236,0.55)", "rgba(143,211,247,0.55)", "rgba(230,220,255,0.55)"];
 
 function paintSydney(g, globe, groundAt) {
   const rnd = seeded(1973);
@@ -458,12 +458,16 @@ function paintOperaHouse(g) {
 // 끝에서 아래로 떨어지는 앞 모서리 안쪽이 어두운 입구(내부와 구릿빛 유리)
 function shell(g, ax, ay, w, by) {
   const h = by - ay;
-  const x0 = ax + w * 0.1; // 입구 밑동 왼쪽: 끝보다 오른쪽이라 끝이 앞으로 튀어나옴
+  const x0 = ax + w * 0.16; // 입구 밑동 왼쪽: 끝보다 오른쪽이라 끝이 앞으로 튀어나옴
   const innerX = ax + w * 0.5; // 흰 겉면과 입구가 만나는 밑동
   const x1 = ax + w;
+  // 등 곡선: 구의 한 조각이라 끝에서 거의 수평으로 나가다 둥글게 부풀어 밑동으로 떨어짐 (3차 곡선)
   const outerCtl = [x1 - w * 0.02, ay - h * 0.04];
-  const innerCtl = [ax + w * 0.42, ay + h * 0.38]; // 흰 겉면 아래 경계는 오른쪽 위로 오목하게 파여 입구가 크게 보임
-  const edgeCtl = [ax + w * 0.05, ay + h * 0.5];
+  const back1 = [ax + w * 0.42, ay - h * 0.1];
+  const back2 = [x1 + w * 0.04, ay + h * 0.3];
+  const backTo = () => g.bezierCurveTo(back1[0], back1[1], back2[0], back2[1], x1, by);
+  const innerCtl = [ax + w * 0.5, ay + h * 0.3]; // 흰 겉면 아래 경계는 오른쪽 위로 오목하게 파여 입구가 크게 보임
+  const edgeCtl = [ax + w * 0.06, ay + h * 0.62];
 
   // 입구: 꼭짓점에서 왼쪽 가장자리를 따라 내려왔다가 안쪽 곡선으로 올라감
   g.beginPath();
@@ -502,7 +506,7 @@ function shell(g, ax, ay, w, by) {
   function surface() {
     g.beginPath();
     g.moveTo(ax, ay);
-    g.quadraticCurveTo(outerCtl[0], outerCtl[1], x1, by);
+    backTo();
     g.lineTo(innerX, by);
     g.quadraticCurveTo(innerCtl[0], innerCtl[1], ax, ay);
     g.closePath();
@@ -559,7 +563,7 @@ function shell(g, ax, ay, w, by) {
   g.lineWidth = 0.6;
   g.beginPath();
   g.moveTo(ax, ay);
-  g.quadraticCurveTo(outerCtl[0], outerCtl[1], x1, by);
+  backTo();
   g.stroke();
 }
 
@@ -634,38 +638,85 @@ function paintFerry(g, x, y, s) {
 }
 
 // 물방울: 가장자리가 밝고 속이 비치는 방울. 색마다 한 번만 그려 둠
+// 진주 같은 기포: 투명한 몸통, 가장자리에 무지갯빛 테(분홍·민트·하늘), 왼쪽 위 또렷한 반사점
 const sprites = new Map();
-function dropSprite(color) {
+function pearlSprite(color) {
   if (!sprites.has(color)) {
     const c = document.createElement("canvas");
-    c.width = c.height = 32;
+    c.width = c.height = 48;
     const g = c.getContext("2d");
-    const body = g.createRadialGradient(16, 16, 4, 16, 16, 15);
-    body.addColorStop(0, "rgba(255,255,255,0.15)");
-    body.addColorStop(0.75, color);
-    body.addColorStop(1, "rgba(255,255,255,0.9)");
+    const body = g.createRadialGradient(20, 18, 2, 24, 24, 23);
+    body.addColorStop(0, "rgba(255,255,255,0.55)");
+    body.addColorStop(0.55, "rgba(255,255,255,0.08)");
+    body.addColorStop(0.82, color);
+    body.addColorStop(1, "rgba(255,255,255,0.95)");
     g.fillStyle = body;
     g.beginPath();
-    g.arc(16, 16, 15, 0, Math.PI * 2);
+    g.arc(24, 24, 23, 0, Math.PI * 2);
     g.fill();
+    // 무지갯빛 테
+    const rim = g.createLinearGradient(0, 0, 48, 48);
+    rim.addColorStop(0, "rgba(255,190,230,0.75)");
+    rim.addColorStop(0.5, "rgba(180,255,235,0.6)");
+    rim.addColorStop(1, "rgba(170,200,255,0.75)");
+    g.strokeStyle = rim;
+    g.lineWidth = 2.4;
+    g.beginPath();
+    g.arc(24, 24, 21.5, 0, Math.PI * 2);
+    g.stroke();
     g.fillStyle = "rgba(255,255,255,0.95)";
     g.beginPath();
-    g.ellipse(11, 10, 4, 2.5, -0.6, 0, Math.PI * 2);
+    g.ellipse(16, 14, 6, 3.4, -0.6, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "rgba(255,255,255,0.6)";
+    g.beginPath();
+    g.arc(32, 33, 2, 0, Math.PI * 2);
     g.fill();
     sprites.set(color, c);
   }
   return sprites.get(color);
 }
 
-function drawDrop(ctx, p) {
-  ctx.globalAlpha = p.settled ? 0.55 : 0.9;
-  const r = p.size;
-  ctx.drawImage(dropSprite(p.color), p.x - r, p.y - r, r * 2, r * 2);
+function drawDrop(ctx, p, t) {
+  // 물속에서 살짝 찰랑이며 크기가 숨 쉬듯 변함
+  const wob = 1 + 0.06 * Math.sin((t || 0) * 0.01 + p.swayPhase * 3);
+  ctx.globalAlpha = p.settled ? 0.6 : 0.95;
+  const r = p.size * wob;
+  ctx.drawImage(pearlSprite(p.color), p.x - r, p.y - r * (2 - wob), r * 2, r * 2);
+}
+
+// 바닥 수면에서 끊임없이 피어오르는 진주 기포: 흔들리며 올라가다 커지고, 수면 위쪽에서 터지듯 사라짐
+let rising = [];
+function drawRisingBubbles(ctx, t, globe) {
+  if (!rising.length) {
+    const rnd = seeded(31);
+    rising = Array.from({ length: 34 }, () => ({
+      x: globe.x + (rnd() * 2 - 1) * (globe.r - 40),
+      speed: 0.012 + rnd() * 0.02,
+      phase: rnd() * 1000,
+      size: 1.6 + rnd() * 3.2,
+      wobble: 2 + rnd() * 4,
+      color: DROP_COLORS[Math.floor(rnd() * DROP_COLORS.length)],
+    }));
+  }
+  const bottom = globe.y + globe.r * 0.82;
+  const range = globe.r * 1.25;
+  ctx.save();
+  for (const b of rising) {
+    const k = ((t * b.speed + b.phase) % range) / range; // 0 바닥 → 1 위
+    const y = bottom - k * range;
+    const x = b.x + Math.sin(t * 0.003 + b.phase) * b.wobble * (0.4 + k);
+    const r = b.size * (0.6 + k * 0.7);
+    ctx.globalAlpha = Math.min(1, k * 6) * (1 - Math.max(0, (k - 0.85) / 0.15));
+    ctx.drawImage(pearlSprite(b.color), x - r, y - r, r * 2, r * 2);
+  }
+  ctx.restore();
 }
 
 // 바다 위 반짝임: 물결 위 몇 곳이 번갈아 빛남
 let glints = [];
-function animateSydney(ctx, t) {
+function animateSydney(ctx, t, globe) {
+  drawRisingBubbles(ctx, t, globe);
   if (!glints.length) {
     const rnd = seeded(7);
     glints = Array.from({ length: 24 }, () => ({
@@ -703,7 +754,7 @@ export const sydney = {
     count: 170,
     blend: "source-over",
     make(rand) {
-      const size = rand(1.5, 4);
+      const size = rand(1.8, 4.2);
       return {
         size,
         color: DROP_COLORS[Math.floor(rand(0, DROP_COLORS.length))],

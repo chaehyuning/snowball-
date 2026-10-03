@@ -523,8 +523,17 @@ function update(t, accel) {
     } else {
       // 천천히 떨어지며 입자마다 자기 박자로 좌우로 살랑임 (떨어지는 눈송이·꽃잎의 진자 운동)
       const slow = fallScale(now);
-      const sway = Math.sin(t * p.swayFreq + p.swayPhase) * p.swayAmp * slow;
+      let sway = Math.sin(t * p.swayFreq + p.swayPhase) * p.swayAmp * slow;
+      let lift = 0;
+      if (scene.wind) {
+        // 바람 방향으로 흐르다가, 위치마다 다른 소용돌이 장에 휘감김
+        const w = scene.wind;
+        const a = Math.sin(p.x * 0.03 + t * 0.0012) + Math.cos(p.y * 0.035 - t * 0.001);
+        sway += w.x * slow + Math.cos(a * 2.2) * w.swirl * 1.6;
+        lift = Math.sin(a * 2.2) * w.swirl;
+      }
       p.vx += (sway - p.vx) * p.drag;
+      p.vy += lift * p.drag;
       p.vy += (p.sink * FALL_SPEED * slow - p.vy) * p.drag;
     }
 

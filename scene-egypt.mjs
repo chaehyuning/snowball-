@@ -2,6 +2,7 @@
 
 import { seeded, fillSilhouette } from "./util.mjs";
 
+const GOLD_DUST = ["#ffd56a", "#f5b942", "#ffe9a8", "#e8a23a", "#fff1c4"];
 const SAND = ["#e9b07a", "#d48a52", "#b8683a", "#f3cf9c", "#9c5530"];
 
 function paintEgypt(g, globe, groundAt) {
@@ -617,21 +618,44 @@ function camel(g, x, baseY) {
 
 // 모래알: 작은 알갱이. 가끔 햇빛을 받아 반짝임
 function drawGrain(ctx, p, t) {
+  // 금빛 모래가루: 작은 빛 알갱이에 바람 방향으로 짧은 꼬리, 가끔 반짝임
   const glint = Math.max(0, Math.sin(t * p.twinkle + p.phase));
-  ctx.globalAlpha = p.settled ? 0.75 : 0.9;
-  ctx.fillStyle = p.color;
+  const moving = !p.settled;
   ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(p.angle);
-  ctx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.66);
-  ctx.restore();
-  if (!p.settled && glint > 0.85) {
-    ctx.globalAlpha = (glint - 0.85) * 5;
-    ctx.fillStyle = "#fff4d8";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * 0.8, 0, Math.PI * 2);
-    ctx.fill();
+  if (moving) {
+    const sp = Math.hypot(p.vx, p.vy);
+    if (sp > 0.3) {
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.size * 0.6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - p.vx * 3, p.y - p.vy * 3);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "lighter";
+    const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2.2);
+    halo.addColorStop(0, `rgba(255,214,120,${0.35 + 0.4 * glint})`);
+    halo.addColorStop(1, "rgba(255,190,80,0)");
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = halo;
+    ctx.fillRect(p.x - p.size * 2.2, p.y - p.size * 2.2, p.size * 4.4, p.size * 4.4);
+    ctx.globalCompositeOperation = "source-over";
   }
+  ctx.globalAlpha = p.settled ? 0.75 : 0.95;
+  ctx.fillStyle = p.color;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.size * 0.55, 0, Math.PI * 2);
+  ctx.fill();
+  if (moving && glint > 0.8) {
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = (glint - 0.8) * 5;
+    ctx.fillStyle = "#fff6d8";
+    ctx.fillRect(p.x - p.size * 1.6, p.y - 0.25, p.size * 3.2, 0.5);
+    ctx.fillRect(p.x - 0.25, p.y - p.size * 1.6, 0.5, p.size * 3.2);
+  }
+  ctx.restore();
 }
 
 export const egypt = {
@@ -647,6 +671,8 @@ export const egypt = {
     plateInk: "#2b1d10",
   },
   // 모래알은 작고 무거워서 꽃잎보다 빨리 떨어짐
+  // 사막 열풍: 왼쪽에서 오른쪽 아래로 사선으로 불고, 군데군데 소용돌이가 일어남
+  wind: { x: 1.1, swirl: 1.3 },
   particles: {
     count: 280,
     blend: "source-over",
@@ -654,8 +680,8 @@ export const egypt = {
       const size = rand(1.2, 2.4);
       return {
         size,
-        color: SAND[Math.floor(rand(0, SAND.length))],
-        sink: 0.22 + size * 0.05,
+        color: GOLD_DUST[Math.floor(rand(0, GOLD_DUST.length))],
+        sink: 0.12 + size * 0.04,
         drag: rand(0.1, 0.15),
         inertia: rand(0.4, 0.7),
         grip: rand(0.5, 1.8),
