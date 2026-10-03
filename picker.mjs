@@ -9,8 +9,11 @@ const PLACES = {
   korea: { lat: 37.55, lon: 126.99, landmark: "N서울타워", particle: "반짝이는 불빛", color: "#ffd27a", stem: 42, dx: 0 },
   canada: { lat: 46.81, lon: -71.21, landmark: "샤토 프롱트낙", particle: "단풍잎", color: "#e0531f", stem: 22, dx: 0 },
   australia: { lat: -33.86, lon: 151.21, landmark: "오페라하우스", particle: "물방울", color: "#4fb0e8", stem: 22, dx: 0 },
-  finland: { lat: 66.54, lon: 25.85, landmark: "산타마을", particle: "눈꽃", color: "#e8f2ff", stem: 22, dx: 0 },
+  finland: { lat: 66.54, lon: 25.85, landmark: "산타마을", particle: "눈꽃", color: "#e8f2ff", stem: 26, dx: 0 },
   china: { lat: 39.92, lon: 116.39, landmark: "자금성", particle: "은행잎", color: "#f2c230", stem: 24, dx: -30 },
+  egypt: { lat: 29.98, lon: 31.13, landmark: "기자 피라미드", particle: "모래알", color: "#d48a52", stem: 14, dx: -24 },
+  france: { lat: 48.86, lon: 2.29, landmark: "에펠탑", particle: "장미 꽃잎", color: "#d81b4a", stem: 22, dx: -24 },
+  turkey: { lat: 41.01, lon: 28.98, landmark: "블루 모스크", particle: "나비", color: "#2ec4c9", stem: 20, dx: 30 },
 };
 
 const RAD = Math.PI / 180;

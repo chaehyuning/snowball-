@@ -4,9 +4,12 @@ import { quebec } from "./scene-quebec.mjs";
 import { sydney } from "./scene-sydney.mjs";
 import { santa } from "./scene-santa.mjs";
 import { forbidden } from "./scene-forbidden.mjs";
+import { egypt } from "./scene-egypt.mjs";
+import { paris } from "./scene-paris.mjs";
+import { istanbul } from "./scene-istanbul.mjs";
 import { openPicker } from "./picker.mjs";
 
-const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden];
+const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul];
 
 const canvas = document.getElementById("globe");
 const ctx = canvas.getContext("2d");
