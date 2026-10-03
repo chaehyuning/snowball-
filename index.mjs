@@ -1,8 +1,11 @@
 import { fuji } from "./scene-fuji.mjs";
 import { namsan } from "./scene-namsan.mjs";
 import { quebec } from "./scene-quebec.mjs";
+import { sydney } from "./scene-sydney.mjs";
+import { santa } from "./scene-santa.mjs";
+import { forbidden } from "./scene-forbidden.mjs";
 
-const SCENES = [fuji, namsan, quebec];
+const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden];
 
 const canvas = document.getElementById("globe");
 const ctx = canvas.getContext("2d");
@@ -158,6 +161,9 @@ function stepScene(dir) {
 for (const button of document.querySelectorAll("[data-scene]")) {
   button.addEventListener("click", () => switchScene(button.dataset.scene));
 }
+
+// 주소의 # 뒤를 직접 바꿔도 그 나라로 넘어감
+window.addEventListener("hashchange", () => switchScene(location.hash.slice(1)));
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") stepScene(1);
