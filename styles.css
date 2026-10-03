@@ -4,16 +4,19 @@
   box-sizing: border-box;
 }
 
-html,
-body {
+html {
   height: 100%;
+  background: #070b16;
 }
 
+/* 작은 화면에서 버튼이 여러 줄로 늘어나면 세로로 스크롤됨 */
 body {
+  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  padding: 16px;
+  overflow-x: hidden;
   background: radial-gradient(circle at 50% 30%, #1d2b4a, #070b16);
   color: #cfd8ea;
   font-family: sans-serif;
@@ -36,6 +39,9 @@ canvas {
 .hint {
   font-size: 14px;
   opacity: 0.7;
+  text-align: center;
+  text-wrap: balance;
+  word-break: keep-all;
 }
 
 .scenes {
