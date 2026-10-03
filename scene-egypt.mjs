@@ -56,9 +56,11 @@ function paintEgypt(g, globe, groundAt) {
   fillSilhouette(g, farY, left, right, 400);
 
   // 피라미드 세 개: 멘카우레(작은 것) → 카프레(꼭대기에 흰 외장석이 남은 것) → 쿠푸
-  pyramid(g, 150, 268, 32, 46, false);
-  pyramid(g, 238, 270, 72, 108, true);
-  pyramid(g, 312, 274, 60, 88, false);
+  // 피라미드 세 개. 멀수록 작고 하늘빛 먼지에 묻혀 흐릿함
+  // 멘카우레(가장 멀고 작음) → 쿠푸 → 카프레(스핑크스 바로 뒤, 꼭대기에 흰 외장석)
+  pyramid(g, 330, 262, 26, 38, false, 0.4);
+  pyramid(g, 285, 266, 58, 86, false, 0.2);
+  pyramid(g, 222, 270, 70, 108, true, 0);
 
   // 앞쪽 사막
   const duneY = (x) => 286 + 6 * Math.sin(x * 0.025 + 2) + 2 * Math.sin(x * 0.09);
@@ -79,12 +81,8 @@ function paintEgypt(g, globe, groundAt) {
     g.stroke();
   }
 
-  g.save();
-  g.translate(128, 306);
-  g.scale(1.6, 1.6);
-  sphinx(g, 0, 0);
-  g.restore();
-  camel(g, 300, 304);
+  sphinx(g);
+  camel(g, 318, 300);
 
   // 바닥: 고운 모래
   const floorTop = groundAt(globe.x);
@@ -105,8 +103,9 @@ function paintEgypt(g, globe, groundAt) {
   g.restore();
 }
 
-// 피라미드: 해를 받는 왼쪽 면은 밝고 오른쪽 면은 그늘. 돌단 줄무늬
-function pyramid(g, cx, baseY, half, h, cap) {
+// 피라미드: 해를 받는 왼쪽 면은 밝고 오른쪽 면은 그늘. 돌단 줄무늬.
+// fade: 멀리 있을수록 하늘빛 먼지에 묻혀 흐려지는 정도
+function pyramid(g, cx, baseY, half, h, cap, fade) {
   const apexY = baseY - h;
   g.fillStyle = "#e3a66e";
   g.beginPath();
@@ -153,57 +152,209 @@ function pyramid(g, cx, baseY, half, h, cap) {
     g.closePath();
     g.fill();
   }
+
+  if (fade > 0) {
+    g.fillStyle = `rgba(236,180,140,${fade})`;
+    g.beginPath();
+    g.moveTo(cx - half, baseY);
+    g.lineTo(cx, apexY);
+    g.lineTo(cx + half, baseY);
+    g.closePath();
+    g.fill();
+  }
 }
 
-// 스핑크스: 엎드린 사자 몸, 앞발, 두건(네메스)을 쓴 머리. 오른쪽을 바라봄
-function sphinx(g, x, baseY) {
-  const body = g.createLinearGradient(0, baseY - 30, 0, baseY);
-  body.addColorStop(0, "#e2a468");
-  body.addColorStop(1, "#8f4e28");
-  g.fillStyle = body;
+// 스핑크스: 오른쪽 앞을 바라보는 3/4 각도.
+// 석회암 구덩이 안에 엎드린 사자 몸, 길게 뻗은 앞발 두 개, 엉덩이와 꼬리,
+// 줄무늬 두건(네메스)과 늘어진 자락, 코가 떨어져 나간 얼굴과 이마의 코브라 장식 자리
+function sphinx(g) {
+  // 스핑크스를 둘러싼 암반 구덩이 벽 (층층이 쌓인 석회암)
+  const pit = g.createLinearGradient(0, 262, 0, 304);
+  pit.addColorStop(0, "#c98a58");
+  pit.addColorStop(1, "#8a4c28");
+  g.fillStyle = pit;
   g.beginPath();
-  g.moveTo(x - 46, baseY);
-  g.quadraticCurveTo(x - 50, baseY - 14, x - 36, baseY - 18);
-  g.lineTo(x + 12, baseY - 20);
-  // 두건과 머리
-  g.lineTo(x + 14, baseY - 34);
-  g.quadraticCurveTo(x + 22, baseY - 42, x + 30, baseY - 34);
-  g.lineTo(x + 31, baseY - 24);
-  g.lineTo(x + 26, baseY - 18);
-  // 앞발
-  g.lineTo(x + 30, baseY - 8);
-  g.lineTo(x + 54, baseY - 7);
-  g.lineTo(x + 56, baseY);
+  g.moveTo(30, 304);
+  g.lineTo(34, 268);
+  g.lineTo(120, 264);
+  g.lineTo(250, 270);
+  g.lineTo(262, 304);
+  g.closePath();
+  g.fill();
+  g.strokeStyle = "rgba(90,40,15,0.35)";
+  g.lineWidth = 0.7;
+  for (let y = 272; y < 304; y += 5) {
+    g.beginPath();
+    g.moveTo(34, y);
+    g.lineTo(255, y + 2);
+    g.stroke();
+  }
+
+  // 뒤쪽 앞발 (그늘져서 어둡게, 조금 위)
+  g.fillStyle = "#9c5a30";
+  g.beginPath();
+  g.moveTo(168, 282);
+  g.lineTo(224, 284);
+  g.quadraticCurveTo(230, 285, 229, 289);
+  g.lineTo(170, 289);
   g.closePath();
   g.fill();
 
-  // 두건 줄무늬와 얼굴 그늘
-  g.strokeStyle = "rgba(110,55,25,0.45)";
-  g.lineWidth = 0.6;
-  for (let k = 0; k < 4; k++) {
-    g.beginPath();
-    g.moveTo(x + 14 + k, baseY - 33 + k * 3);
-    g.lineTo(x + 16 + k, baseY - 22 + k);
-    g.stroke();
-  }
-  // 얼굴: 해가 왼쪽 뒤에 있어 얼굴은 그늘지고 눈매만 보임
-  g.fillStyle = "rgba(80,35,12,0.5)";
-  g.fillRect(x + 24, baseY - 33, 6.5, 12);
-  g.fillStyle = "rgba(40,15,5,0.7)";
-  g.fillRect(x + 26, baseY - 29, 3, 1);
-  // 몸통 그림자
-  g.fillStyle = "rgba(60,25,8,0.35)";
+  // 몸통: 엉덩이 → 등 → 어깨 → 가슴 → 앞쪽 앞발
+  const body = g.createLinearGradient(50, 258, 120, 300);
+  body.addColorStop(0, "#efb57a");
+  body.addColorStop(0.5, "#cf8c56");
+  body.addColorStop(1, "#9a5630");
+  g.fillStyle = body;
   g.beginPath();
-  g.ellipse(x + 2, baseY, 52, 3, 0, 0, Math.PI * 2);
+  g.moveTo(52, 300);
+  g.quadraticCurveTo(46, 272, 70, 266);
+  g.quadraticCurveTo(110, 260, 150, 260);
+  g.lineTo(158, 256);
+  g.lineTo(172, 258);
+  g.quadraticCurveTo(178, 270, 176, 286);
+  g.lineTo(232, 290);
+  g.quadraticCurveTo(242, 292, 238, 299);
+  g.lineTo(52, 300);
+  g.closePath();
   g.fill();
-  // 몸통 돌결
-  g.strokeStyle = "rgba(110,55,25,0.3)";
-  for (let y = baseY - 15; y < baseY; y += 4) {
+
+  // 엉덩이 둥근 근육과 꼬리
+  const haunch = g.createRadialGradient(72, 278, 2, 76, 284, 24);
+  haunch.addColorStop(0, "rgba(255,210,160,0.35)");
+  haunch.addColorStop(1, "rgba(255,210,160,0)");
+  g.fillStyle = haunch;
+  g.beginPath();
+  g.ellipse(78, 284, 24, 16, 0, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = "#8a4c28";
+  g.lineWidth = 2;
+  g.lineCap = "round";
+  g.beginPath();
+  g.moveTo(58, 294);
+  g.quadraticCurveTo(76, 300, 98, 297);
+  g.stroke();
+
+  // 풍화로 생긴 가로 균열과 세로 틈 (몸통 안에서만)
+  g.save();
+  g.beginPath();
+  g.moveTo(52, 300);
+  g.quadraticCurveTo(46, 272, 70, 266);
+  g.quadraticCurveTo(110, 260, 150, 260);
+  g.lineTo(172, 258);
+  g.quadraticCurveTo(178, 270, 176, 286);
+  g.lineTo(52, 300);
+  g.closePath();
+  g.clip();
+  g.strokeStyle = "rgba(80,35,12,0.45)";
+  g.lineWidth = 0.9;
+  for (const y of [268, 274, 280, 287, 294]) {
     g.beginPath();
-    g.moveTo(x - 44, y);
-    g.lineTo(x + 12, y);
+    g.moveTo(44, y);
+    for (let x = 44; x < 180; x += 6) g.lineTo(x, y + Math.sin(x * 0.3 + y) * 0.8);
     g.stroke();
   }
+  g.lineWidth = 0.5;
+  for (const x of [88, 112, 131, 150]) {
+    g.beginPath();
+    g.moveTo(x, 262);
+    g.lineTo(x + 1.5, 270);
+    g.stroke();
+  }
+  g.restore();
+
+  // 앞쪽 앞발 발가락
+  g.strokeStyle = "rgba(80,35,12,0.5)";
+  g.lineWidth = 0.6;
+  for (const x of [226, 230, 234]) {
+    g.beginPath();
+    g.moveTo(x, 292);
+    g.lineTo(x + 1, 298);
+    g.stroke();
+  }
+  g.fillStyle = "rgba(80,35,12,0.3)";
+  g.fillRect(176, 296, 60, 3);
+
+  // 두건(네메스): 뒤에서 앞으로 둥글게, 양옆 자락은 어깨까지
+  const nemes = g.createLinearGradient(156, 0, 192, 0);
+  nemes.addColorStop(0, "#d6955c");
+  nemes.addColorStop(1, "#b77442");
+  g.fillStyle = nemes;
+  g.beginPath();
+  g.moveTo(156, 258);
+  g.lineTo(158, 228);
+  g.quadraticCurveTo(162, 212, 176, 211);
+  g.quadraticCurveTo(188, 212, 190, 222);
+  g.lineTo(191, 238);
+  g.lineTo(186, 254);
+  g.lineTo(180, 262);
+  g.lineTo(170, 262);
+  g.closePath();
+  g.fill();
+  // 두건 줄무늬
+  g.strokeStyle = "rgba(90,40,15,0.45)";
+  g.lineWidth = 0.8;
+  for (let k = 0; k < 9; k++) {
+    const y = 216 + k * 4.5;
+    g.beginPath();
+    g.moveTo(158, y + 2);
+    g.quadraticCurveTo(170, y - 1, 180, y + 1);
+    g.stroke();
+  }
+
+  // 얼굴: 해가 왼쪽 뒤에 있어 조금 그늘짐. 붉은 안료 흔적
+  g.fillStyle = "#c27c4c";
+  g.beginPath();
+  g.moveTo(180, 223);
+  g.lineTo(191, 224);
+  g.lineTo(193, 238);
+  g.lineTo(191, 246);
+  g.lineTo(185, 252);
+  g.lineTo(179, 248);
+  g.closePath();
+  g.fill();
+  // 이마의 코브라 장식이 떨어져 나간 자리
+  g.fillStyle = "#6a3012";
+  g.beginPath();
+  g.ellipse(188, 224.5, 1.3, 1, 0, 0, Math.PI * 2);
+  g.fill();
+  // 눈썹과 눈
+  g.strokeStyle = "#5a2810";
+  g.lineWidth = 0.9;
+  g.beginPath();
+  g.moveTo(182, 229);
+  g.lineTo(189, 228.5);
+  g.stroke();
+  g.fillStyle = "#4a200a";
+  g.beginPath();
+  g.ellipse(186, 231.5, 2.2, 1, -0.1, 0, Math.PI * 2);
+  g.fill();
+  // 떨어져 나간 코: 거칠게 깨진 평평한 자리
+  g.fillStyle = "#dca070";
+  g.beginPath();
+  g.moveTo(190, 234);
+  g.lineTo(193.5, 236);
+  g.lineTo(193, 240);
+  g.lineTo(190.5, 241);
+  g.lineTo(189.5, 237);
+  g.closePath();
+  g.fill();
+  // 입
+  g.strokeStyle = "#5a2810";
+  g.lineWidth = 0.8;
+  g.beginPath();
+  g.moveTo(186, 244.5);
+  g.quadraticCurveTo(189, 245.5, 191.5, 244.5);
+  g.stroke();
+  // 두건과 얼굴 경계 그늘
+  g.fillStyle = "rgba(70,30,10,0.35)";
+  g.beginPath();
+  g.moveTo(179, 222);
+  g.lineTo(181, 223);
+  g.lineTo(180, 250);
+  g.lineTo(177, 252);
+  g.closePath();
+  g.fill();
 }
 
 // 사람을 태운 낙타 실루엣
