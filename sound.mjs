@@ -332,6 +332,15 @@ const VOICES = {
       pluck(note(311.13, MAJOR[i]), t + 0.04 + i * 0.035, { level: 0.08, decay: 1.4, bright: 4000, wave: "triangle", pan: -0.7 + (1.4 * i) / n });
     }
   },
+  // 유리 조각: 높은 유리 종이 흩어지듯 짤랑이고, 기타를 빠르게 훑는 스페인 음계
+  spain(t, p) {
+    const n = Math.round(8 + p * 10);
+    for (let i = 0; i < n; i++) bell(rand(2200, 5200), t + 0.03 + rand(0, 0.7), { level: 0.03, decay: 0.4, pan: rand(-0.8, 0.8) });
+    const strum = [0, 4, 7, 8, 12, 13];
+    for (let i = 0; i < strum.length; i++) {
+      pluck(note(164.81, strum[i] + 12), t + 0.05 + i * 0.022, { level: 0.08, decay: 1.2, bright: 2600, wave: "triangle", pan: -0.3 + i * 0.12 });
+    }
+  },
   // 나비: 파르르 날갯짓 + 카눈처럼 반짝이는 중동 음계
   turkey(t, p) {
     const flaps = Math.round(2 + p * 2);
@@ -367,7 +376,7 @@ export function pop(power, sceneId) {
 // 끌어서 흔드는 한 박자마다: 유리구 안 물이 출렁이며 입자가 사르르 쓸리는 소리
 const SHAKE_TONE = {
   japan: 1800, korea: 3200, canada: 2600, australia: 900, finland: 2200,
-  china: 2800, egypt: 4200, france: 2000, turkey: 2400,
+  china: 2800, egypt: 4200, france: 2000, turkey: 2400, spain: 3600,
 };
 export function shake(level, sceneId) {
   if (!ensure() || muted) return;
