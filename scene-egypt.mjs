@@ -634,11 +634,92 @@ function drawGrain(ctx, p, t) {
   }
 }
 
+// 모래 폭풍: 흐린 모래 장막 몇 겹이 바람을 타고 오른쪽으로 천천히 흘러감.
+// 장막은 한 번만 그려 두고(가로로 이어지게) 매 프레임 옮겨 그림. 세기는 20초쯤 주기로 일었다 잦아듦
+let veils = null;
+function makeVeil(seed, w, h, tint) {
+  const scale = 2;
+  const c = document.createElement("canvas");
+  c.width = w * scale;
+  c.height = h * scale;
+  const g = c.getContext("2d");
+  g.scale(scale, scale);
+  const rnd = seeded(seed);
+  g.filter = "blur(7px)";
+  for (let i = 0; i < 46; i++) {
+    const x = rnd() * w;
+    const y = h * (0.3 + rnd() * 0.45);
+    const rx = 30 + rnd() * 70;
+    const ry = 5 + rnd() * 12;
+    g.fillStyle = `rgba(${tint},${0.18 + rnd() * 0.3})`;
+    // 가로로 이어 붙여도 끊기지 않게 양 끝에서 한 번 더 그림
+    for (const off of [-w, 0, w]) {
+      g.beginPath();
+      g.ellipse(x + off, y, rx, ry, (rnd() - 0.5) * 0.12, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  // 바람결: 가로로 길게 끌린 옅은 줄
+  g.filter = "blur(1.5px)";
+  for (let i = 0; i < 40; i++) {
+    const x = rnd() * w;
+    const y = h * (0.25 + rnd() * 0.55);
+    const len = 30 + rnd() * 80;
+    g.strokeStyle = `rgba(255,226,180,${0.12 + rnd() * 0.2})`;
+    g.lineWidth = 0.6 + rnd() * 1.2;
+    for (const off of [-w, 0, w]) {
+      g.beginPath();
+      g.moveTo(x + off, y);
+      g.quadraticCurveTo(x + off + len / 2, y - 2 - rnd() * 3, x + off + len, y + 1);
+      g.stroke();
+    }
+  }
+  return { c, w, h };
+}
+
+function animateEgypt(ctx, t, globe) {
+  if (!veils) {
+    veils = [
+      { ...makeVeil(31, 520, 90, "236,176,120"), y: 196, speed: 0.006, alpha: 0.22 },
+      { ...makeVeil(57, 520, 110, "226,160,105"), y: 248, speed: 0.011, alpha: 0.26 },
+      { ...makeVeil(83, 520, 120, "214,146,92"), y: 288, speed: 0.018, alpha: 0.22 },
+    ];
+  }
+  // 20초쯤 주기로 일었다 잦아드는 바람
+  const gust = 0.55 + 0.45 * Math.sin(t * 0.0003) * Math.sin(t * 0.00017 + 1);
+  const left = globe.x - globe.r;
+  ctx.save();
+  for (const v of veils) {
+    const shift = (t * v.speed * (0.7 + gust * 0.6)) % v.w;
+    const bob = Math.sin(t * 0.0005 + v.y) * 3;
+    ctx.globalAlpha = v.alpha * (0.3 + gust * 0.7);
+    for (let x = left - v.w + shift; x < globe.x + globe.r; x += v.w) {
+      ctx.drawImage(v.c, x, v.y - v.h / 2 + bob, v.w, v.h);
+    }
+  }
+  // 땅 가까이 낮게 휩쓸려 가는 모래 알갱이 줄
+  ctx.globalAlpha = 0.25 + gust * 0.35;
+  ctx.strokeStyle = "#f3cf9c";
+  ctx.lineWidth = 0.7;
+  ctx.lineCap = "round";
+  for (let i = 0; i < 26; i++) {
+    const speed = 0.05 + (i % 5) * 0.012;
+    const x = left + ((t * speed + i * 97) % (globe.r * 2 + 60)) - 30;
+    const y = 300 + ((i * 37) % 40) + Math.sin(t * 0.003 + i) * 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 6 + (i % 3) * 4, y - 0.8);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export const egypt = {
   id: "egypt",
   label: "이집트 · 피라미드",
   title: "Pyramids of Giza",
   paint: paintEgypt,
+  animate: animateEgypt,
   glare: 0.8,
   base: {
     trim: ["#7a5a1c", "#f2d17a", "#c99a35", "#6b4d16"],
