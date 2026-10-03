@@ -13,18 +13,20 @@ const globe = { x: 200, y: 210, r: 170 };
 const mound = { x: 200, y: 360, rx: 190, ry: 50 };
 const FLAKE_COUNT = 260;
 const MAX_OFFSET = 50; // 흔들 수 있는 최대 거리
-const LIFT = 0.6; // 이 값보다 세게 흔들어야 눈이 떠오름
-const MAX_SPEED = 7;
 
-// 흔들기 상태
+// 흔들기 상태 (스노우볼은 손을 스프링처럼 따라감)
 let dragging = false;
 let startY = 0;
 let target = 0;
 let offset = 0;
-let prevOffset = 0;
-let prevVel = 0;
+let globeVel = 0;
+let prevGlobeVel = 0;
+
+// 물이 휘젓는 세기. 흔들면 커지고 시간이 지나면 잦아든다
+let stir = 0;
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const rand = (min, max) => min + Math.random() * (max - min);
 
 // 눈 언덕 표면의 y 좌표
 function groundAt(x) {
@@ -33,19 +35,54 @@ function groundAt(x) {
   return mound.y - mound.ry * Math.sqrt(1 - t * t);
 }
 
+// 물속 소용돌이. 방향이 다른 물결 몇 개를 겹친 흐름 함수(psi)로 만든다.
+// psi에 유리 경계에서 0이 되는 값을 곱해서, 물이 벽을 뚫지 않고 벽을 따라 돈다.
+const waves = Array.from({ length: 5 }, () => {
+  const angle = rand(0, Math.PI * 2);
+  const k = rand(0.012, 0.03);
+  return {
+    kx: Math.cos(angle) * k,
+    ky: Math.sin(angle) * k,
+    speed: rand(0.0004, 0.0012),
+    phase: rand(0, Math.PI * 2),
+  };
+});
+
+function streamAt(x, y, t) {
+  let psi = 0;
+  for (const w of waves) {
+    const k = Math.hypot(w.kx, w.ky);
+    psi += Math.sin(w.kx * x + w.ky * y + w.speed * t + w.phase) / k;
+  }
+  const dx = (x - globe.x) / globe.r;
+  const dy = (y - globe.y) / globe.r;
+  return psi * Math.max(0, 1 - dx * dx - dy * dy);
+}
+
+function flowAt(x, y, t) {
+  const h = 1;
+  const u = (streamAt(x, y + h, t) - streamAt(x, y - h, t)) / (2 * h);
+  const v = -(streamAt(x + h, y, t) - streamAt(x - h, y, t)) / (2 * h);
+  return { x: u * stir * 0.5, y: v * stir * 0.5 };
+}
+
 function settle(f) {
-  f.y = groundAt(f.x) - f.size * 0.5;
+  f.y = groundAt(f.x) - f.size * 0.5 + rand(0, 3);
   f.vx = 0;
   f.vy = 0;
   f.settled = true;
 }
 
-// 처음에는 모든 눈이 바닥에 가라앉은 상태
+// 입자마다 무게·저항·떠오르기 쉬운 정도를 다르게 준다
 const flakes = Array.from({ length: FLAKE_COUNT }, () => {
+  const size = rand(1, 3.5);
   const f = {
-    x: globe.x + (Math.random() * 2 - 1) * 115,
-    size: 1 + Math.random() * 2.5,
-    phase: Math.random() * Math.PI * 2,
+    x: globe.x + rand(-115, 115),
+    size,
+    sink: 0.15 + size * 0.09 + rand(-0.05, 0.05), // 가라앉는 속도
+    drag: 0.1 - size * 0.015 + rand(-0.01, 0.01), // 물 흐름을 따라가는 정도 (작을수록 둔함)
+    inertia: rand(0.3, 0.7), // 흔들림에 반응하는 정도
+    grip: rand(0.5, 2.2), // 바닥에서 떠오르기 어려운 정도
   };
   settle(f);
   return f;
@@ -74,41 +111,65 @@ canvas.addEventListener("pointerup", release);
 canvas.addEventListener("pointercancel", release);
 
 function update(t, accel) {
+  // 흔든 만큼 물이 휘저어지고, 몇 초에 걸쳐 잦아든다
+  stir = Math.min(stir + Math.abs(accel) * 0.12, 3);
+  stir *= 0.99;
+
   for (const f of flakes) {
+    const flow = flowAt(f.x, f.y, t);
+
     if (f.settled) {
-      // 스노우볼이 아래로 가속하면 눈이 상대적으로 위로 떠오름
-      if (accel > LIFT && Math.random() < Math.min(1, 0.2 + (accel - LIFT) * 0.5)) {
+      // 스노우볼이 아래로 가속하는 힘 + 바닥 근처 물살이 입자마다 다른 기준을 넘으면 떠오름
+      const lift = accel * f.inertia - flow.y + Math.hypot(flow.x, flow.y) * 0.3;
+      if (lift > f.grip) {
         f.settled = false;
-        f.vy = -accel * (0.8 + Math.random() * 1.5);
-        f.vx = (Math.random() - 0.5) * accel * 2;
+        f.vy = -Math.min(lift * rand(0.5, 1), 4);
+        f.vx = flow.x + rand(-0.6, 0.6) * Math.min(lift, 3);
       }
       continue;
     }
 
-    // 떠 있는 눈은 흔드는 반대 방향으로 밀림
-    f.vy -= accel * 0.9;
-    f.vx += (Math.random() - 0.5) * Math.abs(accel) * 0.3;
-    f.vx = clamp(f.vx * 0.97, -MAX_SPEED, MAX_SPEED);
-    f.vy = clamp(f.vy * 0.97, -MAX_SPEED, MAX_SPEED);
+    // 유리가 움직이면 물보다 무거운 눈은 뒤처진다
+    f.vy -= accel * f.inertia;
 
-    f.x += f.vx + Math.sin(t * 0.0015 + f.phase) * 0.3;
-    f.y += f.vy + 0.15 + f.size * 0.08;
+    // 물 흐름 쪽으로 서서히 끌려가고, 물이 잔잔하면 제 무게만큼 가라앉는다
+    f.vx += (flow.x - f.vx) * f.drag;
+    f.vy += (flow.y + f.sink - f.vy) * f.drag;
 
-    // 유리 벽에 부딪히면 안쪽으로 되돌림
+    // 입자마다 미세하게 흔들려서 한 줄로 뭉치지 않게 함
+    const jitter = 0.04 + stir * 0.05;
+    f.vx += rand(-jitter, jitter);
+    f.vy += rand(-jitter, jitter);
+
+    f.x += f.vx;
+    f.y += f.vy;
+
+    // 유리 벽에 닿으면 벽을 따라 미끄러짐
     const dx = f.x - globe.x;
     const dy = f.y - globe.y;
     const d = Math.hypot(dx, dy);
     const max = globe.r - f.size - 3;
     if (d > max) {
-      f.x = globe.x + (dx / d) * max;
-      f.y = globe.y + (dy / d) * max;
-      f.vx *= -0.4;
-      f.vy *= -0.4;
+      const nx = dx / d;
+      const ny = dy / d;
+      const out = f.vx * nx + f.vy * ny;
+      if (out > 0) {
+        f.vx -= out * nx;
+        f.vy -= out * ny;
+      }
+      f.x = globe.x + nx * max;
+      f.y = globe.y + ny * max;
     }
 
-    // 언덕에 닿으면 쌓임
-    if (f.y >= groundAt(f.x) - f.size && f.vy >= -0.5) {
-      settle(f);
+    // 언덕에 닿았을 때 물살이 약하면 쌓이고, 세면 바닥을 따라 쓸려감
+    const ground = groundAt(f.x) - f.size * 0.5;
+    if (f.y >= ground && f.vy >= 0) {
+      if (Math.hypot(flow.x, flow.y) < f.grip) {
+        settle(f);
+      } else {
+        f.y = ground;
+        f.vy = 0;
+      }
     }
   }
 }
@@ -156,7 +217,8 @@ function drawScene() {
 
   ctx.fillStyle = "#ffffff";
   for (const f of flakes) {
-    ctx.globalAlpha = f.settled ? 0.95 : 0.85;
+    // 작은 입자는 흐리게 그려서 앞뒤 깊이감을 줌
+    ctx.globalAlpha = f.settled ? 0.95 : 0.55 + f.size * 0.12;
     ctx.beginPath();
     ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
     ctx.fill();
@@ -208,12 +270,12 @@ function drawBase() {
 }
 
 function frame(t) {
-  // 스노우볼 위치를 부드럽게 따라가게 하고 가속도 계산
-  offset += (target - offset) * 0.35;
-  const vel = offset - prevOffset;
-  const accel = vel - prevVel;
-  prevOffset = offset;
-  prevVel = vel;
+  // 스노우볼이 손을 스프링처럼 따라가고, 놓으면 살짝 출렁이며 제자리로 돌아감
+  globeVel += (target - offset) * 0.2;
+  globeVel *= 0.75;
+  offset += globeVel;
+  const accel = globeVel - prevGlobeVel;
+  prevGlobeVel = globeVel;
 
   update(t, accel);
 
