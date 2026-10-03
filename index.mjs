@@ -22,6 +22,7 @@ const globe = { x: 200, y: 210, r: 170 };
 const mound = { x: 200, y: 360, rx: 190, ry: 50 };
 const MAX_OFFSET = 50; // 흔들 수 있는 최대 거리
 const PARTICLE_SCALE = 1.5; // 모든 나라의 입자를 이만큼 크게 그림
+const FALL_SPEED = 2.2; // 장면 파일의 가라앉는 속도에 곱함. 클수록 빨리 쏟아짐
 // 화면에서는 흔들림을 이만큼만 보여줌. 입자가 받는 힘은 그대로라 눈은 똑같이 날림
 const VISUAL_SHAKE = 0.35;
 
@@ -56,66 +57,32 @@ function startAutoShake(power = 1) {
   autoShakePower = power;
 }
 
-// 누르고 떼면 누른 자리에서 물이 유리구 안쪽으로 밀려 들어감.
-// 물리적으로는 서로 반대로 도는 소용돌이 한 쌍이 생겨, 가운데로는 물이 뿜어져 나가고
-// 양옆으로는 말려 돌아오는 버섯 모양 흐름이 된다. 입자는 이 물에 실려 움직인다.
-const vortices = [];
+// 누르고 떼면 누른 자리에서 가까운 입자부터 차례로 솟아올라 유리구 위쪽을 덮음.
+// 입자마다 서로 다른 목적지를 받아서 줄지어 따라가지 않고 고르게 퍼진다.
+const RIPPLE_SPEED = 0.6; // 솟아오르는 물결이 퍼지는 속도 (px/ms)
+
+function randomSkyPoint() {
+  for (;;) {
+    const x = globe.x + rand(-1, 1) * (globe.r - 18);
+    const y = globe.y - globe.r + 18 + Math.random() * (globe.r + 40);
+    if (Math.hypot(x - globe.x, y - globe.y) < globe.r - 18 && y < groundAt(x) - 30) return { x, y };
+  }
+}
 
 function burst(x, y, power) {
-  let nx = globe.x - x;
-  let ny = globe.y - 20 - y;
-  const n = Math.hypot(nx, ny);
-  if (n < 20) {
-    nx = 0;
-    ny = -1;
-  } else {
-    nx /= n;
-    ny /= n;
+  const now = performance.now();
+  for (const p of particles) {
+    // 이번에 날아갈 입자 수는 누른 세기에 비례 (짧게 톡 치면 일부만)
+    if (Math.random() > 0.55 + 0.45 * power) continue;
+    const d = Math.hypot(p.x - x, p.y - y);
+    p.launchAt = now + d / RIPPLE_SPEED + rand(0, 90);
+    p.target = randomSkyPoint();
   }
-  const px = -ny;
-  const py = nx;
-  const qx = x + nx * 25;
-  const qy = y + ny * 25;
-  const g = 1300 * power;
-  vortices.push({ x: qx + px * 28, y: qy + py * 28, g, rc: 25 }, { x: qx - px * 28, y: qy - py * 28, g: -g, rc: 25 });
-  stir = Math.min(stir + 0.8 * power, 5);
-  rings.push({ x, y, start: performance.now(), power });
+  stir = Math.min(stir + 3 * power, 5);
+  rings.push({ x, y, start: now, power });
   try {
     navigator.vibrate?.(power > 0.75 ? 30 : 15);
   } catch {}
-}
-
-// 소용돌이 하나가 (x, y)에 만드는 물의 속도 (중심 가까이는 부드럽게 0으로)
-function vortexAt(w, x, y) {
-  const dx = x - w.x;
-  const dy = y - w.y;
-  const r2 = dx * dx + dy * dy + 1;
-  const f = (w.g / (2 * Math.PI * r2)) * (1 - Math.exp(-r2 / (w.rc * w.rc)));
-  return { u: -f * dy, v: f * dx };
-}
-
-// 소용돌이는 서로를 밀며 함께 흘러가고, 물의 끈적임 때문에 약해지며 넓게 퍼짐
-function updateVortices() {
-  for (const w of vortices) {
-    let u = 0;
-    let v = 0;
-    for (const o of vortices) {
-      if (o === w) continue;
-      const vel = vortexAt(o, w.x, w.y);
-      u += vel.u;
-      v += vel.v;
-    }
-    w.x += u * 0.5;
-    w.y += v * 0.5;
-  }
-  for (const w of vortices) {
-    w.g *= 0.986;
-    w.rc += 0.25;
-  }
-  for (let i = vortices.length - 1; i >= 0; i--) {
-    const w = vortices[i];
-    if (Math.abs(w.g) < 30 || Math.hypot(w.x - globe.x, w.y - globe.y) > globe.r) vortices.splice(i, 1);
-  }
 }
 
 // 화면 좌표 → 스노우볼 그림 좌표. 유리구 밖을 누르면 유리구 안 가장 가까운 곳으로
@@ -161,45 +128,6 @@ function makeLayer(paint) {
   return layer;
 }
 
-// 물속 소용돌이. 방향이 다른 물결 몇 개를 겹친 흐름 함수(psi)로 만든다.
-// psi에 유리 경계에서 0이 되는 값을 곱해서, 물이 벽을 뚫지 않고 벽을 따라 돈다.
-// 흔들어서 생기는 물살은 유리구 크기만 한 큰 소용돌이 몇 개로 둠
-const waves = Array.from({ length: 3 }, () => {
-  const angle = rand(0, Math.PI * 2);
-  const k = rand(0.008, 0.015);
-  return {
-    kx: Math.cos(angle) * k,
-    ky: Math.sin(angle) * k,
-    speed: rand(0.0004, 0.0012),
-    phase: rand(0, Math.PI * 2),
-  };
-});
-
-function streamAt(x, y, t) {
-  let psi = 0;
-  for (const w of waves) {
-    const k = Math.hypot(w.kx, w.ky);
-    psi += Math.sin(w.kx * x + w.ky * y + w.speed * t + w.phase) / k;
-  }
-  const dx = (x - globe.x) / globe.r;
-  const dy = (y - globe.y) / globe.r;
-  return psi * Math.max(0, 1 - dx * dx - dy * dy);
-}
-
-function flowAt(x, y, t) {
-  const h = 1;
-  const u = (streamAt(x, y + h, t) - streamAt(x, y - h, t)) / (2 * h);
-  const v = -(streamAt(x + h, y, t) - streamAt(x - h, y, t)) / (2 * h);
-  let x2 = u * stir * 0.8;
-  let y2 = v * stir * 0.8;
-  for (const w of vortices) {
-    const vel = vortexAt(w, x, y);
-    x2 += vel.u;
-    y2 += vel.v;
-  }
-  return { x: x2, y: y2 };
-}
-
 function settle(p) {
   p.y = groundAt(p.x) - 1 + rand(0, 3);
   p.vx = 0;
@@ -232,6 +160,9 @@ function loadScene(id) {
     };
     Object.assign(p, scene.particles.make(rand));
     p.size *= PARTICLE_SCALE;
+    p.swayFreq = rand(0.0015, 0.004); // 좌우로 살랑이는 박자
+    p.swayPhase = rand(0, Math.PI * 2);
+    p.swayAmp = rand(0.2, 0.6) * (1 + p.flutter * 15);
     settle(p);
     return p;
   });
@@ -320,36 +251,36 @@ canvas.addEventListener("pointerup", (e) => {
 canvas.addEventListener("pointercancel", release);
 
 function update(t, accel) {
-  // 흔든 만큼 물이 휘저어지고, 몇 초에 걸쳐 잦아든다
-  stir = Math.min(stir + Math.abs(accel) * 0.25, 5);
-  stir *= 0.993;
-  updateVortices();
+  stir *= 0.985;
+  const now = performance.now();
 
   for (const p of particles) {
-    const flow = flowAt(p.x, p.y, t);
+    // 출발 시각이 되면 목적지를 향해 솟아오름
+    if (p.target && now >= p.launchAt) {
+      p.settled = false;
+      p.rising = true;
+      p.riseFrames = 0;
+      p.goal = p.target;
+      p.target = null;
+    }
+    if (p.settled) continue;
 
-    if (p.settled) {
-      // 스노우볼이 아래로 가속하는 힘 + 바닥 근처 물살이 입자마다 다른 기준을 넘으면 떠오름
-      const lift = accel * p.inertia - flow.y + Math.hypot(flow.x, flow.y) * 0.3;
-      if (lift > p.grip) {
-        // 물에 들려 올라감. 가벼운 입자일수록(inertia가 작을수록) 물을 더 잘 따라감
-        p.settled = false;
-        p.vy = Math.min(flow.y, 0) - Math.min(lift, 7) * (0.5 + p.inertia);
-        p.vx = flow.x;
-      }
-      continue;
+    if (p.rising) {
+      // 목적지로 날아가며 물속처럼 감속. 무거운 입자(drag가 작은)일수록 느긋하게 도착
+      const k = 0.05 + p.drag * 0.4;
+      p.vx += ((p.goal.x - p.x) * k - p.vx) * 0.25;
+      p.vy += ((p.goal.y - p.y) * k - p.vy) * 0.25;
+      p.riseFrames++;
+      if (Math.hypot(p.goal.x - p.x, p.goal.y - p.y) < 6 || p.riseFrames > 70) p.rising = false;
+    } else {
+      // 천천히 떨어지며 입자마다 자기 박자로 좌우로 살랑임 (떨어지는 눈송이·꽃잎의 진자 운동)
+      const sway = Math.sin(t * p.swayFreq + p.swayPhase) * p.swayAmp;
+      p.vx += (sway - p.vx) * p.drag;
+      p.vy += (p.sink * FALL_SPEED - p.vy) * p.drag;
     }
 
-    // 유리가 움직이면 물보다 무거운 입자는 뒤처진다
-    p.vy -= accel * p.inertia;
-
-    // 점성 저항: 입자 속도는 (물의 속도 + 제 무게로 가라앉는 속도)를 향해 서서히 맞춰짐.
-    // 크고 무거운 입자일수록 drag가 작아 늦게 맞춰지고 sink가 커서 빨리 가라앉음
-    p.vx += (flow.x - p.vx) * p.drag;
-    p.vy += (flow.y + p.sink - p.vy) * p.drag;
-
-    // 꽃잎처럼 납작한 입자는 뒤집힐 때마다 옆으로 미끄러지며 팔랑임
-    p.vx += Math.cos(p.flip) * p.flutter;
+    // 유리구를 흔들면 무거운 입자가 살짝 뒤처짐
+    p.vy -= accel * p.inertia * 0.5;
 
     p.x += p.vx;
     p.y += p.vy;
@@ -359,7 +290,7 @@ function update(t, accel) {
     p.angle += p.spin * (1 + speed * 2);
     p.flip += p.flipSpeed * (1 + speed);
 
-    // 유리 벽에 닿으면 벽을 따라 미끄러짐. 물속이라 거의 튕기지 않음
+    // 유리 벽에 닿으면 벽을 따라 미끄러짐
     const dx = p.x - globe.x;
     const dy = p.y - globe.y;
     const d = Math.hypot(dx, dy);
@@ -369,23 +300,15 @@ function update(t, accel) {
       const ny = dy / d;
       const out = p.vx * nx + p.vy * ny;
       if (out > 0) {
-        p.vx -= 1.2 * out * nx;
-        p.vy -= 1.2 * out * ny;
+        p.vx -= out * nx;
+        p.vy -= out * ny;
       }
       p.x = globe.x + nx * max;
       p.y = globe.y + ny * max;
     }
 
-    // 바닥에 닿았을 때 물살이 약하면 내려앉고, 세면 바닥을 따라 쓸려감
-    const ground = groundAt(p.x) - 1;
-    if (p.y >= ground && p.vy >= 0) {
-      if (Math.hypot(flow.x, flow.y) < p.grip) {
-        settle(p);
-      } else {
-        p.y = ground;
-        p.vy = 0;
-      }
-    }
+    // 바닥에 닿으면 내려앉음
+    if (!p.rising && p.y >= groundAt(p.x) - 1 && p.vy >= 0) settle(p);
   }
 }
 
