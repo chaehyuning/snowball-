@@ -19,7 +19,7 @@ import { startTutorial, tutorialDone, openHelp } from "./tutorial.mjs";
 const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul, barcelona, uyuni, hongkong];
 
 const canvas = document.getElementById("globe");
-const ctx = canvas.getContext("2d");
+let ctx = canvas.getContext("2d"); // 엽서를 고해상도로 뜰 때 잠시 다른 캔버스로 바꿔 끼움
 
 const W = 400;
 const H = 600;
@@ -98,9 +98,6 @@ function burst(x, y, power) {
   }
   stir = Math.min(stir + 3 * power, 5);
   rings.push({ x, y, start: now, power });
-  try {
-    navigator.vibrate?.(power > 0.75 ? 30 : 15);
-  } catch {}
 }
 
 // 화면 좌표 → 스노우볼 그림 좌표. 유리구 밖을 누르면 유리구 안 가장 가까운 곳으로
@@ -119,8 +116,22 @@ function toGlobe(clientX, clientY) {
   return { x, y };
 }
 
+// 손끝 햅틱: 입자가 팍 흩어지거나 흔들 때 폰이 짧게 "통" 울림 (진동을 지원하는 폰만, 너무 잦지 않게)
+let lastBuzz = 0;
+function buzz(pattern) {
+  if (!navigator.vibrate) return;
+  const now = performance.now();
+  if (now - lastBuzz < 70) return;
+  lastBuzz = now;
+  try {
+    navigator.vibrate(pattern);
+  } catch {}
+}
+
 function pop(power) {
   burst(pressPoint.x, pressPoint.y, power);
+  // 세게 터뜨리면 "통-톡" 두 번, 살짝 탭하면 짧게 한 번
+  buzz(power > 0.8 ? [20, 40, 12] : Math.round(10 + power * 8));
   startAutoShake(power);
   squashVel += 0.16 * power;
   sfx.pop(power, scene.id);
@@ -159,12 +170,12 @@ function groundAt(x) {
 // 움직이지 않는 그림은 한 번만 그려 두고 매 프레임 복사해서 씀
 // 고정 그림 층은 해상도를 2배까지만: 3배 화면(최신 폰)에서 픽셀 수가 절반 아래로 줄어 나라 전환이 빨라짐
 const LAYER_DPR = Math.min(dpr, 2);
-function paintLayer(paint, grade) {
+function paintLayer(paint, grade, scale = LAYER_DPR) {
   const layer = document.createElement("canvas");
-  layer.width = W * LAYER_DPR;
-  layer.height = H * LAYER_DPR;
+  layer.width = W * scale;
+  layer.height = H * scale;
   const g = layer.getContext("2d", { willReadFrequently: grade });
-  g.scale(LAYER_DPR, LAYER_DPR);
+  g.scale(scale, scale);
   paint(g);
   return layer;
 }
@@ -273,22 +284,31 @@ export function letItSnow() {
   window.dispatchEvent(new CustomEvent("snowball:pop", { detail: { power: 1 } }));
 }
 
-// 엽서용 한 장면: 명판에 원하는 글을 새긴 채 지금 화면을 그대로 떠 옴
+// 엽서용 한 장면: 명판에 원하는 글을 새기고, 화면 해상도와 상관없이 3배(1200×1800)로 다시 그려 떠 옴.
+// 보통 화면(1배) PC에서도 글자와 입자가 깨지지 않음
+const POSTCARD_SCALE = 3;
 export async function capturePostcard(text) {
+  // "만드는 중" 글이 먼저 화면에 보이도록 한 프레임 쉬고 시작
+  await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const original = scene.base;
-  const keepFront = layers.baseFront;
-  if (text) {
-    scene.base = { ...original, plate: text, plateFont: "600 14px Pretendard, 'Apple SD Gothic Neo', sans-serif" };
-    layers.baseFront = makeLayer(paintBaseFront, true);
-  }
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  if (text) scene.base = { ...original, plate: text, plateFont: "600 14px Pretendard, 'Apple SD Gothic Neo', sans-serif" };
+  const hiLayers = {};
+  for (const _ of buildSteps(scene, hiLayers, POSTCARD_SCALE));
+  scene.base = original;
   const snap = document.createElement("canvas");
-  snap.width = canvas.width;
-  snap.height = canvas.height;
-  snap.getContext("2d").drawImage(canvas, 0, 0);
-  if (text) {
-    scene.base = original;
-    layers.baseFront = keepFront;
+  snap.width = W * POSTCARD_SCALE;
+  snap.height = H * POSTCARD_SCALE;
+  const hctx = snap.getContext("2d");
+  hctx.scale(POSTCARD_SCALE, POSTCARD_SCALE);
+  const keepCtx = ctx;
+  const keepLayers = layers;
+  ctx = hctx;
+  layers = hiLayers;
+  try {
+    draw(performance.now());
+  } finally {
+    ctx = keepCtx;
+    layers = keepLayers;
   }
   return { snap, id: scene.id };
 }
@@ -311,6 +331,7 @@ export function motionShake(power) {
   stir = Math.min(5, stir + 2 * k);
   startAutoShake(0.5 + 0.5 * k);
   sfx.shake(k, scene.id);
+  buzz(Math.round(12 + 10 * k));
 }
 
 function settle(p) {
@@ -332,13 +353,13 @@ const layerCache = new Map();
 const CACHE_SIZE = 4;
 // 한 나라의 고정 그림 층을 만드는 단계들: 먼저 네 층을 그리고, 색 보정은 띠(STRIP 줄)로 나눠 한 단계씩
 const STRIP = 400;
-function* buildSteps(target, out) {
+function* buildSteps(target, out, scale = LAYER_DPR) {
   const prev = scene;
   scene = target; // 받침 색·명판이 지금 장면 값을 읽으므로 잠시 바꿔 둠
-  out.baseBack = paintLayer(paintBaseBack, true);
-  out.scene = paintLayer((g) => target.paint(g, globe, groundAt), true);
-  out.glass = paintLayer(paintGlass, false);
-  out.baseFront = paintLayer(paintBaseFront, true);
+  out.baseBack = paintLayer(paintBaseBack, true, scale);
+  out.scene = paintLayer((g) => target.paint(g, globe, groundAt), true, scale);
+  out.glass = paintLayer(paintGlass, false, scale);
+  out.baseFront = paintLayer(paintBaseFront, true, scale);
   scene = prev;
   yield;
   for (const key of ["baseBack", "scene", "baseFront"]) {
@@ -574,6 +595,7 @@ canvas.addEventListener("pointermove", (e) => {
   const now = performance.now();
   if (dir && dir !== lastShakeDir && Math.abs(next - target) > 2 && now - lastShakeSound > 140) {
     sfx.shake(Math.min(1, Math.abs(next - target) / 12), scene.id);
+    buzz(8);
     lastShakeSound = now;
   }
   if (dir) lastShakeDir = dir;
@@ -976,6 +998,36 @@ if ("IntersectionObserver" in window) {
 const covered = () =>
   !globeOnScreen || document.body.classList.contains("sheet-open") || document.body.classList.contains("picker-open");
 
+// 한 장면 그리기: 받침 그림자 → 받침 뒤 → 장면 → 입자 → 유리 → 받침 앞
+function draw(t) {
+  ctx.clearRect(0, 0, W, H);
+
+  // 바닥 그림자. 들어 올리면 옅어짐
+  ctx.save();
+  ctx.globalAlpha = clamp(0.5 + (offset * VISUAL_SHAKE) / 120, 0.15, 0.7);
+  const shadow = ctx.createRadialGradient(200, PAD + 462, 0, 200, PAD + 462, 150);
+  shadow.addColorStop(0, "rgba(0,0,0,0.6)");
+  shadow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = shadow;
+  ctx.beginPath();
+  ctx.ellipse(200, PAD + 462, 150, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(0, PAD + offset * VISUAL_SHAKE);
+  // 받침대 바닥을 기준으로 위아래는 줄고 옆으로는 퍼짐
+  ctx.translate(globe.x, base.bottom);
+  ctx.scale(1 - squash * 0.7, 1 + squash);
+  ctx.translate(-globe.x, -base.bottom);
+  ctx.drawImage(layers.baseBack, 0, 0, W, H);
+  ctx.drawImage(layers.scene, 0, 0, W, H);
+  drawParticles(t);
+  ctx.drawImage(layers.glass, 0, 0, W, H);
+  ctx.drawImage(layers.baseFront, 0, 0, W, H);
+  ctx.restore();
+}
+
 function frame(t) {
   if (covered()) {
     requestAnimationFrame(frame);
@@ -1005,33 +1057,7 @@ function frame(t) {
   prevGlobeVel = globeVel;
 
   update(t, accel);
-
-  ctx.clearRect(0, 0, W, H);
-
-  // 바닥 그림자. 들어 올리면 옅어짐
-  ctx.save();
-  ctx.globalAlpha = clamp(0.5 + (offset * VISUAL_SHAKE) / 120, 0.15, 0.7);
-  const shadow = ctx.createRadialGradient(200, PAD + 462, 0, 200, PAD + 462, 150);
-  shadow.addColorStop(0, "rgba(0,0,0,0.6)");
-  shadow.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = shadow;
-  ctx.beginPath();
-  ctx.ellipse(200, PAD + 462, 150, 16, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(0, PAD + offset * VISUAL_SHAKE);
-  // 받침대 바닥을 기준으로 위아래는 줄고 옆으로는 퍼짐
-  ctx.translate(globe.x, base.bottom);
-  ctx.scale(1 - squash * 0.7, 1 + squash);
-  ctx.translate(-globe.x, -base.bottom);
-  ctx.drawImage(layers.baseBack, 0, 0, W, H);
-  ctx.drawImage(layers.scene, 0, 0, W, H);
-  drawParticles(t);
-  ctx.drawImage(layers.glass, 0, 0, W, H);
-  ctx.drawImage(layers.baseFront, 0, 0, W, H);
-  ctx.restore();
+  draw(t);
 
   if (fadeFrom) {
     const k = (performance.now() - fadeStart) / FADE_MS;

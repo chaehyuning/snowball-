@@ -64,6 +64,13 @@ html {
 }
 
 /* 작은 화면에서 버튼이 여러 줄로 늘어나면 세로로 스크롤됨 */
+/* 화면 밖으로 삐져나온 글씨(배경 필기체 지명 등) 때문에 폰 화면이 옆으로 넓어지지 않게 자름.
+   넓어지면 아래 고정 띠가 화면 밖으로 밀려남 */
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   min-height: 100%;
   display: flex;
@@ -303,6 +310,13 @@ body {
 /* PC는 자리가 넓어 접지 않고 이야기와 랜드마크 정보를 모두 늘어놓음.
    위쪽 Let it snow 글씨와 겹치지 않게 제목은 조금 줄이고, 이야기는 화면 높이에 맞춰 스크롤 */
 @media (min-width: 1181px) {
+  /* 왼쪽 소개(폭 270px)와 도구 버튼이 겹치지 않도록, 화면이 좁으면 가운데 묶음(도구·스노우볼·나라)을
+     오른쪽으로 민다. 묶음 폭은 46 + 18 + 400 + 18 + 316 = 798px */
+  #app {
+    position: relative;
+    left: max(0px, calc(clamp(16px, 4vw, 72px) + 294px - (100vw - 798px) / 2));
+  }
+
   .meta-toggle {
     display: none;
   }
@@ -478,8 +492,8 @@ body {
 }
 
 /* 장식 글씨와 장면 정보가 버튼과 겹칠 만큼 좁아지면 숨김 */
-/* 나라 격자가 6열로 넓어져, 1400px보다 좁은 PC 화면에서는 오른쪽 Wonders 글씨와 겹침 → 숨김 */
-@media (max-width: 1399px) {
+/* 나라 격자가 6열로 넓어지고 가운데 묶음이 오른쪽으로 밀려, 1560px보다 좁은 화면에서는 오른쪽 Wonders 글씨와 겹침 → 숨김 */
+@media (max-width: 1559px) {
   .deco-right {
     display: none;
   }

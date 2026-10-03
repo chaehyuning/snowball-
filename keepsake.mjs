@@ -98,7 +98,7 @@ function openPostcard() {
         <div class="postcard-preview"></div>
         <div class="help-actions">
           <button type="button" class="help-replay postcard-make">미리 보기</button>
-          <button type="button" class="help-replay postcard-share" hidden>공유</button>
+          <button type="button" class="help-replay postcard-share">공유</button>
           <button type="button" class="help-close postcard-save" disabled>저장</button>
         </div>
       </div>`;
@@ -118,8 +118,6 @@ function openPostcard() {
       img.alt = "만든 엽서 미리 보기";
       preview.append(img);
       save.disabled = false;
-      const file = new File([lastBlob], "snowball-postcard.png", { type: "image/png" });
-      share.hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
     };
     postcard.querySelector(".postcard-make").addEventListener("click", make);
     input.addEventListener("keydown", (e) => {
@@ -133,10 +131,33 @@ function openPostcard() {
       a.download = `snowball-${new Date().toISOString().slice(0, 10)}.png`;
       a.click();
     });
-    share.addEventListener("click", () => {
-      if (!lastBlob) return;
+    // 공유: 폰 기본 공유 시트로 엽서 이미지를 바로 보냄(카카오톡·인스타그램 스토리·에어드롭 등).
+    // 이미지 공유를 못 하는 브라우저는 링크만 공유하고, 공유 시트가 아예 없으면 링크를 복사함
+    share.addEventListener("click", async () => {
+      if (!lastBlob) await make();
+      const link = location.href;
+      const title = "Snowball 엽서";
       const file = new File([lastBlob], "snowball-postcard.png", { type: "image/png" });
-      navigator.share({ files: [file], title: "Snowball 엽서" }).catch(() => {});
+      const tries = [];
+      if (navigator.canShare?.({ files: [file] })) {
+        tries.push({ files: [file], title, text: link }, { files: [file] });
+      }
+      if (navigator.share) tries.push({ title, text: "내 스노우볼 엽서", url: link });
+      for (const data of tries) {
+        try {
+          await navigator.share(data);
+          return;
+        } catch (e) {
+          if (e.name === "AbortError") return; // 사용자가 닫음
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(link);
+        share.textContent = "링크 복사됨";
+        setTimeout(() => (share.textContent = "공유"), 1600);
+      } catch {
+        window.prompt("이 주소를 복사하세요", link);
+      }
     });
     const close = () => (postcard.hidden = true);
     postcard.addEventListener("click", (e) => e.target === postcard && close());
@@ -156,7 +177,6 @@ function resetPostcard() {
   lastBlob = null;
   postcard.querySelector(".postcard-preview").innerHTML = "";
   postcard.querySelector(".postcard-save").disabled = true;
-  postcard.querySelector(".postcard-share").hidden = true;
 }
 
 export function setupKeepsakes(opts) {

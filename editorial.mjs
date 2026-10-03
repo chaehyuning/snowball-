@@ -232,7 +232,8 @@ function fitGhost() {
   const ghost = document.querySelector(".ghost");
   if (!ghost) return;
   ghost.style.fontSize = "";
-  const room = window.innerWidth - 24;
+  // 필기체 머리글자의 꼬리(스워시)는 글자 상자 밖으로 삐져나와서 여유를 넉넉히 둠
+  const room = window.innerWidth - 56;
   const width = ghost.scrollWidth;
   if (width > room) {
     const size = parseFloat(getComputedStyle(ghost).fontSize);
