@@ -1,4 +1,4 @@
-// 캐나다: 가을 노을 속 언덕 위 퀘벡 샤토 프롱트낙(드라마 「도깨비」 촬영지)과 흩날리는 단풍잎
+// 캐나다: 가을 노을 속 퀘벡 샤토 프롱트낙(드라마 「도깨비」 촬영지)과 흩날리는 단풍잎
 
 import { seeded, fillSilhouette, paintTree } from "./util.mjs";
 
@@ -6,6 +6,8 @@ const LEAF_COLORS = ["#c8321e", "#e0531f", "#f08a24", "#f2b233", "#a8231a"];
 const COPPER = ["#5fae94", "#3f8a74", "#2c6655"]; // 녹청이 슨 구리 지붕
 const BRICK = ["#a4543c", "#8c4330", "#743524"];
 
+// 「도깨비」에 나온 구도: 단풍나무가 선 언덕 위에서
+// 아래쪽 샤토 프롱트낙과 구시가지, 그 뒤 세인트로렌스강을 내려다봄
 function paintQuebec(g, globe, groundAt) {
   const rnd = seeded(1608);
   const r = (a, b) => a + rnd() * (b - a);
@@ -20,18 +22,20 @@ function paintQuebec(g, globe, groundAt) {
   g.clip();
 
   // 가을 노을 하늘
-  const sky = g.createLinearGradient(0, top, 0, 290);
+  const sky = g.createLinearGradient(0, top, 0, 235);
   sky.addColorStop(0, "#5f7fb8");
   sky.addColorStop(0.45, "#c9a7b4");
-  sky.addColorStop(0.75, "#f2bf8c");
+  sky.addColorStop(0.8, "#f2bf8c");
   sky.addColorStop(1, "#f6a368");
   g.fillStyle = sky;
   g.fillRect(left, top, size, size);
 
-  // 왼쪽 아래로 지는 해
-  const sun = g.createRadialGradient(95, 245, 0, 95, 245, 120);
-  sun.addColorStop(0, "rgba(255,236,190,0.95)");
-  sun.addColorStop(0.1, "rgba(255,214,150,0.6)");
+  // 강 건너편 너머로 지는 해
+  const sunX = 300;
+  const sunY = 222;
+  const sun = g.createRadialGradient(sunX, sunY, 0, sunX, sunY, 120);
+  sun.addColorStop(0, "rgba(255,240,200,1)");
+  sun.addColorStop(0.08, "rgba(255,220,160,0.7)");
   sun.addColorStop(1, "rgba(255,200,140,0)");
   g.fillStyle = sun;
   g.fillRect(left, top, size, size);
@@ -41,38 +45,97 @@ function paintQuebec(g, globe, groundAt) {
   for (let i = 0; i < 9; i++) {
     g.fillStyle = `rgba(255,${Math.round(r(170, 215))},${Math.round(r(150, 190))},${r(0.3, 0.55)})`;
     g.beginPath();
-    g.ellipse(r(50, 350), r(80, 190), r(30, 80), r(4, 10), 0, 0, Math.PI * 2);
+    g.ellipse(r(60, 350), r(75, 190), r(30, 80), r(4, 10), 0, 0, Math.PI * 2);
     g.fill();
   }
   g.filter = "none";
 
-  // 멀리 보이는 언덕
-  const farY = (x) => 258 + 6 * Math.sin(x * 0.025 + 2) + 3 * Math.sin(x * 0.09);
-  g.fillStyle = "#9a8aa0";
-  fillSilhouette(g, farY, left, right, 400);
+  // 강 건너편 레비 기슭
+  const shoreY = (x) => 229 + 3 * Math.sin(x * 0.04 + 1) + 2 * Math.sin(x * 0.13);
+  g.fillStyle = "#857a9c";
+  fillSilhouette(g, shoreY, left, right, 400);
 
-  // 호텔이 올라앉은 잔디 언덕: 꼭대기는 평평하고 양옆으로 둥글게 내려감
-  const hillY = (x) => {
-    const dx = Math.abs(x - 205);
-    const rough = 1.2 * Math.sin(x * 0.13) + 0.8 * Math.sin(x * 0.41);
-    if (dx < 90) return 241 + rough * 0.3;
-    return 241 + 0.008 * (dx - 90) ** 2 + 0.3 * (dx - 90) + rough;
+  // 세인트로렌스강과 해 반사
+  const river = g.createLinearGradient(0, 234, 0, 310);
+  river.addColorStop(0, "#e0ad90");
+  river.addColorStop(1, "#66708f");
+  g.fillStyle = river;
+  g.fillRect(left, 234, size, 90);
+  g.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 50; i++) {
+    const y = r(236, 300);
+    const w = r(8, 34) * (1 - (y - 236) / 90);
+    g.fillStyle = `rgba(255,215,165,${r(0.12, 0.35)})`;
+    g.fillRect(sunX - w / 2 + r(-12, 12), y, w, 0.8);
+  }
+  g.globalCompositeOperation = "source-over";
+
+  // 호텔이 올라앉은 강가 절벽(디아망 곶)과 단풍 든 숲
+  const bluffY = (x) => {
+    const d = Math.abs(x - 275) / 95;
+    return d >= 1 ? 400 : 264 + 30 * d ** 3 + 1.5 * Math.sin(x * 0.3);
   };
-  const grass = g.createLinearGradient(0, 241, 0, 335);
-  grass.addColorStop(0, "#a8a24c");
-  grass.addColorStop(0.5, "#7f8a3c");
-  grass.addColorStop(1, "#4f5a2a");
+  const bluff = g.createLinearGradient(0, 262, 0, 305);
+  bluff.addColorStop(0, "#7a5d44");
+  bluff.addColorStop(1, "#4a382c");
+  g.fillStyle = bluff;
+  fillSilhouette(g, bluffY, 178, 372, 400);
+  for (let i = 0; i < 160; i++) {
+    const x = r(185, 365);
+    const y = r(bluffY(x) + 2, 304);
+    g.globalAlpha = r(0.6, 0.95);
+    g.fillStyle = [...LEAF_COLORS, "#6b5a2a"][Math.floor(rnd() * 6)];
+    g.beginPath();
+    g.arc(x, y, r(0.8, 1.8), 0, Math.PI * 2);
+    g.fill();
+  }
+  g.globalAlpha = 1;
+
+  // 언덕 아래 강가 절벽 위의 샤토 프롱트낙 (멀리 있어서 작게)
+  g.save();
+  g.translate(262, 268);
+  g.scale(0.62, 0.62);
+  paintChateau(g, r, rnd, 0, 0);
+  g.restore();
+
+  // 성 아래 구시가지 지붕들
+  for (let i = 0; i < 46; i++) {
+    const x = r(178, 372);
+    const base = r(278, 302);
+    const w = r(6, 12);
+    const h = r(6, 13);
+    g.fillStyle = ["#cbb79a", "#b49c80", "#9c8670", "#d8c6aa"][Math.floor(rnd() * 4)];
+    g.fillRect(x, base - h, w, h);
+    g.fillStyle = rnd() < 0.3 ? COPPER[1] : ["#3d3a3e", "#5a4a44"][Math.floor(rnd() * 2)];
+    g.beginPath();
+    g.moveTo(x - 1, base - h);
+    g.lineTo(x + w / 2, base - h - r(3, 6));
+    g.lineTo(x + w + 1, base - h);
+    g.closePath();
+    g.fill();
+    for (let k = 0; k < 2; k++) {
+      g.fillStyle = rnd() < 0.5 ? "#ffd38a" : "#4a3a34";
+      g.fillRect(x + 1.5 + k * (w / 2), base - h + 3, 1.3, 1.8);
+    }
+  }
+
+  // 앞쪽 잔디 언덕: 왼쪽이 높고 오른쪽 아래로 내려감
+  const hillY = (x) => 212 + 95 / (1 + Math.exp(-(x - 170) / 45)) + 1.5 * Math.sin(x * 0.17);
+  const grass = g.createLinearGradient(0, 212, 0, 335);
+  grass.addColorStop(0, "#a3a04a");
+  grass.addColorStop(0.5, "#7d883a");
+  grass.addColorStop(1, "#4d5828");
   g.fillStyle = grass;
   fillSilhouette(g, hillY, left, right, 400);
 
-  // 노을이 왼쪽 비탈을 비춤
-  const slopeLight = g.createLinearGradient(left, 0, right, 0);
-  slopeLight.addColorStop(0, "rgba(255,190,110,0.3)");
-  slopeLight.addColorStop(0.6, "rgba(255,190,110,0)");
-  g.fillStyle = slopeLight;
-  fillSilhouette(g, hillY, left, right, 400);
+  // 해를 받는 언덕 능선
+  g.strokeStyle = "rgba(255,210,140,0.55)";
+  g.lineWidth = 1.5;
+  g.beginPath();
+  for (let x = left; x <= right; x += 2) g.lineTo(x, hillY(x) + 0.5);
+  g.stroke();
 
-  // 잔디 결
+  // 잔디 결과 떨어진 단풍잎
   for (let i = 0; i < 500; i++) {
     const x = r(left, right);
     const y = r(hillY(x) + 2, 335);
@@ -83,45 +146,43 @@ function paintQuebec(g, globe, groundAt) {
     g.lineTo(x + r(-1, 1), y - r(1.5, 3.5));
     g.stroke();
   }
-
-  paintChateau(g, r, rnd, 205, 243);
-
-  // 호텔로 올라가는 언덕길
-  g.strokeStyle = "#d9c3a0";
-  g.lineCap = "round";
-  g.lineWidth = 5;
-  g.beginPath();
-  g.moveTo(110, 345);
-  g.bezierCurveTo(165, 320, 125, 285, 182, 260);
-  g.quadraticCurveTo(200, 252, 205, 244);
-  g.stroke();
-  g.strokeStyle = "rgba(120,90,60,0.35)";
-  g.lineWidth = 1;
-  g.stroke();
-
-  // 비탈의 작은 단풍나무와 가로등
-  const maple = { trunk: "#3a2418", shade: "#7e2414", colors: LEAF_COLORS.slice(0, 4) };
-  for (const [tx, len] of [[112, 16], [138, 13], [268, 14], [296, 17], [322, 15]]) {
-    paintTree(g, rnd, tx, hillY(tx) + 3, len, -Math.PI / 2 + r(-0.2, 0.2), 2.5, 3, maple);
-  }
-  for (const lx of [150, 176]) {
-    const ly = lx === 150 ? 300 : 262;
-    g.strokeStyle = "#2c2622";
-    g.lineWidth = 1;
+  for (let i = 0; i < 120; i++) {
+    const x = r(left, 260);
+    const y = r(hillY(x) + 3, 330);
+    g.globalAlpha = r(0.6, 0.95);
+    g.fillStyle = LEAF_COLORS[Math.floor(rnd() * LEAF_COLORS.length)];
     g.beginPath();
-    g.moveTo(lx, ly);
-    g.lineTo(lx, ly - 12);
-    g.stroke();
-    const lamp = g.createRadialGradient(lx, ly - 13, 0, lx, ly - 13, 5);
-    lamp.addColorStop(0, "rgba(255,220,150,0.95)");
-    lamp.addColorStop(1, "rgba(255,220,150,0)");
-    g.fillStyle = lamp;
-    g.fillRect(lx - 5, ly - 18, 10, 10);
+    g.ellipse(x, y, r(1.2, 2.4), r(0.7, 1.3), r(0, Math.PI), 0, Math.PI * 2);
+    g.fill();
   }
+  g.globalAlpha = 1;
 
-  // 앞쪽 단풍나무 두 그루
-  paintTree(g, rnd, 26, 356, 36, -1.2, 6, 4, maple);
-  paintTree(g, rnd, 376, 358, 36, -1.95, 6, 4, maple);
+  // 언덕 위 벤치와 가로등
+  const benchX = 158;
+  const benchY = hillY(benchX) + 4;
+  g.fillStyle = "#3a2a20";
+  g.fillRect(benchX - 11, benchY - 6, 22, 2);
+  g.fillRect(benchX - 11, benchY - 11, 22, 1.6);
+  g.fillRect(benchX - 9, benchY - 6, 1.4, 6);
+  g.fillRect(benchX + 8, benchY - 6, 1.4, 6);
+  const lampX = 196;
+  const lampY = hillY(lampX) + 3;
+  g.strokeStyle = "#2c2622";
+  g.lineWidth = 1.2;
+  g.beginPath();
+  g.moveTo(lampX, lampY);
+  g.lineTo(lampX, lampY - 26);
+  g.stroke();
+  const lamp = g.createRadialGradient(lampX, lampY - 27, 0, lampX, lampY - 27, 7);
+  lamp.addColorStop(0, "rgba(255,222,150,0.95)");
+  lamp.addColorStop(1, "rgba(255,222,150,0)");
+  g.fillStyle = lamp;
+  g.fillRect(lampX - 7, lampY - 34, 14, 14);
+
+  // 언덕 위 큰 단풍나무와 오른쪽 가장자리 작은 나무
+  const maple = { trunk: "#3a2418", shade: "#7e2414", colors: LEAF_COLORS.slice(0, 4) };
+  paintTree(g, rnd, 92, hillY(92) + 6, 42, -1.5, 7, 5, maple);
+  paintTree(g, rnd, 378, 352, 32, -1.95, 5, 4, maple);
 
   // 낙엽이 깔린 바닥
   const floorTop = groundAt(globe.x);
