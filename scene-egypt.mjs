@@ -17,12 +17,13 @@ function paintEgypt(g, globe, groundAt) {
   g.arc(globe.x, globe.y, globe.r, 0, Math.PI * 2);
   g.clip();
 
-  // 먼지 낀 해 질 녘 하늘: 위는 탁한 보랏빛, 지평선은 살구색
+  // 사막의 해 질 녘 하늘: 위는 짙은 남보라, 가운데 장밋빛, 지평선 가까이 주황과 금빛
   const sky = g.createLinearGradient(0, top, 0, 275);
-  sky.addColorStop(0, "#5e4f7a");
-  sky.addColorStop(0.45, "#b8806e");
-  sky.addColorStop(0.8, "#eaa877");
-  sky.addColorStop(1, "#f5cf9e");
+  sky.addColorStop(0, "#2c2f6b");
+  sky.addColorStop(0.35, "#6e4f8e");
+  sky.addColorStop(0.6, "#d7748a");
+  sky.addColorStop(0.82, "#f6a25a");
+  sky.addColorStop(1, "#ffd890");
   g.fillStyle = sky;
   g.fillRect(left, top, size, size);
 
@@ -50,10 +51,46 @@ function paintEgypt(g, globe, groundAt) {
   }
   g.filter = "none";
 
-  // 먼 모래 언덕
+  // 먼 모래 언덕: 저녁 하늘빛을 받아 보랏빛이 도는 분홍
   const farY = (x) => 262 + 5 * Math.sin(x * 0.03 + 1) + 3 * Math.sin(x * 0.08);
-  g.fillStyle = "#d99a6c";
+  g.fillStyle = "#c98a7a";
   fillSilhouette(g, farY, left, right, 400);
+
+  // 왼쪽 지평선의 나일강과 야자수 숲: 청록 물줄기에 해가 금빛으로 비침
+  const rn = seeded(3100);
+  const nile = g.createLinearGradient(0, 260, 0, 270);
+  nile.addColorStop(0, "#3f9aa6");
+  nile.addColorStop(1, "#1f6a7a");
+  g.fillStyle = nile;
+  g.beginPath();
+  g.moveTo(left, 264);
+  g.quadraticCurveTo(90, 258, 170, 266);
+  g.lineTo(170, 268);
+  g.quadraticCurveTo(90, 264, left, 272);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(255,220,150,0.8)";
+  for (let i = 0; i < 10; i++) g.fillRect(100 + rn() * 36, 262 + rn() * 4, 2 + rn() * 4, 0.6);
+  for (let i = 0; i < 9; i++) {
+    const px = 40 + i * 13 + rn() * 6;
+    const py = 262 - (i % 3) * 0.5;
+    const ph = 10 + rn() * 7;
+    g.strokeStyle = "#3a3a2a";
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(px, py);
+    g.quadraticCurveTo(px + 1.5, py - ph * 0.5, px + (rn() - 0.5) * 2, py - ph);
+    g.stroke();
+    g.strokeStyle = i % 2 ? "#2f5a3a" : "#3c6e44";
+    g.lineWidth = 1.3;
+    for (let k = 0; k < 6; k++) {
+      const a = -Math.PI / 2 + (k - 2.5) * 0.55;
+      g.beginPath();
+      g.moveTo(px, py - ph);
+      g.quadraticCurveTo(px + Math.cos(a) * 4, py - ph + Math.sin(a) * 4 - 1, px + Math.cos(a) * 7, py - ph + Math.sin(a) * 5 + 3);
+      g.stroke();
+    }
+  }
 
   // 피라미드 세 개: 멘카우레(작은 것) → 카프레(꼭대기에 흰 외장석이 남은 것) → 쿠푸
   // 피라미드 세 개. 멀수록 작고 하늘빛 먼지에 묻혀 흐릿함
@@ -65,8 +102,9 @@ function paintEgypt(g, globe, groundAt) {
   // 앞쪽 사막
   const duneY = (x) => 286 + 6 * Math.sin(x * 0.025 + 2) + 2 * Math.sin(x * 0.09);
   const dune = g.createLinearGradient(0, 280, 0, 335);
-  dune.addColorStop(0, "#d58b55");
-  dune.addColorStop(1, "#a65c32");
+  dune.addColorStop(0, "#e8a05e");
+  dune.addColorStop(0.6, "#c47a58");
+  dune.addColorStop(1, "#8e5a62");
   g.fillStyle = dune;
   fillSilhouette(g, duneY, left, right, 400);
   // 모래 물결
@@ -81,14 +119,27 @@ function paintEgypt(g, globe, groundAt) {
     g.stroke();
   }
 
+  // 모래 물결 뒤쪽 그늘은 보랏빛
+  g.strokeStyle = "rgba(110,80,140,0.25)";
+  g.lineWidth = 0.9;
+  for (let i = 0; i < 30; i++) {
+    const x = left + rn() * size;
+    const y = duneY(x) + 6 + rn() * 40;
+    g.beginPath();
+    g.moveTo(x, y + 1);
+    g.quadraticCurveTo(x + 9, y - 1, x + 20, y + 1);
+    g.stroke();
+  }
+
   sphinx(g);
   camel(g, 318, 300);
 
   // 바닥: 고운 모래
   const floorTop = groundAt(globe.x);
   const floor = g.createLinearGradient(0, floorTop, 0, floorTop + 60);
-  floor.addColorStop(0, "#e2a46e");
-  floor.addColorStop(1, "#b06636");
+  floor.addColorStop(0, "#f0b878");
+  floor.addColorStop(0.6, "#cf8a5a");
+  floor.addColorStop(1, "#9a5a52");
   g.fillStyle = floor;
   fillSilhouette(g, groundAt, left, right, globe.y + globe.r);
   for (let i = 0; i < 380; i++) {
@@ -164,14 +215,14 @@ function mottle(g, rnd, x0, x1, y0, y1, count, colors) {
 // fade: 멀리 있을수록 하늘빛 먼지에 묻혀 흐려지는 정도
 function pyramid(g, cx, baseY, half, h, cap, fade) {
   const apexY = baseY - h;
-  g.fillStyle = "#e3a66e";
+  g.fillStyle = "#efae6c";
   g.beginPath();
   g.moveTo(cx - half, baseY);
   g.lineTo(cx, apexY);
   g.lineTo(cx + half * 0.25, baseY);
   g.closePath();
   g.fill();
-  g.fillStyle = "#a9623a";
+  g.fillStyle = "#8a5866";
   g.beginPath();
   g.moveTo(cx + half * 0.25, baseY);
   g.lineTo(cx, apexY);
@@ -207,7 +258,7 @@ function pyramid(g, cx, baseY, half, h, cap, fade) {
   g.stroke();
   g.restore();
   // 바깥 모서리는 돌단이 깨져 살짝 들쭉날쭉
-  g.fillStyle = "#e3a66e";
+  g.fillStyle = "#efae6c";
   for (let k = 3; k < 24; k++) {
     const t = k / 24;
     const ex = cx - half * t;
@@ -235,7 +286,7 @@ function pyramid(g, cx, baseY, half, h, cap, fade) {
   }
 
   if (fade > 0) {
-    g.fillStyle = `rgba(236,180,140,${fade})`;
+    g.fillStyle = `rgba(214,150,160,${fade})`;
     g.beginPath();
     g.moveTo(cx - half, baseY);
     g.lineTo(cx, apexY);
@@ -527,6 +578,20 @@ function camel(g, x, baseY) {
   leg(x + 9, 0.6, true);
   leg(x - 9, -1, false);
   leg(x + 11.5, 0.8, false);
+  // 혹 위 안장 담요: 빨강·남색 줄무늬와 술
+  g.fillStyle = "#b8283a";
+  g.beginPath();
+  g.moveTo(x - 6, baseY - 19);
+  g.quadraticCurveTo(x - 2, baseY - 24.5, x + 2.5, baseY - 18.5);
+  g.lineTo(x + 3, baseY - 14);
+  g.lineTo(x - 6.5, baseY - 14.5);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "#2a3f8a";
+  g.fillRect(x - 6.3, baseY - 16.5, 9.2, 1);
+  g.fillStyle = "#f2c232";
+  for (let k = 0; k < 5; k++) g.fillRect(x - 6 + k * 2.2, baseY - 14, 0.6, 1.4);
+
   // 꼬리
   g.strokeStyle = "#42241a";
   g.lineWidth = 0.9;

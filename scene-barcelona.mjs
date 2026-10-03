@@ -134,40 +134,27 @@ function paintBarcelona(g, globe, groundAt) {
   roseWindow(g, 200, 308, 11, ["#1f5fc9", "#2f86e0", "#7fd0f0", "#1aa3a0"]);
 
   // 양옆 벽의 색유리: 왼쪽(동쪽)은 파랑·초록, 오른쪽(서쪽)은 빨강·주황·노랑.
-  // 벽이 바깥쪽 위로 비스듬히 물러나므로 창은 바깥 모서리가 높은 평행사변형으로 기울고, 멀수록 좁아짐
+  // 기둥 사이 틈으로 곧게 선 창이 보이고, 가운데(먼 쪽)로 갈수록 작아짐
   const coolGlass = ["#1f5fc9", "#2f86e0", "#1aa3a0", "#3cbf6a", "#7fd0f0", "#9ad84a"];
   const warmGlass = ["#d8324a", "#e0531f", "#f08a24", "#f2b632", "#ffd86a", "#c2185b"];
   for (const side of [-1, 1]) {
     const palette = side < 0 ? coolGlass : warmGlass;
-    // 아래 회랑 난간: 벽을 따라 바깥으로 갈수록 올라가는 크림색 띠와 짧은 기둥들
-    g.fillStyle = "#e7d2ad";
-    g.beginPath();
-    g.moveTo(200 + side * 58, 300);
-    g.lineTo(200 + side * 175, 262);
-    g.lineTo(200 + side * 175, 272);
-    g.lineTo(200 + side * 58, 306);
-    g.closePath();
-    g.fill();
-    g.fillStyle = "rgba(120,90,55,0.45)";
-    for (let k = 0; k <= 10; k++) {
-      const u = k / 10;
-      const bx = 200 + side * (58 + 117 * u);
-      const by = 300 - 38 * u;
-      g.fillRect(bx - 0.5, by - 6 - 4 * u, 1 + u, 6 + 4 * u);
-    }
-    for (const [d, row] of [[0.25, 0], [0.5, 0], [0.82, 0], [0.4, 1], [0.75, 1]]) {
-      const cx = 200 + side * (62 + 110 * d);
-      const w = 7 + 15 * d;
-      const h = row ? 22 + 24 * d : 34 + 46 * d;
-      const cy = row ? 150 - 34 * d : 262 - 60 * d - h;
-      g.save();
-      g.translate(cx, cy + h / 2);
-      g.rotate(side * 0.1);
-      g.transform(1, -side * 0.22, 0, 1, 0, 0);
-      g.translate(-cx, -(cy + h / 2));
-      stainedWindow(g, rnd, cx, cy, w, h, palette, 1);
-      g.restore();
-      if (!row) roseWindow(g, cx + side * 2, cy - w * 0.9, w * 0.42, palette);
+    // 기둥 사이 틈으로 보이는 창. 멀수록(가운데로 갈수록) 작고 높음. 기울이지 않고 곧게 세움
+    for (const [gx, w, h, top] of [
+      [96, 15, 62, 186],
+      [132, 10, 46, 198],
+      [157, 7, 32, 208],
+    ]) {
+      const x = side < 0 ? gx : 400 - gx;
+      // 아래 큰 창, 그 위 작은 장미창, 맨 위 작은 창
+      stainedWindow(g, rnd, x, top, w, h, palette, 1);
+      roseWindow(g, x, top - w * 0.75, w * 0.38, palette);
+      stainedWindow(g, rnd, x, top - w * 2.6 - h * 0.45, w * 0.7, h * 0.45, palette, 0.9);
+      // 창 아래 회랑 턱
+      g.fillStyle = "#e7d2ad";
+      g.fillRect(x - w * 0.9, top + h, w * 1.8, 2 + w * 0.15);
+      g.fillStyle = "rgba(110,80,50,0.4)";
+      g.fillRect(x - w * 0.9, top + h + 2 + w * 0.15, w * 1.8, 0.8);
     }
     // 창 둘레로 번지는 색빛
     g.save();
@@ -190,21 +177,6 @@ function paintBarcelona(g, globe, groundAt) {
     leaningColumn(g, bx, tx, 372, 110, w, -1, d);
     leaningColumn(g, 400 - bx, 400 - tx, 372, 110, w, 1, d);
   }
-  // 기둥 위쪽의 타원 메달: 초록·노랑 유리
-  for (const [mx, my] of [[74, 150], [326, 150]]) {
-    const medal = g.createRadialGradient(mx - 3, my - 3, 0, mx, my, 12);
-    medal.addColorStop(0, "#fff3a0");
-    medal.addColorStop(0.55, "#d8d040");
-    medal.addColorStop(1, "#3a9a4a");
-    g.fillStyle = medal;
-    g.beginPath();
-    g.ellipse(mx, my, 9, 12, 0, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = "rgba(120,95,60,0.7)";
-    g.lineWidth = 1.2;
-    g.stroke();
-  }
-
   // 바닥: 따뜻한 돌. 창빛이 색 웅덩이로 비침
   const floorTop = groundAt(globe.x);
   const floor = g.createLinearGradient(0, floorTop - 40, 0, globe.y + globe.r);
@@ -408,13 +380,15 @@ function leaningColumn(g, bx, tx, baseY, topY, w, side, d) {
     g.restore();
   };
   paintPart(knotY, baseY, "#b4b6bc", "#7a7c84", "#3a3b42");
-  paintPart(topY, knotY, "#fff6e6", "#dccaa8", "#9a8160");
+  // 마디 위 크림색 몸통은 짧게: 곧 굵은 가지 서너 갈래로 나뉨
+  const splitY = knotY - (knotY - topY) * 0.35;
+  paintPart(splitY, knotY, "#fff6e6", "#dccaa8", "#9a8160");
   // 깎인 면의 모서리: 몸통을 따라 휘는 아주 옅은 세로줄 (가장자리로 갈수록 촘촘)
   g.lineWidth = Math.max(0.3, w * 0.02);
   for (const f of [-0.3, 0, 0.3]) {
     g.strokeStyle = f * side < 0 ? "rgba(255,250,240,0.1)" : "rgba(0,0,0,0.08)";
     g.beginPath();
-    for (let y = baseY; y >= topY; y -= 4) g.lineTo(xAt(y) + f * wAt(y), y);
+    for (let y = baseY; y >= splitY; y -= 4) g.lineTo(xAt(y) + f * wAt(y), y);
     g.stroke();
   }
   // 마디: 몸통이 살짝 부풀어 오른 둥근 띠. 위는 밝고 아래 가장자리는 그늘
@@ -433,36 +407,61 @@ function leaningColumn(g, bx, tx, baseY, topY, w, side, d) {
   g.ellipse(kx, knotY + kw * 0.18, kw * 0.55, kw * 0.06, 0, 0, Math.PI * 2);
   g.fill();
 
-  // 가지: 굵게 시작해 휘면서 가늘어짐. 아랫면은 그늘, 윗면은 밝음
+  // 가지: 몸통이 그대로 갈라진 굵은 가지 네 갈래. 바깥 가지는 옆으로 눕고 안쪽 가지는 곧게 오름.
+  // 가지마다 중간에서 다시 두 갈래로 나뉘어 천장을 받침. 아랫면 그늘 → 크림색 몸 → 윗면 빛
   g.globalAlpha = 1;
-  const tX = xAt(topY);
-  const tW = wAt(topY);
-  const ao = g.createRadialGradient(tX, topY - 20, 0, tX, topY - 20, 50);
-  ao.addColorStop(0, "rgba(90,60,30,0.28)");
+  const sx = xAt(splitY);
+  const sw = wAt(splitY);
+  const ao = g.createRadialGradient(sx, splitY - 30, 0, sx, splitY - 30, 70);
+  ao.addColorStop(0, "rgba(90,60,30,0.25)");
   ao.addColorStop(1, "rgba(90,60,30,0)");
   g.fillStyle = ao;
-  g.fillRect(tX - 50, topY - 70, 100, 100);
-  for (const [dx, lift, curl] of [[-1.7, 0.65, -0.3], [-0.6, 1, 0.15], [0.6, 1, -0.15], [1.7, 0.65, 0.3]]) {
-    const ex = tX + dx * tW * 1.5;
-    const ey = topY - 70 * lift;
-    const cx = tX + dx * tW * 0.6 + curl * tW;
-    const cy = topY - 28 * lift;
+  g.fillRect(sx - 70, splitY - 100, 140, 140);
+  const limb = (x0, y0, cx, cy, ex, ey, w0, w1) => {
     const pt = (t) => {
       const u = 1 - t;
-      return [u * u * tX + 2 * u * t * cx + t * t * ex, u * u * topY + 2 * u * t * cy + t * t * ey];
+      return [u * u * x0 + 2 * u * t * cx + t * t * ex, u * u * y0 + 2 * u * t * cy + t * t * ey];
     };
-    for (const [color, extra, off] of [["#9f875f", 1.4, 0.9], ["#f2e6cf", 0, 0], ["#fffaf0", -0.55, -0.4]]) {
-      g.strokeStyle = color;
-      g.lineCap = "round";
-      for (let k = 0; k < 8; k++) {
-        const [x0, y0] = pt(k / 8);
-        const [x1, y1] = pt((k + 1) / 8);
-        g.lineWidth = Math.max(0.5, tW * 0.26 * (1 - (k / 8) * 0.7) + extra * (1 - k / 10));
-        g.beginPath();
-        g.moveTo(x0 - off * side, y0 + Math.abs(off));
-        g.lineTo(x1 - off * side, y1 + Math.abs(off));
-        g.stroke();
-      }
+    const steps = 10;
+    // 양옆 윤곽을 따라 채운 테이퍼 모양 (선이 아니라 면이라 마디가 생기지 않음)
+    const leftEdge = [];
+    const rightEdge = [];
+    for (let k = 0; k <= steps; k++) {
+      const t = k / steps;
+      const [px, py] = pt(t);
+      const [qx, qy] = pt(Math.min(1, t + 0.01));
+      const ang = Math.atan2(qy - py, qx - px) + Math.PI / 2;
+      const half = (w0 + (w1 - w0) * t) / 2;
+      leftEdge.push([px + Math.cos(ang) * half, py + Math.sin(ang) * half]);
+      rightEdge.push([px - Math.cos(ang) * half, py - Math.sin(ang) * half]);
+    }
+    const shape = () => {
+      g.beginPath();
+      leftEdge.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py)));
+      for (let i = rightEdge.length - 1; i >= 0; i--) g.lineTo(...rightEdge[i]);
+      g.closePath();
+    };
+    const body = g.createLinearGradient(x0 - w0, 0, x0 + w0, 0);
+    body.addColorStop(0, side < 0 ? "#a88f6c" : "#fff6e6");
+    body.addColorStop(0.5, "#e6d7ba");
+    body.addColorStop(1, side < 0 ? "#fff6e6" : "#a88f6c");
+    g.fillStyle = body;
+    shape();
+    g.fill();
+    g.strokeStyle = "rgba(110,85,55,0.35)";
+    g.lineWidth = 0.5;
+    g.stroke();
+    return pt;
+  };
+  for (const [dx, rise] of [[-1.5, 0.55], [-0.5, 0.95], [0.5, 0.95], [1.5, 0.55]]) {
+    const ex = sx + dx * sw * 1.4;
+    const ey = splitY - (splitY - 50) * rise;
+    const pt = limb(sx + dx * sw * 0.18, splitY + 2, sx + dx * sw * 0.55, splitY - (splitY - ey) * 0.4, ex, ey, sw * 0.34, sw * 0.16);
+    const [fx, fy] = pt(1);
+    for (const fork of [-1, 1]) {
+      const tx2 = fx + (fork * 0.6 + dx * 0.4) * sw * 0.9;
+      const ty2 = fy - (fy - 40) * 0.6 - 4;
+      limb(fx, fy, fx + fork * sw * 0.2, fy - 8, tx2, ty2, sw * 0.16, sw * 0.06);
     }
   }
   g.restore();
