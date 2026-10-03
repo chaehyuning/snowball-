@@ -12,13 +12,51 @@
       <canvas id="globe"></canvas>
       <p class="hint">꾹 눌렀다 떼면 팡! 좌우로 밀면 다른 나라로 바뀌어요</p>
       <nav class="scenes" aria-label="나라 선택">
-        <button type="button" data-scene="japan">일본 · 후지산</button>
-        <button type="button" data-scene="korea">한국 · 남산타워</button>
-        <button type="button" data-scene="canada">캐나다 · 퀘벡</button>
-        <button type="button" data-scene="australia">호주 · 오페라하우스</button>
-        <button type="button" data-scene="finland">핀란드 · 산타마을</button>
-        <button type="button" data-scene="china">중국 · 자금성</button>
+        <button type="button" data-scene="japan" aria-label="일본 · 후지산" title="일본 · 후지산">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 20 9 8.5 12 7l3 1.5L22 20Z" fill="#7c8fc2" />
+            <path d="M9 8.5 12 7l3 1.5-1.4 2.2-1.6-1.3-1.6 1.6-1.6-1.2Z" fill="#fff" />
+            <circle cx="19" cy="5" r="2.2" fill="#f6a3ba" />
+          </svg>
+        </button>
+        <button type="button" data-scene="korea" aria-label="한국 · 남산타워" title="한국 · 남산타워">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="11.6" y="1.5" width="0.8" height="5" fill="#e04b4b" />
+            <rect x="8.5" y="7" width="7" height="3.2" rx="1" fill="#ffd27a" />
+            <path d="M10.8 10.2h2.4l.5 9h-3.4Z" fill="#cfd6e6" />
+            <path d="M3 22c3-4 6-3.5 9-3.5s6-.5 9 3.5Z" fill="#3b5a7a" />
+          </svg>
+        </button>
+        <button type="button" data-scene="canada" aria-label="캐나다 · 퀘벡" title="캐나다 · 퀘벡">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2l1.7 3.4 2-1-.4 4.3 3-2.3-.3 2.7 3 .6-2.5 2.6 1 1.6-4.5.6.5 2-3.7-1.2V22h-1.6v-4.7L6.5 18.5l.5-2-4.5-.6 1-1.6L1 11.7l3-.6-.3-2.7 3 2.3-.4-4.3 2 1Z" fill="#e0531f" />
+          </svg>
+        </button>
+        <button type="button" data-scene="australia" aria-label="호주 · 오페라하우스" title="호주 · 오페라하우스">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 21h20" stroke="#4fb0e8" stroke-width="2" />
+            <path d="M4 18Q4.5 10 8 7.5 9.5 13 11 18Z" fill="#fff" />
+            <path d="M9 18Q10 7 14 4.5 15.6 11.5 17 18Z" fill="#f3f1ea" />
+            <path d="M15 18Q16.5 11 19.5 9.5 20.5 14 21 18Z" fill="#dcdad2" />
+          </svg>
+        </button>
+        <button type="button" data-scene="finland" aria-label="핀란드 · 산타마을" title="핀란드 · 산타마을">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#e8f2ff" stroke-width="1.6" stroke-linecap="round">
+            <path d="M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10" />
+            <path d="M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5M3.6 10.4l3.4-.9-.9-3.4M20.4 13.6l-3.4.9.9 3.4M3.6 13.6l3.4.9-.9 3.4M20.4 10.4l-3.4-.9.9-3.4" />
+          </svg>
+        </button>
+        <button type="button" data-scene="china" aria-label="중국 · 자금성" title="중국 · 자금성">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 7.5Q12 3.5 19 7.5L17 8.5H7Z" fill="#f2c230" />
+            <rect x="8" y="8.5" width="8" height="2.5" fill="#b8261c" />
+            <path d="M2.5 13Q12 9 21.5 13L19 14H5Z" fill="#f2c230" />
+            <rect x="6" y="14" width="12" height="5.5" fill="#b8261c" />
+            <rect x="4" y="19.5" width="16" height="2" fill="#efeadf" />
+          </svg>
+        </button>
       </nav>
+      <p class="scene-name" id="scene-name" aria-live="polite"></p>
     </div>
 
     <script src="./index.mjs" type="module"></script>

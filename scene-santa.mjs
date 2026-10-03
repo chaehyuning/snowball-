@@ -1,4 +1,5 @@
-// 핀란드: 로바니에미 산타마을. 눈 덮인 가문비나무 숲, 통나무집, 북극선, 순록, 흩날리는 눈꽃
+// 핀란드: 로바니에미 산타마을. 산타 집무실 본관과 중앙우체국, 북극선과 이정표, 유리 이글루,
+// 크리스마스트리, 순록 썰매, 오로라, 흩날리는 눈꽃
 
 import { seeded, fillSilhouette } from "./util.mjs";
 
@@ -57,6 +58,20 @@ function animateSanta(ctx, t, globe) {
   ctx.drawImage(aurora, left + 6 * Math.sin(t * 0.0004), top, globe.r * 2, AURORA_H);
   ctx.globalAlpha = 0.3 + 0.2 * Math.sin(t * 0.0013 + 1);
   ctx.drawImage(aurora, left - 8 * Math.sin(t * 0.0006), top + 4, globe.r * 2, AURORA_H);
+
+  // 크리스마스트리와 줄전구가 하나씩 다른 박자로 반짝임
+  for (const l of lights) {
+    const on = 0.5 + 0.5 * Math.sin(t * 0.004 + l.phase);
+    ctx.globalAlpha = 0.35 + 0.65 * on;
+    ctx.fillStyle = l.color;
+    ctx.beginPath();
+    ctx.arc(l.x, l.y, 0.9 + on * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.25 * on;
+    ctx.beginPath();
+    ctx.arc(l.x, l.y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -111,14 +126,23 @@ function paintSanta(g, globe, groundAt) {
   g.fillStyle = field;
   fillSilhouette(g, fieldY, left, right, 400);
 
-  // 통나무집들과 가운데 산타 집무실
-  cabin(g, 110, 282, 40, 22, 20);
-  cabin(g, 296, 284, 44, 22, 22);
+  lights = [];
+
+  // 왼쪽: 산타클로스 중앙우체국과 빨간 우체통
+  cabin(g, 102, 282, 42, 22, 20);
+  sign(g, 102, 256, 22, 6, "#b52a2a", "POST", 4.5);
+  mailbox(g, 130, 296);
+
+  // 가운데: 산타 집무실 본관 ("SANTA IS HERE" 탑)과 지붕 줄전구
   santaOffice(g, 200, 278);
+  stringLights(165, 250, 235, 250, 8);
+
+  // 크리스마스트리
+  xmasTree(g, 150, 296, 34);
 
   // 굴뚝 연기
   g.filter = "blur(3px)";
-  for (const [sx, sy] of [[124, 240], [310, 241]]) {
+  for (const [sx, sy] of [[116, 240], [214, 236]]) {
     for (let i = 0; i < 5; i++) {
       g.fillStyle = `rgba(200,205,215,${0.5 - i * 0.08})`;
       g.beginPath();
@@ -128,27 +152,58 @@ function paintSanta(g, globe, groundAt) {
   }
   g.filter = "none";
 
-  // 북극선: 눈밭을 가로지르는 선과 표지판
-  g.strokeStyle = "rgba(60,90,140,0.55)";
-  g.lineWidth = 1.2;
-  g.setLineDash([5, 3]);
+  // 오른쪽: 유리 이글루
+  igloo(g, 290, 290, 15);
+  igloo(g, 322, 294, 13);
+
+  // 북극선: 눈밭에 칠한 흰 선 (눈 위에서 보이도록 옅은 그림자를 깔아 둠)
+  g.strokeStyle = "rgba(90,120,170,0.45)";
+  g.lineWidth = 3;
+  g.beginPath();
+  g.moveTo(left, 301);
+  g.quadraticCurveTo(200, 293, right, 301);
+  g.stroke();
+  g.strokeStyle = "#ffffff";
+  g.lineWidth = 2;
   g.beginPath();
   g.moveTo(left, 300);
   g.quadraticCurveTo(200, 292, right, 300);
   g.stroke();
-  g.setLineDash([]);
+
+  // 북극선 이정표: 세계 도시 방향을 가리키는 화살표 판
   g.fillStyle = "#5a3a24";
-  g.fillRect(253, 276, 2, 22);
+  g.fillRect(253, 262, 2, 36);
+  const arrows = [
+    [266, -1, "#2e4f7a"],
+    [272, 1, "#b52a2a"],
+    [278, -1, "#2f6b4a"],
+    [284, 1, "#c9952a"],
+  ];
+  for (const [ay, dir, color] of arrows) {
+    g.fillStyle = color;
+    g.beginPath();
+    g.moveTo(254, ay - 2.5);
+    g.lineTo(254 + dir * 14, ay - 2.5);
+    g.lineTo(254 + dir * 17, ay);
+    g.lineTo(254 + dir * 14, ay + 2.5);
+    g.lineTo(254, ay + 2.5);
+    g.closePath();
+    g.fill();
+  }
   g.fillStyle = "#2e4f7a";
-  g.fillRect(234, 271, 40, 10);
+  g.fillRect(238, 253, 34, 9);
   g.fillStyle = "#ffffff";
-  g.font = "bold 4.5px sans-serif";
+  g.font = "bold 4px sans-serif";
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.fillText("ARCTIC CIRCLE", 254, 275);
-  g.fillText("66°33′07″", 254, 279);
+  g.fillText("ARCTIC CIRCLE", 255, 256);
+  g.fillText("66°33′07″", 255, 260);
 
-  reindeer(g, 318, 306);
+  snowman(g, 228, 304);
+
+  // 순록이 끄는 빨간 썰매
+  sleigh(g, 300, 312);
+  reindeer(g, 330, 312);
 
   // 앞쪽 큰 가문비나무
   spruce(g, 32, 330, 90, 1);
@@ -268,6 +323,8 @@ function santaOffice(g, x, baseY) {
   g.beginPath();
   g.arc(x, baseY - 93, 1.8, 0, Math.PI * 2);
   g.fill();
+  // 탑의 "SANTA IS HERE" 표시
+  sign(g, x, baseY - 46, 30, 6, "#b52a2a", "SANTA IS HERE", 3.6);
   // 빨간 문과 화환
   g.fillStyle = "#b52a2a";
   g.fillRect(x - 5, baseY - 13, 10, 13);
@@ -275,6 +332,181 @@ function santaOffice(g, x, baseY) {
   g.lineWidth = 1.6;
   g.beginPath();
   g.arc(x, baseY - 19, 3, 0, Math.PI * 2);
+  g.stroke();
+}
+
+// 위치를 저장해 두었다가 animate에서 반짝이게 하는 전구들
+let lights = [];
+const BULBS = ["#ff5a5a", "#ffd34a", "#6ad16a", "#5ab8ff", "#ffffff"];
+
+function stringLights(x0, y0, x1, y1, sag) {
+  for (let i = 0; i <= 10; i++) {
+    const k = i / 10;
+    lights.push({
+      x: x0 + (x1 - x0) * k,
+      y: y0 + (y1 - y0) * k + sag * 4 * k * (1 - k),
+      color: BULBS[i % BULBS.length],
+      phase: i * 1.3,
+    });
+  }
+}
+
+// 간판: 가운데 (x, y), 폭 w, 높이 h
+function sign(g, x, y, w, h, color, text, fontSize) {
+  g.fillStyle = color;
+  g.fillRect(x - w / 2, y - h / 2, w, h);
+  g.fillStyle = "#ffffff";
+  g.font = `bold ${fontSize}px sans-serif`;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText(text, x, y + 0.3);
+}
+
+// 편지를 넣는 빨간 우체통
+function mailbox(g, x, y) {
+  g.fillStyle = "#3a2a20";
+  g.fillRect(x - 0.8, y - 10, 1.6, 10);
+  g.fillStyle = "#d42a2a";
+  g.beginPath();
+  g.roundRect(x - 5, y - 18, 10, 9, 2);
+  g.fill();
+  g.fillStyle = "#3a1010";
+  g.fillRect(x - 3, y - 15.5, 6, 1);
+  g.fillStyle = "#ffffff";
+  g.fillRect(x - 5, y - 18.5, 10, 1.4);
+}
+
+// 장식 전구와 별이 달린 크리스마스트리
+function xmasTree(g, x, baseY, h) {
+  spruce(g, x, baseY, h, 1);
+  const rnd = seeded(25);
+  for (let i = 0; i < 16; i++) {
+    const k = 0.15 + rnd() * 0.8;
+    const half = h * 0.42 * (1 - k) * 0.85;
+    lights.push({
+      x: x + (rnd() * 2 - 1) * half,
+      y: baseY - h * k * 0.95 + 2,
+      color: BULBS[i % BULBS.length],
+      phase: rnd() * 6.28,
+    });
+  }
+  g.fillStyle = "#ffd34a";
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? 1.6 : 3.8;
+    g.lineTo(x + Math.cos(a) * rr, baseY - h * 1.0 - 2 + Math.sin(a) * rr);
+  }
+  g.closePath();
+  g.fill();
+}
+
+// 유리 이글루: 눈 위에 놓인 유리 돔, 안에서 따뜻한 불빛
+function igloo(g, x, baseY, r) {
+  const glow = g.createRadialGradient(x, baseY - r * 0.4, 0, x, baseY - r * 0.4, r * 1.6);
+  glow.addColorStop(0, "rgba(255,210,140,0.55)");
+  glow.addColorStop(1, "rgba(255,210,140,0)");
+  g.fillStyle = glow;
+  g.fillRect(x - r * 2, baseY - r * 2.2, r * 4, r * 3);
+  const dome = g.createLinearGradient(x - r, baseY - r, x + r, baseY);
+  dome.addColorStop(0, "rgba(200,225,255,0.85)");
+  dome.addColorStop(1, "rgba(80,110,160,0.85)");
+  g.fillStyle = dome;
+  g.beginPath();
+  g.arc(x, baseY, r, Math.PI, 0);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(255,200,120,0.75)";
+  g.beginPath();
+  g.arc(x, baseY, r * 0.55, Math.PI, 0);
+  g.closePath();
+  g.fill();
+  // 유리 창살
+  g.strokeStyle = "rgba(255,255,255,0.6)";
+  g.lineWidth = 0.5;
+  for (const a of [0.25, 0.5, 0.75]) {
+    g.beginPath();
+    g.moveTo(x, baseY - r);
+    g.quadraticCurveTo(x + (a - 0.5) * r * 2.4, baseY - r * 0.5, x + (a - 0.5) * r * 2, baseY);
+    g.stroke();
+  }
+  g.beginPath();
+  g.arc(x, baseY, r * 0.62, Math.PI, 0);
+  g.stroke();
+  // 눈 덮인 위쪽
+  g.fillStyle = "#ffffff";
+  g.beginPath();
+  g.arc(x, baseY, r, Math.PI * 1.25, Math.PI * 1.75);
+  g.lineTo(x, baseY - r * 0.75);
+  g.closePath();
+  g.fill();
+}
+
+function snowman(g, x, baseY) {
+  g.fillStyle = "#ffffff";
+  for (const [dy, rr] of [[-5, 5.5], [-13.5, 4], [-20, 3]]) {
+    g.beginPath();
+    g.arc(x, baseY + dy, rr, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = "rgba(150,170,200,0.4)";
+  g.beginPath();
+  g.arc(x + 1.5, baseY - 5, 5.5, -0.6, 1.4);
+  g.fill();
+  g.fillStyle = "#b52a2a";
+  g.fillRect(x - 3.5, baseY - 17.5, 7, 1.6);
+  g.fillStyle = "#222";
+  g.fillRect(x - 3, baseY - 26, 6, 3.5);
+  g.fillRect(x - 4.2, baseY - 23, 8.4, 1);
+  g.fillStyle = "#f08a24";
+  g.beginPath();
+  g.moveTo(x + 0.5, baseY - 20.5);
+  g.lineTo(x + 4, baseY - 20);
+  g.lineTo(x + 0.5, baseY - 19.5);
+  g.fill();
+}
+
+// 금빛 활주부가 말려 올라간 빨간 썰매
+function sleigh(g, x, y) {
+  g.strokeStyle = "#e0b040";
+  g.lineWidth = 1.2;
+  g.beginPath();
+  g.moveTo(x - 12, y);
+  g.lineTo(x + 10, y);
+  g.quadraticCurveTo(x + 16, y, x + 14, y - 5);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(x - 6, y);
+  g.lineTo(x - 6, y - 3);
+  g.moveTo(x + 6, y);
+  g.lineTo(x + 6, y - 3);
+  g.stroke();
+  g.fillStyle = "#c22626";
+  g.beginPath();
+  g.moveTo(x - 13, y - 3);
+  g.lineTo(x + 9, y - 3);
+  g.quadraticCurveTo(x + 11, y - 8, x + 7, y - 10);
+  g.lineTo(x - 9, y - 10);
+  g.quadraticCurveTo(x - 14, y - 14, x - 13, y - 3);
+  g.closePath();
+  g.fill();
+  g.strokeStyle = "#e0b040";
+  g.lineWidth = 0.7;
+  g.beginPath();
+  g.moveTo(x - 10, y - 6);
+  g.lineTo(x + 8, y - 6);
+  g.stroke();
+  // 선물 꾸러미
+  g.fillStyle = "#2f6b4a";
+  g.fillRect(x - 8, y - 15, 6, 5);
+  g.fillStyle = "#e0b040";
+  g.fillRect(x - 5.4, y - 15, 0.8, 5);
+  // 썰매와 순록을 잇는 끈
+  g.strokeStyle = "#5a3a24";
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.moveTo(x + 9, y - 6);
+  g.lineTo(x + 22, y - 9);
   g.stroke();
 }
 
