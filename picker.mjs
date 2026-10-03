@@ -80,6 +80,10 @@ function buildUI() {
       <button type="button" class="picker-step" data-step="1" aria-label="다음 나라">›</button>
     </div>
     <button type="button" class="picker-go">이 나라로</button>
+    <p class="picker-where" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M21 15.5v-2l-8-5V3.8a1.5 1.5 0 0 0-3 0v4.7l-8 5v2l8-2.5v5l-2 1.5V21l3.5-1 3.5 1v-1.5l-2-1.5v-5Z" fill="currentColor" /></svg>
+      <span>Where to go?</span>
+    </p>
   `;
   document.body.append(root);
   return {
@@ -118,6 +122,7 @@ export async function openPicker(scenes, currentId, onSelect, onClose) {
   };
   ui.root.hidden = false;
   document.body.style.overflow = "hidden";
+  document.body.classList.add("picker-open");
   setFocus(focusId);
   await loadLand();
   wire();
@@ -134,6 +139,7 @@ export async function openPicker(scenes, currentId, onSelect, onClose) {
 function closePicker() {
   ui.root.hidden = true;
   document.body.style.overflow = "";
+  document.body.classList.remove("picker-open");
   cancelAnimationFrame(state.raf);
   state.onClose?.();
 }
@@ -150,7 +156,7 @@ function setFocus(id) {
   state.target = { lon: place.lon, lat: Math.max(-MAX_TILT, Math.min(MAX_TILT, place.lat * 0.6)) };
   const scene = state.scenes.find((s) => s.id === id);
   ui.name.textContent = scene.label;
-  ui.detail.textContent = `${place.landmark} · 흩날리는 것: ${place.particle}`;
+  ui.detail.textContent = place.landmark;
   const svg = document.querySelector(`.scenes [data-scene="${id}"] svg`);
   ui.icon.innerHTML = svg ? svg.outerHTML : "";
   ui.icon.style.setProperty("--accent", place.color);

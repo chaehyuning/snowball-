@@ -866,6 +866,29 @@ body {
   }
 }
 
+/* 지구본을 고르는 동안에는 아래 도시 띠를 숨기고, 그 자리에 비행기와 Where to go? */
+body.picker-open .meta {
+  display: none;
+}
+
+.picker-where {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 20px;
+  color: var(--ink-dim);
+}
+
+.picker-where svg {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+  transform: rotate(45deg);
+}
+
 .picker-title {
   font-size: 13px;
   font-weight: 700;
