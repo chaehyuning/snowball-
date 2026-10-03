@@ -190,44 +190,106 @@ function paintBridge(g) {
 // 오페라하우스: 분홍 화강암 기단과 대계단, 구릿빛 유리벽,
 // 흰색·크림색 타일 껍데기 두 무리(콘서트홀·오페라 극장)와 작은 레스토랑 껍데기
 function paintOperaHouse(g) {
-  // 기단: 분홍 화강암, 물가 쪽은 그늘
-  const podium = g.createLinearGradient(0, 262, 0, 286);
-  podium.addColorStop(0, "#e2c2ad");
-  podium.addColorStop(1, "#b58f7a");
-  g.fillStyle = podium;
-  g.beginPath();
-  g.moveTo(160, 286);
-  g.lineTo(170, 263);
-  g.lineTo(352, 263);
-  g.lineTo(358, 286);
-  g.closePath();
-  g.fill();
-  g.strokeStyle = "rgba(110,75,60,0.35)";
-  g.lineWidth = 0.6;
-  for (let y = 268; y < 286; y += 4) {
+  const rnd = seeded(1973);
+  const r = (a, b) => a + rnd() * (b - a);
+  // 기단: 분홍 화강암 블록. 줄을 긋지 않고 단마다 밝기를 조금씩 달리 칠하고,
+  // 블록 이음매는 짧게 끊긴 그늘로만 보임. 물가로 내려갈수록 어두움
+  function podiumShape() {
     g.beginPath();
-    g.moveTo(166, y);
-    g.lineTo(355, y);
-    g.stroke();
+    g.moveTo(160, 286);
+    g.lineTo(170, 263);
+    g.lineTo(352, 263);
+    g.lineTo(358, 286);
+    g.closePath();
   }
-  // 대계단: 기단 왼쪽 앞을 넓게 차지하는 계단
-  g.fillStyle = "#ead3c0";
+  const podium = g.createLinearGradient(0, 262, 0, 286);
+  podium.addColorStop(0, "#e8cab4");
+  podium.addColorStop(0.6, "#c9a38c");
+  podium.addColorStop(1, "#9c7764");
+  g.fillStyle = podium;
+  podiumShape();
+  g.fill();
+  g.save();
+  podiumShape();
+  g.clip();
+  for (let y = 265; y < 286; y += 3.2) {
+    let x = 160;
+    while (x < 358) {
+      const w = r(8, 18);
+      g.fillStyle = rnd() < 0.5 ? "rgba(255,236,220,0.12)" : "rgba(120,80,62,0.1)";
+      g.fillRect(x, y, w, 3.2);
+      if (rnd() < 0.6) {
+        g.fillStyle = "rgba(100,66,52,0.12)";
+        g.fillRect(x + w - 0.4, y + 0.4, 0.5, 2.6);
+      }
+      x += w;
+    }
+    g.fillStyle = `rgba(100,66,52,${r(0.1, 0.2)})`;
+    g.fillRect(160, y + 3, 200, 0.5);
+  }
+  // 윗면 테두리에 받은 햇빛, 물에 닿는 아래쪽 젖은 그늘
+  g.fillStyle = "rgba(255,244,230,0.6)";
+  g.fillRect(160, 263, 200, 1);
+  const wet = g.createLinearGradient(0, 281, 0, 286);
+  wet.addColorStop(0, "rgba(60,50,60,0)");
+  wet.addColorStop(1, "rgba(60,50,60,0.35)");
+  g.fillStyle = wet;
+  g.fillRect(160, 281, 200, 5);
+  g.restore();
+
+  // 대계단: 디딤판은 밝고 챌판은 그늘. 계단 폭이 아래로 갈수록 넓어짐
+  const steps = 12;
+  for (let k = 0; k < steps; k++) {
+    const y0 = 263 + (k * 23) / steps;
+    const y1 = 263 + ((k + 1) * 23) / steps;
+    const l0 = 170 - (k * 10) / steps;
+    const r0 = 206 - (k * 6) / steps;
+    const l1 = 170 - ((k + 1) * 10) / steps;
+    const r1 = 206 - ((k + 1) * 6) / steps;
+    const mid = y0 + (y1 - y0) * 0.45;
+    g.fillStyle = "#f1dccb";
+    g.beginPath();
+    g.moveTo(l0, y0);
+    g.lineTo(r0, y0);
+    g.lineTo(r0 - 0.3, mid);
+    g.lineTo(l0 - 0.4, mid);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "#c9a690";
+    g.beginPath();
+    g.moveTo(l0 - 0.4, mid);
+    g.lineTo(r0 - 0.3, mid);
+    g.lineTo(r1, y1);
+    g.lineTo(l1, y1);
+    g.closePath();
+    g.fill();
+  }
+  // 계단 오른쪽 옆면 그늘
+  g.fillStyle = "rgba(90,60,50,0.25)";
   g.beginPath();
-  g.moveTo(160, 286);
-  g.lineTo(170, 263);
-  g.lineTo(206, 263);
+  g.moveTo(206, 263);
+  g.lineTo(209, 263);
+  g.lineTo(203, 286);
   g.lineTo(200, 286);
   g.closePath();
   g.fill();
-  g.strokeStyle = "rgba(120,85,70,0.45)";
-  g.lineWidth = 0.5;
-  for (let k = 1; k < 12; k++) {
-    const y = 263 + (k * 23) / 12;
-    g.beginPath();
-    g.moveTo(170 - (k * 10) / 12, y);
-    g.lineTo(206 - (k * 6) / 12, y);
-    g.stroke();
+
+  // 물에 비친 기단과 껍데기: 물결에 끊긴 흰 가로 획
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  for (let y = 288; y < 306; y += 1.6) {
+    const fade = 1 - (y - 288) / 18;
+    let x = 176;
+    while (x < 350) {
+      const w = r(3, 12);
+      if (rnd() < 0.55) {
+        g.fillStyle = `rgba(230,230,220,${0.16 * fade})`;
+        g.fillRect(x + r(-1.5, 1.5), y, w, 0.8);
+      }
+      x += w + r(1, 5);
+    }
   }
+  g.restore();
 
   // 껍데기 아래 구릿빛 유리 커튼월
   const glass = g.createLinearGradient(0, 250, 0, 264);
@@ -283,7 +345,14 @@ function shell(g, x, y, w, h) {
   grad.addColorStop(0.55, "#f3f1ea");
   grad.addColorStop(1, "#c9c8c0");
   g.fillStyle = grad;
+  // 앞 껍데기가 뒤 껍데기 위로 드리우는 부드러운 그림자
+  g.shadowColor = "rgba(70,85,110,0.35)";
+  g.shadowBlur = 6;
+  g.shadowOffsetX = 3;
   g.fill();
+  g.shadowColor = "transparent";
+  g.shadowBlur = 0;
+  g.shadowOffsetX = 0;
   g.clip();
 
   // 타일: 꼭짓점에서 부채꼴로 퍼지는 띠를 광택 흰색과 무광 크림색으로 번갈아 칠함
@@ -298,17 +367,24 @@ function shell(g, x, y, w, h) {
     g.closePath();
     g.fill();
   }
-  // 셰브론 결: 띠를 가로지르는 가는 V자 줄
-  g.strokeStyle = "rgba(150,150,140,0.18)";
-  g.lineWidth = 0.4;
-  for (let k = 1; k < 8; k++) {
-    const ty = ay + (h * k) / 8;
+  // 셰브론 결: 띠를 가로지르는 V자 줄. 아래로 갈수록 간격이 넓고 조금 진해짐 (가까울수록 또렷)
+  for (let k = 1; k < 10; k++) {
+    const t = Math.pow(k / 10, 1.3);
+    const ty = ay + h * t;
+    g.strokeStyle = `rgba(140,140,130,${0.08 + t * 0.16})`;
+    g.lineWidth = 0.25 + t * 0.35;
     g.beginPath();
     g.moveTo(x - w * 0.2, ty + 2);
     g.lineTo(x + w * 0.35, ty - 1);
     g.lineTo(x + w * 1.1, ty + 2);
     g.stroke();
   }
+  // 해를 받는 왼쪽 가장자리의 반짝임
+  const sheen = g.createLinearGradient(x - w * 0.1, 0, x + w * 0.35, 0);
+  sheen.addColorStop(0, "rgba(255,255,255,0.55)");
+  sheen.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = sheen;
+  g.fillRect(x - w * 0.15, ay, w * 0.5, h);
   // 그늘진 오른쪽 면
   const shade = g.createLinearGradient(x + w * 0.4, 0, x + w, 0);
   shade.addColorStop(0, "rgba(90,100,120,0)");
@@ -317,12 +393,24 @@ function shell(g, x, y, w, h) {
   g.fillRect(x - 5, ay - 2, w + 10, h + 4);
   g.restore();
 
-  g.strokeStyle = "rgba(90,105,120,0.4)";
-  g.lineWidth = 0.8;
-  g.beginPath();
-  g.moveTo(ax, ay);
-  g.quadraticCurveTo(x + w * 0.9, y - h * 0.72, x + w, y);
-  g.stroke();
+  // 등뼈 모서리: 꼭짓점 쪽은 가늘고 밑동으로 갈수록 굵고 진해짐
+  for (let k = 0; k < 6; k++) {
+    const t0 = k / 6;
+    const t1 = (k + 1) / 6;
+    const pt = (t) => {
+      const u = 1 - t;
+      return [u * u * ax + 2 * u * t * (x + w * 0.9) + t * t * (x + w), u * u * ay + 2 * u * t * (y - h * 0.72) + t * t * y];
+    };
+    const [x0, y0] = pt(t0);
+    const [x1, y1] = pt(t1);
+    g.strokeStyle = `rgba(80,95,115,${0.25 + t1 * 0.3})`;
+    g.lineWidth = 0.4 + t1 * 0.8;
+    g.lineCap = "round";
+    g.beginPath();
+    g.moveTo(x0, y0);
+    g.lineTo(x1, y1);
+    g.stroke();
+  }
 }
 
 // 시드니 페리: 초록 선체에 크림색 선실, 노란 굴뚝
@@ -385,8 +473,8 @@ function animateSydney(ctx, t) {
   if (!glints.length) {
     const rnd = seeded(7);
     glints = Array.from({ length: 24 }, () => ({
-      x: 240 + rnd() * 120,
-      y: 248 + rnd() * 50,
+      x: 210 + rnd() * 150,
+      y: 289 + rnd() * 12,
       phase: rnd() * Math.PI * 2,
       speed: 0.002 + rnd() * 0.004,
     }));
