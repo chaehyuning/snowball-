@@ -291,126 +291,139 @@ function paintOperaHouse(g) {
   }
   g.restore();
 
-  // 껍데기 아래 구릿빛 유리 커튼월
-  const glass = g.createLinearGradient(0, 250, 0, 264);
-  glass.addColorStop(0, "#8a6a4e");
-  glass.addColorStop(1, "#4e3a2c");
-  g.fillStyle = glass;
-  g.fillRect(214, 250, 114, 14);
-  g.strokeStyle = "rgba(230,200,160,0.35)";
-  g.lineWidth = 0.5;
-  for (let x = 216; x < 328; x += 4) {
-    g.beginPath();
-    g.moveTo(x, 250);
-    g.lineTo(x, 264);
-    g.stroke();
-  }
-  g.fillStyle = "rgba(255,240,210,0.25)";
-  g.fillRect(214, 255, 114, 1);
+  // 껍데기를 받치는 윗단: 베이지 콘크리트 띠와 어두운 창 띠
+  const tier = g.createLinearGradient(0, 254, 0, 263);
+  tier.addColorStop(0, "#efdcc4");
+  tier.addColorStop(1, "#cdb193");
+  g.fillStyle = tier;
+  g.fillRect(208, 254, 144, 9);
+  g.fillStyle = "#3a2e2a";
+  g.fillRect(208, 258.5, 144, 2.2);
+  g.fillStyle = "rgba(255,230,190,0.35)";
+  for (let x = 210; x < 350; x += 3.5) g.fillRect(x, 258.7, 0.5, 1.8);
+  g.fillStyle = "rgba(255,248,235,0.6)";
+  g.fillRect(208, 254, 144, 0.8);
 
-  // [밑변 왼쪽 x, 밑변 y, 폭, 높이]. 뒤(작은 것)부터 그림
-  const concertHall = [
-    [312, 262, 28, 30],
-    [286, 262, 32, 48],
-    [258, 262, 34, 66],
-    [228, 262, 36, 78],
+  // 껍데기: 꼭짓점이 왼쪽 위에 있고, 바깥 곡선이 오른쪽 아래로 크게 휘어 내려옴.
+  // 왼쪽으로 열린 입구 안은 어두운 내부와 구릿빛 유리. 뒤(오른쪽)부터 그려서 앞 껍데기가 겹침
+  // [꼭짓점 x, 꼭짓점 y, 왼쪽 폭, 오른쪽 폭, 밑변 y]
+  const shells = [
+    [300, 214, 10, 50, 256],
+    [268, 188, 12, 44, 256],
+    [240, 204, 12, 36, 256],
+    [217, 226, 10, 28, 256],
+    [182, 242, 6, 18, 263],
   ];
-  const operaTheatre = [
-    [318, 266, 22, 22],
-    [296, 266, 26, 36],
-    [272, 266, 28, 50],
-    [246, 266, 30, 60],
-  ];
-  const restaurant = [
-    [188, 262, 16, 18],
-    [176, 263, 16, 24],
-  ];
-  for (const group of [concertHall, operaTheatre, restaurant]) {
-    for (const [x, y, w, h] of group) shell(g, x, y, w, h);
-  }
+  for (const [ax, ay, lw, rw, by] of shells) shell(g, ax, ay, lw, rw, by);
 }
 
-// 껍데기 하나: 흰색·크림색 타일 줄무늬와 꼭짓점에서 퍼지는 갈비뼈
-function shell(g, x, y, w, h) {
-  const ax = x + w * 0.18;
-  const ay = y - h;
-  g.save();
-  g.beginPath();
-  g.moveTo(x, y);
-  g.quadraticCurveTo(x - w * 0.12, y - h * 0.55, ax, ay);
-  g.quadraticCurveTo(x + w * 0.9, y - h * 0.72, x + w, y);
-  g.closePath();
-  const grad = g.createLinearGradient(x, 0, x + w, 0);
-  grad.addColorStop(0, "#ffffff");
-  grad.addColorStop(0.55, "#f3f1ea");
-  grad.addColorStop(1, "#c9c8c0");
-  g.fillStyle = grad;
-  // 앞 껍데기가 뒤 껍데기 위로 드리우는 부드러운 그림자
-  g.shadowColor = "rgba(70,85,110,0.35)";
-  g.shadowBlur = 6;
-  g.shadowOffsetX = 3;
-  g.fill();
-  g.shadowColor = "transparent";
-  g.shadowBlur = 0;
-  g.shadowOffsetX = 0;
-  g.clip();
+// 껍데기 하나. 흰 겉면(햇빛 받는 안쪽 가장자리가 가장 밝음)과 왼쪽으로 열린 어두운 입구
+function shell(g, ax, ay, lw, rw, by) {
+  const x0 = ax - lw;
+  const x1 = ax + rw;
+  const w = lw + rw;
+  const h = by - ay;
+  const innerX = x0 + w * 0.42;
+  const outerCtl = [x1 - w * 0.08, ay + h * 0.12];
+  const innerCtl = [ax + w * 0.12, ay + h * 0.62];
+  const edgeCtl = [ax - lw * 0.9, ay + h * 0.55];
 
-  // 타일: 꼭짓점에서 부채꼴로 퍼지는 띠를 광택 흰색과 무광 크림색으로 번갈아 칠함
-  const bands = 9;
-  for (let i = 0; i < bands; i++) {
-    if (i % 2) continue;
-    g.fillStyle = "rgba(232,222,196,0.45)";
+  // 입구: 꼭짓점에서 왼쪽 가장자리를 따라 내려왔다가 안쪽 곡선으로 올라감
+  g.beginPath();
+  g.moveTo(ax, ay);
+  g.quadraticCurveTo(edgeCtl[0], edgeCtl[1], x0, by);
+  g.lineTo(innerX, by);
+  g.quadraticCurveTo(innerCtl[0], innerCtl[1], ax, ay);
+  g.closePath();
+  const mouth = g.createLinearGradient(0, ay, 0, by);
+  mouth.addColorStop(0, "#2c2a32");
+  mouth.addColorStop(0.55, "#3e3434");
+  mouth.addColorStop(1, "#7a5a3e");
+  g.fillStyle = mouth;
+  g.fill();
+  g.save();
+  g.clip();
+  // 아래쪽 유리벽의 세로 살과 위쪽 콘크리트 갈비뼈
+  g.strokeStyle = "rgba(230,190,140,0.3)";
+  g.lineWidth = 0.4;
+  for (let x = x0; x < innerX; x += 2.2) {
+    g.beginPath();
+    g.moveTo(x, by);
+    g.lineTo(x + 1, by - h * 0.35);
+    g.stroke();
+  }
+  g.strokeStyle = "rgba(200,190,180,0.12)";
+  for (let k = 1; k < 5; k++) {
     g.beginPath();
     g.moveTo(ax, ay);
-    g.lineTo(x - w * 0.2 + (w * 1.4 * i) / bands, y + 2);
-    g.lineTo(x - w * 0.2 + (w * 1.4 * (i + 1)) / bands, y + 2);
-    g.closePath();
-    g.fill();
-  }
-  // 셰브론 결: 띠를 가로지르는 V자 줄. 아래로 갈수록 간격이 넓고 조금 진해짐 (가까울수록 또렷)
-  for (let k = 1; k < 10; k++) {
-    const t = Math.pow(k / 10, 1.3);
-    const ty = ay + h * t;
-    g.strokeStyle = `rgba(140,140,130,${0.08 + t * 0.16})`;
-    g.lineWidth = 0.25 + t * 0.35;
-    g.beginPath();
-    g.moveTo(x - w * 0.2, ty + 2);
-    g.lineTo(x + w * 0.35, ty - 1);
-    g.lineTo(x + w * 1.1, ty + 2);
+    g.lineTo(x0 + ((innerX - x0) * k) / 5, by);
     g.stroke();
   }
-  // 해를 받는 왼쪽 가장자리의 반짝임
-  const sheen = g.createLinearGradient(x - w * 0.1, 0, x + w * 0.35, 0);
-  sheen.addColorStop(0, "rgba(255,255,255,0.55)");
-  sheen.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = sheen;
-  g.fillRect(x - w * 0.15, ay, w * 0.5, h);
-  // 그늘진 오른쪽 면
-  const shade = g.createLinearGradient(x + w * 0.4, 0, x + w, 0);
-  shade.addColorStop(0, "rgba(90,100,120,0)");
-  shade.addColorStop(1, "rgba(90,100,120,0.28)");
-  g.fillStyle = shade;
-  g.fillRect(x - 5, ay - 2, w + 10, h + 4);
   g.restore();
 
-  // 등뼈 모서리: 꼭짓점 쪽은 가늘고 밑동으로 갈수록 굵고 진해짐
-  for (let k = 0; k < 6; k++) {
-    const t0 = k / 6;
-    const t1 = (k + 1) / 6;
-    const pt = (t) => {
-      const u = 1 - t;
-      return [u * u * ax + 2 * u * t * (x + w * 0.9) + t * t * (x + w), u * u * ay + 2 * u * t * (y - h * 0.72) + t * t * y];
-    };
-    const [x0, y0] = pt(t0);
-    const [x1, y1] = pt(t1);
-    g.strokeStyle = `rgba(80,95,115,${0.25 + t1 * 0.3})`;
-    g.lineWidth = 0.4 + t1 * 0.8;
-    g.lineCap = "round";
+  // 흰 겉면
+  function surface() {
     g.beginPath();
-    g.moveTo(x0, y0);
-    g.lineTo(x1, y1);
+    g.moveTo(ax, ay);
+    g.quadraticCurveTo(outerCtl[0], outerCtl[1], x1, by);
+    g.lineTo(innerX, by);
+    g.quadraticCurveTo(innerCtl[0], innerCtl[1], ax, ay);
+    g.closePath();
+  }
+  const skin = g.createLinearGradient(innerX - w * 0.05, 0, x1, 0);
+  skin.addColorStop(0, "#fffaf0");
+  skin.addColorStop(0.45, "#f1eadb");
+  skin.addColorStop(1, "#cfc7b6");
+  g.fillStyle = skin;
+  g.save();
+  g.shadowColor = "rgba(60,70,90,0.35)";
+  g.shadowBlur = 6;
+  g.shadowOffsetX = 3;
+  surface();
+  g.fill();
+  g.restore();
+  // 타일 결: 바깥 곡선과 나란히 흐르는 아주 옅은 줄
+  g.save();
+  surface();
+  g.clip();
+  for (let k = 1; k < 7; k++) {
+    const t = k / 7;
+    g.strokeStyle = `rgba(150,140,120,${0.06 + t * 0.08})`;
+    g.lineWidth = 0.3 + t * 0.2;
+    g.beginPath();
+    g.moveTo(ax, ay);
+    g.quadraticCurveTo(
+      outerCtl[0] + (innerCtl[0] - outerCtl[0]) * t,
+      outerCtl[1] + (innerCtl[1] - outerCtl[1]) * t,
+      x1 + (innerX - x1) * t,
+      by,
+    );
     g.stroke();
   }
+  g.restore();
+  // 입구 가장자리: 껍데기 두께가 햇빛을 받아 반짝임 (위는 가늘고 아래로 굵게)
+  for (let k = 0; k < 6; k++) {
+    const p = (t) => {
+      const u = 1 - t;
+      return [u * u * ax + 2 * u * t * innerCtl[0] + t * t * innerX, u * u * ay + 2 * u * t * innerCtl[1] + t * t * by];
+    };
+    const [px0, py0] = p(k / 6);
+    const [px1, py1] = p((k + 1) / 6);
+    g.strokeStyle = "#fffdf6";
+    g.lineWidth = 0.5 + (k / 6) * 1.1;
+    g.lineCap = "round";
+    g.beginPath();
+    g.moveTo(px0, py0);
+    g.lineTo(px1, py1);
+    g.stroke();
+  }
+  // 바깥 곡선의 가는 그늘
+  g.strokeStyle = "rgba(90,95,110,0.35)";
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.moveTo(ax, ay);
+  g.quadraticCurveTo(outerCtl[0], outerCtl[1], x1, by);
+  g.stroke();
 }
 
 // 시드니 페리: 초록 선체에 크림색 선실, 노란 굴뚝
