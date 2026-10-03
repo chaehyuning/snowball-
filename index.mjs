@@ -63,16 +63,21 @@ function burst(x, y, power) {
     const dy = p.y - y;
     const d = Math.max(8, Math.hypot(dx, dy));
     const force = power * 11 * Math.exp(-d / 110);
+    // 입자마다 날아가는 방향과 세기를 조금씩 다르게 비틂
+    const kick = force * rand(0.5, 1.6);
+    const a = Math.atan2(dy, dx) + rand(-0.6, 0.6);
+    p.wx += rand(-1, 1) * power;
+    p.wy += rand(-1, 1) * power;
     if (p.settled) {
       // 바닥에 쌓인 입자는 바닥을 뚫을 수 없으니 위로 튀어 오름
       if (force < p.grip * 0.4) continue;
       p.settled = false;
-      p.vx += (dx / d) * force + rand(-1, 1) * power;
-      p.vy = -force * rand(0.7, 1.2);
+      p.vx += Math.cos(a) * kick;
+      p.vy = -kick * rand(0.7, 1.2);
       continue;
     }
-    p.vx += (dx / d) * force + rand(-1, 1) * power;
-    p.vy += (dy / d) * force - force * 0.5;
+    p.vx += Math.cos(a) * kick;
+    p.vy += Math.sin(a) * kick - kick * 0.5;
   }
   stir = Math.min(stir + 3 * power, 5);
   rings.push({ x, y, start: performance.now(), power });
@@ -126,9 +131,10 @@ function makeLayer(paint) {
 
 // 물속 소용돌이. 방향이 다른 물결 몇 개를 겹친 흐름 함수(psi)로 만든다.
 // psi에 유리 경계에서 0이 되는 값을 곱해서, 물이 벽을 뚫지 않고 벽을 따라 돈다.
-const waves = Array.from({ length: 5 }, () => {
+// 물결을 잘게 쪼개 두어 가까운 입자끼리도 다른 방향으로 갈라지게 함
+const waves = Array.from({ length: 7 }, () => {
   const angle = rand(0, Math.PI * 2);
-  const k = rand(0.012, 0.03);
+  const k = rand(0.02, 0.05);
   return {
     kx: Math.cos(angle) * k,
     ky: Math.sin(angle) * k,
@@ -178,7 +184,17 @@ function loadScene(id) {
     baseFront: makeLayer(paintBaseFront),
   };
   particles = Array.from({ length: scene.particles.count }, () => {
-    const p = { x: globe.x + rand(-120, 120), angle: 0, spin: 0, flip: 0, flipSpeed: 0 };
+    const p = {
+      x: globe.x + rand(-120, 120),
+      angle: 0,
+      spin: 0,
+      flip: 0,
+      flipSpeed: 0,
+      follow: rand(0.25, 0.7), // 물살을 따르는 정도. 입자마다 달라서 줄지어 다니지 않음
+      wander: rand(0.6, 1.5), // 혼자 떠도는 힘의 크기
+      wx: 0, // 혼자 떠도는 속도
+      wy: 0,
+    };
     Object.assign(p, scene.particles.make(rand));
     p.size *= PARTICLE_SCALE;
     settle(p);
@@ -290,17 +306,17 @@ function update(t, accel) {
     // 유리가 움직이면 물보다 무거운 입자는 뒤처진다
     p.vy -= accel * p.inertia;
 
-    // 물 흐름 쪽으로 서서히 끌려가고, 물이 잔잔하면 제 무게만큼 가라앉는다
-    p.vx += (flow.x - p.vx) * p.drag;
-    p.vy += (flow.y + p.sink - p.vy) * p.drag;
+    // 입자마다 자기 박자로 방향을 천천히 바꾸며 떠돎. 흔든 직후에 크게 움직임
+    const energy = (0.08 + stir * 0.25) * p.wander;
+    p.wx = p.wx * 0.94 + rand(-1, 1) * energy;
+    p.wy = p.wy * 0.94 + rand(-1, 1) * energy;
+
+    // 물살은 입자마다 다른 만큼만 따르고, 물이 잔잔하면 제 무게만큼 가라앉는다
+    p.vx += (flow.x * p.follow + p.wx - p.vx) * p.drag;
+    p.vy += (flow.y * p.follow + p.wy + p.sink - p.vy) * p.drag;
 
     // 꽃잎처럼 납작한 입자는 뒤집힐 때마다 옆으로 미끄러지며 팔랑임
     p.vx += Math.cos(p.flip) * p.flutter;
-
-    // 미세하게 흔들려서 한 줄로 뭉치지 않게 함
-    const jitter = 0.03 + stir * 0.05;
-    p.vx += rand(-jitter, jitter);
-    p.vy += rand(-jitter, jitter);
 
     p.x += p.vx;
     p.y += p.vy;
