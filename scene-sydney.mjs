@@ -306,27 +306,27 @@ function paintOperaHouse(g) {
 
   // 껍데기: 꼭짓점이 왼쪽 위에 있고, 바깥 곡선이 오른쪽 아래로 크게 휘어 내려옴.
   // 왼쪽으로 열린 입구 안은 어두운 내부와 구릿빛 유리. 뒤(오른쪽)부터 그려서 앞 껍데기가 겹침
-  // [꼭짓점 x, 꼭짓점 y, 왼쪽 폭, 오른쪽 폭, 밑변 y]
+  // [꼭짓점 x, 꼭짓점 y, 밑변 폭, 밑변 y]. 꼭짓점이 밑동보다 왼쪽으로 튀어나와 앞으로 기운 모양
   const shells = [
-    [300, 214, 10, 50, 256],
-    [268, 188, 12, 44, 256],
-    [240, 204, 12, 36, 256],
-    [217, 226, 10, 28, 256],
-    [182, 242, 6, 18, 263],
+    [298, 212, 54, 256],
+    [262, 186, 56, 256],
+    [233, 204, 48, 256],
+    [210, 226, 38, 256],
+    [176, 242, 26, 263],
   ];
-  for (const [ax, ay, lw, rw, by] of shells) shell(g, ax, ay, lw, rw, by);
+  for (const [ax, ay, w, by] of shells) shell(g, ax, ay, w, by);
 }
 
-// 껍데기 하나. 흰 겉면(햇빛 받는 안쪽 가장자리가 가장 밝음)과 왼쪽으로 열린 어두운 입구
-function shell(g, ax, ay, lw, rw, by) {
-  const x0 = ax - lw;
-  const x1 = ax + rw;
-  const w = lw + rw;
+// 껍데기 하나. 뾰족한 끝이 왼쪽 위로 튀어나오고, 등 곡선은 오른쪽으로 둥글게 내려옴.
+// 끝에서 아래로 떨어지는 앞 모서리 안쪽이 어두운 입구(내부와 구릿빛 유리)
+function shell(g, ax, ay, w, by) {
   const h = by - ay;
-  const innerX = x0 + w * 0.42;
-  const outerCtl = [x1 - w * 0.08, ay + h * 0.12];
-  const innerCtl = [ax + w * 0.12, ay + h * 0.62];
-  const edgeCtl = [ax - lw * 0.9, ay + h * 0.55];
+  const x0 = ax + w * 0.1; // 입구 밑동 왼쪽: 끝보다 오른쪽이라 끝이 앞으로 튀어나옴
+  const innerX = ax + w * 0.5; // 흰 겉면과 입구가 만나는 밑동
+  const x1 = ax + w;
+  const outerCtl = [x1 - w * 0.02, ay - h * 0.04];
+  const innerCtl = [ax + w * 0.42, ay + h * 0.38]; // 흰 겉면 아래 경계는 오른쪽 위로 오목하게 파여 입구가 크게 보임
+  const edgeCtl = [ax + w * 0.05, ay + h * 0.5];
 
   // 입구: 꼭짓점에서 왼쪽 가장자리를 따라 내려왔다가 안쪽 곡선으로 올라감
   g.beginPath();

@@ -261,48 +261,127 @@ function paintSanta(g, globe, groundAt) {
 // 가문비나무: 층층이 쌓인 짙은 초록 가지 위에 눈이 얹힘
 function spruce(g, x, baseY, h, alpha) {
   g.globalAlpha = alpha;
+  // 가지 끝이 들쭉날쭉한 층. 같은 나무는 늘 같은 모양이 되도록 위치로 정한 물결을 씀
+  const jag = (k) => Math.sin(x * 1.7 + k * 2.3) * 0.5 + Math.sin(x * 0.6 + k * 5.1) * 0.5;
   const layers = 5;
+  // 줄기
+  g.fillStyle = "#3a2a22";
+  g.fillRect(x - h * 0.02, baseY - h * 0.12, h * 0.04, h * 0.12);
   for (let i = 0; i < layers; i++) {
-    const y = baseY - (h * i) / layers;
+    const y = baseY - h * 0.08 - (h * i) / layers;
     const w = (h * 0.42 * (layers - i)) / layers;
-    g.fillStyle = "#28453a";
+    const tip = y - h * 0.32;
+    // 가지 층: 아래 가장자리를 톱니처럼 늘어진 잔가지로
+    function tier() {
+      g.beginPath();
+      g.moveTo(x, tip);
+      const n = 7;
+      for (let k = 0; k <= n; k++) {
+        const t = k / n;
+        const ex = x + w * (t * 2 - 1);
+        const droop = (1 - Math.abs(t * 2 - 1)) * h * 0.035;
+        g.lineTo(ex, y + droop + jag(i * 10 + k) * h * 0.015);
+        if (k < n) g.lineTo(ex + w / n, y - h * 0.03 + droop * 0.6);
+      }
+      g.closePath();
+    }
+    const needles = g.createLinearGradient(x - w, 0, x + w, 0);
+    needles.addColorStop(0, "#1f3a30");
+    needles.addColorStop(0.55, "#2e5244");
+    needles.addColorStop(1, "#1a3028");
+    g.fillStyle = needles;
+    tier();
+    g.fill();
+    // 층 아래쪽 그늘
+    g.fillStyle = "rgba(10,25,20,0.35)";
     g.beginPath();
-    g.moveTo(x - w, y);
-    g.lineTo(x, y - h * 0.32);
-    g.lineTo(x + w, y);
+    g.moveTo(x - w * 0.9, y);
+    g.lineTo(x, y - h * 0.08);
+    g.lineTo(x + w * 0.9, y);
     g.closePath();
     g.fill();
-    g.fillStyle = "#f4f7fb";
-    g.beginPath();
-    g.moveTo(x - w * 0.8, y - h * 0.05);
-    g.lineTo(x, y - h * 0.32);
-    g.lineTo(x + w * 0.5, y - h * 0.1);
-    g.quadraticCurveTo(x, y - h * 0.14, x - w * 0.8, y - h * 0.05);
-    g.fill();
+    // 가지 위에 얹힌 눈: 덩어리마다 크기가 다르고, 아랫면은 푸르스름한 그늘
+    for (let k = 0; k < 4; k++) {
+      const t = (k + 0.5) / 4;
+      const cx = x + w * (t * 2 - 1) * 0.75;
+      const cy = tip + (y - tip) * (0.35 + Math.abs(t * 2 - 1) * 0.5);
+      const rw = w * (0.18 + 0.06 * jag(i * 7 + k));
+      g.fillStyle = "#c9d6ea";
+      g.beginPath();
+      g.ellipse(cx, cy + 0.6, rw, rw * 0.38, 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = "#f6f9fd";
+      g.beginPath();
+      g.ellipse(cx - rw * 0.08, cy, rw * 0.9, rw * 0.3, 0, 0, Math.PI * 2);
+      g.fill();
+    }
   }
+  // 꼭대기 눈
+  g.fillStyle = "#f6f9fd";
+  g.beginPath();
+  g.ellipse(x, baseY - h * 0.08 - h * ((layers - 1) / layers) - h * 0.3, h * 0.03, h * 0.025, 0, 0, Math.PI * 2);
+  g.fill();
   g.globalAlpha = 1;
 }
 
-// 통나무집: 짙은 갈색 통나무 벽, 눈 덮인 지붕, 불 켜진 창
+// 통나무집: 둥근 통나무를 쌓은 벽(위는 밝고 아래 이음매는 그늘), 모서리로 삐져나온 통나무 끝,
+// 따뜻한 불빛이 새는 창, 두껍게 쌓인 지붕 눈과 고드름
 function cabin(g, x, baseY, w, h, roofH) {
   const left = x - w / 2;
-  g.fillStyle = "#5c3a28";
-  g.fillRect(left, baseY - h, w, h);
-  g.strokeStyle = "rgba(30,15,10,0.45)";
-  g.lineWidth = 0.6;
-  for (let y = baseY - h + 3; y < baseY; y += 3) {
-    g.beginPath();
-    g.moveTo(left, y);
-    g.lineTo(left + w, y);
-    g.stroke();
+  const logH = 3;
+  for (let y = baseY - h, i = 0; y < baseY; y += logH, i++) {
+    const log = g.createLinearGradient(0, y, 0, y + logH);
+    log.addColorStop(0, "#7a5038");
+    log.addColorStop(0.45, "#5c3a28");
+    log.addColorStop(1, "#3a2318");
+    g.fillStyle = log;
+    g.fillRect(left, y, w, logH);
+    // 모서리로 삐져나온 통나무 끝: 엇갈려 쌓여 한 줄씩 번갈아 보임
+    if (i % 2 === 0) {
+      for (const ex of [left - 1.4, left + w + 1.4]) {
+        g.fillStyle = "#8a6244";
+        g.beginPath();
+        g.ellipse(ex, y + logH / 2, 1.5, logH / 2, 0, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = "rgba(60,35,20,0.6)";
+        g.beginPath();
+        g.ellipse(ex, y + logH / 2, 0.6, 0.6, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
   }
+  // 처마 밑 그늘
+  const eave = g.createLinearGradient(0, baseY - h, 0, baseY - h + 5);
+  eave.addColorStop(0, "rgba(20,10,5,0.5)");
+  eave.addColorStop(1, "rgba(20,10,5,0)");
+  g.fillStyle = eave;
+  g.fillRect(left, baseY - h, w, 5);
   for (const wx of [left + w * 0.22, left + w * 0.62]) {
-    g.fillStyle = WINDOW;
-    g.fillRect(wx, baseY - h + 6, w * 0.16, 7);
-    g.fillStyle = "#5c3a28";
-    g.fillRect(wx + w * 0.075, baseY - h + 6, 0.8, 7);
+    const ww = w * 0.16;
+    const wy = baseY - h + 6;
+    // 창에서 새어 나온 빛
+    const spill = g.createRadialGradient(wx + ww / 2, wy + 4, 0, wx + ww / 2, wy + 4, 12);
+    spill.addColorStop(0, "rgba(255,200,120,0.35)");
+    spill.addColorStop(1, "rgba(255,200,120,0)");
+    g.fillStyle = spill;
+    g.fillRect(wx - 10, wy - 8, ww + 20, 26);
+    g.fillStyle = "#3a2318";
+    g.fillRect(wx - 0.8, wy - 0.8, ww + 1.6, 8.6);
+    const glass = g.createLinearGradient(0, wy, 0, wy + 7);
+    glass.addColorStop(0, "#ffe2a8");
+    glass.addColorStop(1, WINDOW);
+    g.fillStyle = glass;
+    g.fillRect(wx, wy, ww, 7);
+    g.fillStyle = "#3a2318";
+    g.fillRect(wx + ww / 2 - 0.4, wy, 0.8, 7);
+    g.fillRect(wx, wy + 3.2, ww, 0.6);
+    // 창턱에 쌓인 눈
+    g.fillStyle = "#f4f7fb";
+    g.beginPath();
+    g.ellipse(wx + ww / 2, wy + 7.6, ww / 2 + 1.2, 1, 0, Math.PI, 0);
+    g.fill();
   }
-  // 눈 덮인 지붕
+  // 지붕: 어두운 처마 판 위로 눈이 두껍게 쌓이고, 끝은 둥글게 처지며 아랫면은 푸른 그늘
   g.fillStyle = "#3d2a20";
   g.beginPath();
   g.moveTo(left - 4, baseY - h);
@@ -310,21 +389,51 @@ function cabin(g, x, baseY, w, h, roofH) {
   g.lineTo(left + w + 4, baseY - h);
   g.closePath();
   g.fill();
-  g.fillStyle = "#ffffff";
-  g.beginPath();
-  g.moveTo(left - 5, baseY - h + 1);
-  g.lineTo(x, baseY - h - roofH - 2);
-  g.lineTo(left + w + 5, baseY - h + 1);
-  g.lineTo(left + w + 2, baseY - h - 2);
-  g.lineTo(x, baseY - h - roofH + 3);
-  g.lineTo(left - 2, baseY - h - 2);
-  g.closePath();
+  const snowRoof = () => {
+    g.beginPath();
+    g.moveTo(left - 6, baseY - h + 1.5);
+    g.quadraticCurveTo(left - 7, baseY - h - 1.5, left - 4, baseY - h - 2.5);
+    g.lineTo(x, baseY - h - roofH - 2.5);
+    g.lineTo(left + w + 4, baseY - h - 2.5);
+    g.quadraticCurveTo(left + w + 7, baseY - h - 1.5, left + w + 6, baseY - h + 1.5);
+    g.quadraticCurveTo(left + w + 2, baseY - h + 0.5, x, baseY - h + 1);
+    g.quadraticCurveTo(left - 2, baseY - h + 0.5, left - 6, baseY - h + 1.5);
+    g.closePath();
+  };
+  g.fillStyle = "#c6d3e8";
+  g.save();
+  g.translate(0, 1.2);
+  snowRoof();
   g.fill();
+  g.restore();
+  const snowTop = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+  snowTop.addColorStop(0, "#ffffff");
+  snowTop.addColorStop(1, "#e4ecf7");
+  g.fillStyle = snowTop;
+  snowRoof();
+  g.fill();
+  // 처마 끝 고드름: 길이가 제각각
+  g.fillStyle = "rgba(225,240,255,0.85)";
+  for (let k = 0; k < 9; k++) {
+    const ix = left - 3 + ((w + 6) * (k + 0.5)) / 9;
+    const len = 1.5 + ((k * 37) % 5) * 0.6;
+    g.beginPath();
+    g.moveTo(ix - 0.6, baseY - h + 1.2);
+    g.lineTo(ix + 0.6, baseY - h + 1.2);
+    g.lineTo(ix, baseY - h + 1.2 + len);
+    g.closePath();
+    g.fill();
+  }
   // 굴뚝
-  g.fillStyle = "#6b4a36";
+  const chim = g.createLinearGradient(x + w * 0.2, 0, x + w * 0.2 + 4, 0);
+  chim.addColorStop(0, "#7d5a44");
+  chim.addColorStop(1, "#523726");
+  g.fillStyle = chim;
   g.fillRect(x + w * 0.2, baseY - h - roofH * 0.9, 4, 10);
   g.fillStyle = "#ffffff";
-  g.fillRect(x + w * 0.2 - 0.5, baseY - h - roofH * 0.9 - 1.5, 5, 2);
+  g.beginPath();
+  g.ellipse(x + w * 0.2 + 2, baseY - h - roofH * 0.9 - 0.5, 3, 1.2, 0, 0, Math.PI * 2);
+  g.fill();
 }
 
 // 산타 집무실: 가운데 뾰족탑이 있는 큰 통나무 건물과 빨간 문
