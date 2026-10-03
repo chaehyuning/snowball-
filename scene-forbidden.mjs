@@ -19,12 +19,21 @@ function paintForbidden(g, globe, groundAt) {
   g.arc(globe.x, globe.y, globe.r, 0, Math.PI * 2);
   g.clip();
 
-  // 맑은 가을 하늘. 지평선 쪽은 금빛 아지랑이
+  // 금빛 해 질 녘: 위는 푸르고 지붕 뒤로 갈수록 황금빛·주황빛
   const sky = g.createLinearGradient(0, top, 0, 270);
-  sky.addColorStop(0, "#5f9fd6");
-  sky.addColorStop(0.6, "#b9dbee");
-  sky.addColorStop(1, "#f6e3a8");
+  sky.addColorStop(0, "#3f6fb5");
+  sky.addColorStop(0.45, "#e9c372");
+  sky.addColorStop(0.8, "#f6a845");
+  sky.addColorStop(1, "#f58a32");
   g.fillStyle = sky;
+  g.fillRect(left, top, size, size);
+
+  // 태화전 뒤로 지는 해
+  const sun = g.createRadialGradient(200, 200, 0, 200, 200, 150);
+  sun.addColorStop(0, "rgba(255,244,200,0.95)");
+  sun.addColorStop(0.2, "rgba(255,214,120,0.5)");
+  sun.addColorStop(1, "rgba(255,190,90,0)");
+  g.fillStyle = sun;
   g.fillRect(left, top, size, size);
 
   // 멀리 징산 언덕과 정자
@@ -57,12 +66,15 @@ function paintForbidden(g, globe, groundAt) {
     g.fillRect(x0, 272, x1 - x0, 2);
   }
 
+  // 담장 뒤 은행나무 숲
+  const ginkgo = { trunk: "#4a3622", shade: "#b07800", colors: GINKGO.slice(0, 4) };
+  for (const tx of [70, 105, 300, 335]) paintTree(g, rnd, tx, 270, 22, -Math.PI / 2 + r(-0.25, 0.25), 3, 4, ginkgo);
+
   paintHall(g, 200, 300);
 
-  // 앞쪽 은행나무 두 그루
-  const ginkgo = { trunk: "#4a3622", shade: "#b07800", colors: GINKGO.slice(0, 4) };
-  paintTree(g, rnd, 30, 352, 46, -1.3, 7, 5, ginkgo);
-  paintTree(g, rnd, 372, 354, 46, -1.85, 7, 5, ginkgo);
+  // 앞쪽 큰 은행나무 두 그루
+  paintTree(g, rnd, 24, 356, 48, -1.2, 8, 5, ginkgo);
+  paintTree(g, rnd, 378, 358, 48, -1.95, 8, 5, ginkgo);
 
   // 바닥: 은행잎이 깔린 돌마당
   const floorTop = groundAt(globe.x);
@@ -205,6 +217,96 @@ function roof(g, cx, baseY, bottomW, topW, h) {
   g.restore();
 }
 
+// 붉은 등: 처마 밑 여섯 개와, 앞쪽 은행나무 사이 줄에 매단 일곱 개
+const EAVE_LANTERNS = [-90, -58, -26, 26, 58, 90].map((dx) => ({ x: 200 + dx, y: 241, len: 7, s: 0.8 }));
+const STRING = { x0: 62, x1: 338, y: 262, sag: 22 };
+const STRING_LANTERNS = Array.from({ length: 7 }, (_, i) => {
+  const k = (i + 1) / 8;
+  const x = STRING.x0 + (STRING.x1 - STRING.x0) * k;
+  return { x, y: STRING.y + STRING.sag * 4 * k * (1 - k), len: 8, s: 1.1 };
+});
+
+let lanternGlow = null;
+function glowSprite() {
+  if (!lanternGlow) {
+    lanternGlow = document.createElement("canvas");
+    lanternGlow.width = lanternGlow.height = 64;
+    const g = lanternGlow.getContext("2d");
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, "rgba(255,170,90,0.9)");
+    grad.addColorStop(0.35, "rgba(255,80,40,0.35)");
+    grad.addColorStop(1, "rgba(255,60,30,0)");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+  }
+  return lanternGlow;
+}
+
+function lantern(ctx, x, y, len, s, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.strokeStyle = "#3a2a1a";
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, len);
+  ctx.stroke();
+  ctx.translate(0, len + 7.5 * s);
+
+  // 빛 번짐
+  ctx.globalCompositeOperation = "lighter";
+  ctx.drawImage(glowSprite(), -18 * s, -18 * s, 36 * s, 36 * s);
+  ctx.globalCompositeOperation = "source-over";
+
+  // 둥근 몸통과 세로 살
+  const body = ctx.createRadialGradient(-2 * s, -2 * s, 1, 0, 0, 8 * s);
+  body.addColorStop(0, "#ff7a4a");
+  body.addColorStop(0.6, "#e0281c");
+  body.addColorStop(1, "#9a100a");
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 6.5 * s, 7.5 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(120,10,5,0.6)";
+  ctx.lineWidth = 0.5;
+  for (const k of [-0.55, 0, 0.55]) {
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 6.5 * s * Math.abs(k) + 0.01, 7.5 * s, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // 금색 위아래 마개와 술
+  ctx.fillStyle = "#e8b030";
+  ctx.fillRect(-3.5 * s, -8.3 * s, 7 * s, 1.8 * s);
+  ctx.fillRect(-3.5 * s, 6.5 * s, 7 * s, 1.8 * s);
+  ctx.strokeStyle = "#e8b030";
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  for (const dx of [-1, 0, 1]) {
+    ctx.moveTo(dx * s, 8.3 * s);
+    ctx.lineTo(dx * 1.3 * s, 13 * s);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 등은 늘 조금씩 흔들리고, 스노우볼을 터뜨려 물이 휘저어지면 크게 흔들림
+function animateLanterns(ctx, t, globe, stir) {
+  const swing = (phase) => Math.sin(t * 0.0025 + phase) * (0.06 + Math.min(stir, 5) * 0.09);
+
+  ctx.save();
+  // 은행나무 사이를 잇는 줄
+  ctx.strokeStyle = "#3a2a1a";
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(STRING.x0, STRING.y);
+  ctx.quadraticCurveTo(200, STRING.y + STRING.sag * 2, STRING.x1, STRING.y);
+  ctx.stroke();
+  EAVE_LANTERNS.forEach((l, i) => lantern(ctx, l.x, l.y, l.len, l.s, swing(i * 1.7)));
+  STRING_LANTERNS.forEach((l, i) => lantern(ctx, l.x, l.y, l.len, l.s, swing(i * 1.3 + 0.5)));
+  ctx.restore();
+}
+
 // 은행잎: 가운데가 살짝 갈라진 부채꼴 잎과 잎자루
 function drawGinkgo(ctx, p) {
   const s = p.size;
@@ -239,6 +341,7 @@ export const forbidden = {
   label: "중국 · 자금성",
   title: "Forbidden City",
   paint: paintForbidden,
+  animate: animateLanterns,
   glare: 0.9,
   base: {
     body: ["#03100b", "#123a2b", "#1b4c39", "#0c2a1f", "#020a06"],
@@ -250,10 +353,10 @@ export const forbidden = {
   },
   // 은행잎은 단풍잎보다 작고 가벼워서 팔랑이며 천천히 내림
   particles: {
-    count: 170,
+    count: 150,
     blend: "source-over",
     make(rand) {
-      const size = rand(3, 5);
+      const size = rand(4, 6.5);
       return {
         size,
         color: GINKGO[Math.floor(rand(0, GINKGO.length))],

@@ -289,8 +289,9 @@ function sprite(color) {
 function drawSparkle(ctx, p, t) {
   const tw = 0.5 + 0.5 * Math.sin(t * p.twinkle + p.phase);
   // 바닥에 가라앉은 불빛은 겹쳐도 타지 않게 작고 은은하게
-  ctx.globalAlpha = p.settled ? 0.12 + 0.25 * tw : 0.45 + 0.55 * tw;
-  const r = p.size * (p.settled ? 1.4 + tw * 0.6 : 2.2 + tw * 1.3);
+  // 겹쳐도 하얗게 타지 않게 번지는 범위와 밝기를 눌러 둠
+  ctx.globalAlpha = p.settled ? 0.1 + 0.2 * tw : 0.3 + 0.45 * tw;
+  const r = p.size * (p.settled ? 1 + tw * 0.4 : 1.4 + tw * 0.9);
   ctx.drawImage(sprite(p.color), p.x - r, p.y - r, r * 2, r * 2);
 
   if (!p.settled && tw > 0.9 && p.size > 2) {
