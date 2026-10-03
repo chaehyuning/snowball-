@@ -44,6 +44,11 @@ let prevGlobeVel = 0;
 // 물이 휘젓는 세기. 흔들면 커지고 시간이 지나면 잦아든다
 let stir = 0;
 
+// 끌어서 흔든 세기. 쌓일수록 바닥에 가라앉은 입자가 많이 떠오름
+let shakeEnergy = 0;
+let lastShakeDir = 0;
+let lastShakeSound = 0;
+
 // 누르면 말랑하게 눌리고, 떼면 누른 자리에서 입자가 팡 터지며 젤리처럼 출렁임
 const AUTO_SHAKE_MS = 700;
 const AUTO_SHAKE_PERIOD = 250; // 한 번 오르내리는 시간
@@ -329,7 +334,16 @@ canvas.addEventListener("pointermove", (e) => {
     sfx.chargeStop();
   }
   const scale = H / canvas.getBoundingClientRect().height;
-  target = clamp((e.clientY - startY) * scale, -MAX_OFFSET, MAX_OFFSET);
+  const next = clamp((e.clientY - startY) * scale, -MAX_OFFSET, MAX_OFFSET);
+  // 방향이 바뀔 때마다(흔드는 한 박자마다) 사르르 소리
+  const dir = Math.sign(next - target);
+  const now = performance.now();
+  if (dir && dir !== lastShakeDir && Math.abs(next - target) > 2 && now - lastShakeSound > 140) {
+    sfx.shake(Math.min(1, Math.abs(next - target) / 12), scene.id);
+    lastShakeSound = now;
+  }
+  if (dir) lastShakeDir = dir;
+  target = next;
 });
 
 function release() {
@@ -356,7 +370,21 @@ function update(t, accel) {
   stir *= 0.985;
   const now = performance.now();
 
+  // 손으로 끌어 흔들 때만: 흔든 만큼 바닥의 입자를 띄움 (누르기 팡과 섞이지 않게)
+  const shaking = dragging && !pressing;
+  if (shaking) {
+    shakeEnergy = Math.min(shakeEnergy + Math.abs(accel) * 0.06, 1.5);
+    stir = Math.min(stir + Math.abs(accel) * 0.02, 5);
+  }
+  shakeEnergy *= 0.94;
+
   for (const p of particles) {
+    // 흔들면 바닥에 누운 입자가 하나씩 들썩이며 떠오름. 입자마다 다른 세기로
+    if (p.settled && shaking && Math.random() < shakeEnergy * 0.12) {
+      p.settled = false;
+      p.vy = -rand(2, 6) * (0.5 + shakeEnergy) * (1.2 - p.inertia * 0.4);
+      p.vx = rand(-2.5, 2.5);
+    }
     // 출발 시각이 되면 목적지를 향해 솟아오름
     if (p.target && now >= p.launchAt) {
       p.settled = false;
@@ -381,8 +409,10 @@ function update(t, accel) {
       p.vy += (p.sink * FALL_SPEED - p.vy) * p.drag;
     }
 
-    // 유리구를 흔들면 무거운 입자가 살짝 뒤처짐
-    p.vy -= accel * p.inertia * 0.5;
+    // 유리구를 흔들면 입자가 물을 따라 출렁임. 무거울수록 뒤처지고, 입자마다 옆으로 조금씩 다르게 튐
+    const jolt = shaking ? 1.6 : 0.5;
+    p.vy -= accel * p.inertia * jolt;
+    if (shaking && Math.abs(accel) > 1) p.vx += rand(-1, 1) * Math.abs(accel) * 0.15;
 
     p.x += p.vx;
     p.y += p.vy;
