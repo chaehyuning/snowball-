@@ -21,6 +21,7 @@ const MAX_OFFSET = 50; // 흔들 수 있는 최대 거리
 
 // 흔들기 상태 (스노우볼은 손을 스프링처럼 따라감)
 let dragging = false;
+let startX = 0;
 let startY = 0;
 let target = 0;
 let offset = 0;
@@ -117,16 +118,44 @@ function loadScene(id) {
   }
 }
 
-for (const button of document.querySelectorAll("[data-scene]")) {
-  button.addEventListener("click", () => {
-    history.replaceState(null, "", `#${button.dataset.scene}`);
-    loadScene(button.dataset.scene);
-  });
+// 장면이 바뀔 때 직전 화면을 잠깐 겹쳐 그려 부드럽게 넘어가게 함
+const FADE_MS = 350;
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let fadeFrom = null;
+let fadeStart = 0;
+
+function switchScene(id) {
+  if (id === scene.id) return;
+  if (!reduceMotion.matches) {
+    fadeFrom = document.createElement("canvas");
+    fadeFrom.width = canvas.width;
+    fadeFrom.height = canvas.height;
+    fadeFrom.getContext("2d").drawImage(canvas, 0, 0);
+    fadeStart = performance.now();
+  }
+  history.replaceState(null, "", `#${id}`);
+  loadScene(id);
 }
 
-// 드래그로 위아래 흔들기
+// 1이면 다음 나라, -1이면 이전 나라. 끝에서는 처음으로 돌아감
+function stepScene(dir) {
+  const i = SCENES.indexOf(scene);
+  switchScene(SCENES[(i + dir + SCENES.length) % SCENES.length].id);
+}
+
+for (const button of document.querySelectorAll("[data-scene]")) {
+  button.addEventListener("click", () => switchScene(button.dataset.scene));
+}
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") stepScene(1);
+  if (e.key === "ArrowLeft") stepScene(-1);
+});
+
+// 위아래로 끌면 흔들기, 좌우로 밀면 나라 바꾸기
 canvas.addEventListener("pointerdown", (e) => {
   dragging = true;
+  startX = e.clientX;
   startY = e.clientY;
   canvas.setPointerCapture(e.pointerId);
   canvas.style.cursor = "grabbing";
@@ -143,7 +172,12 @@ function release() {
   target = 0;
   canvas.style.cursor = "grab";
 }
-canvas.addEventListener("pointerup", release);
+canvas.addEventListener("pointerup", (e) => {
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  release();
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) stepScene(dx < 0 ? 1 : -1);
+});
 canvas.addEventListener("pointercancel", release);
 
 function update(t, accel) {
@@ -377,6 +411,17 @@ function frame(t) {
   ctx.drawImage(layers.glass, 0, 0, W, H);
   ctx.drawImage(layers.baseFront, 0, 0, W, H);
   ctx.restore();
+
+  if (fadeFrom) {
+    const k = (performance.now() - fadeStart) / FADE_MS;
+    if (k >= 1) {
+      fadeFrom = null;
+    } else {
+      ctx.globalAlpha = 1 - k;
+      ctx.drawImage(fadeFrom, 0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+  }
 
   requestAnimationFrame(frame);
 }
