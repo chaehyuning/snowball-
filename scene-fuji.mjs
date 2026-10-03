@@ -1,18 +1,10 @@
-// 일본: 후지산과 벚꽃 풍경을 한 번만 그려 두는 장면
+// 일본: 후지산과 벚꽃
 
-export const SAKURA_COLORS = ["#fff0f4", "#ffe3ea", "#ffd0dc", "#fbb9cb", "#f6a3ba"];
+import { seeded, fillSilhouette } from "./util.mjs";
 
-// 새로고침해도 같은 풍경이 나오도록 고정된 난수
-export function seeded(seed) {
-  return () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+const SAKURA_COLORS = ["#fff0f4", "#ffe3ea", "#ffd0dc", "#fbb9cb", "#f6a3ba"];
 
-export function paintFuji(g, globe, groundAt) {
+function paintFuji(g, globe, groundAt) {
   const rnd = seeded(2026);
   const r = (a, b) => a + rnd() * (b - a);
   const left = globe.x - globe.r;
@@ -114,15 +106,6 @@ export function paintFuji(g, globe, groundAt) {
   g.globalAlpha = 1;
 
   g.restore();
-}
-
-function fillSilhouette(g, yAt, left, right, bottom) {
-  g.beginPath();
-  g.moveTo(left, bottom);
-  for (let x = left; x <= right; x += 2) g.lineTo(x, yAt(x));
-  g.lineTo(right, bottom);
-  g.closePath();
-  g.fill();
 }
 
 // 후지산: 정상은 평평하고, 위는 가파르고 아래로 갈수록 완만한 오목한 경사
@@ -293,3 +276,60 @@ function paintCherryTree(g, rnd, x, y, len, angle, width, depth) {
   }
   g.globalAlpha = 1;
 }
+
+// 벚꽃잎: 끝이 V자로 살짝 갈라진 둥근 잎
+function drawPetal(ctx, p) {
+  const s = p.size;
+  ctx.globalAlpha = p.settled ? 0.95 : 0.75 + s * 0.05;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.angle);
+  // 뒤집히는 각도에 따라 폭이 줄었다 늘었다 해서 회전하는 것처럼 보임
+  ctx.scale(Math.max(0.2, Math.abs(Math.cos(p.flip))), 1);
+  ctx.fillStyle = p.color;
+  ctx.beginPath();
+  ctx.moveTo(0, s);
+  ctx.bezierCurveTo(-s * 0.95, s * 0.25, -s * 0.75, -s * 0.9, -s * 0.22, -s);
+  ctx.lineTo(0, -s * 0.72);
+  ctx.lineTo(s * 0.22, -s);
+  ctx.bezierCurveTo(s * 0.75, -s * 0.9, s * 0.95, s * 0.25, 0, s);
+  ctx.fill();
+  ctx.restore();
+}
+
+export const fuji = {
+  id: "japan",
+  label: "일본 · 후지산",
+  title: "富士山",
+  paint: paintFuji,
+  glare: 1,
+  base: {
+    body: ["#0e0809", "#3a2426", "#4a2f30", "#24161a", "#0b0607"],
+    collar: "#1d1214",
+    trim: ["#7a5a1c", "#f2d17a", "#c99a35", "#6b4d16"],
+    plate: "富士山 · MT. FUJI",
+    plateFont: "600 13px 'Hiragino Mincho ProN', 'Yu Mincho', serif",
+    plateInk: "#2b1d10",
+  },
+  // 꽃잎은 눈보다 가볍고 넓어서 천천히 가라앉고 물살을 잘 탄다
+  particles: {
+    count: 220,
+    blend: "source-over",
+    make(rand) {
+      const size = rand(2.6, 4.6);
+      return {
+        size,
+        color: SAKURA_COLORS[Math.floor(rand(0, SAKURA_COLORS.length))],
+        sink: 0.1 + size * 0.03 + rand(-0.03, 0.03),
+        drag: rand(0.08, 0.13),
+        inertia: rand(0.3, 0.6),
+        grip: rand(0.4, 1.8),
+        angle: rand(0, Math.PI * 2),
+        spin: rand(-0.04, 0.04),
+        flipSpeed: rand(0.03, 0.08),
+        flutter: 0.025, // 뒤집힐 때 옆으로 미끄러지는 정도
+      };
+    },
+    draw: drawPetal,
+  },
+};
