@@ -154,34 +154,67 @@ function paintBarcelona(g, globe, groundAt) {
   g.fill();
   roseWindow(g, 200, 308, 11, ["#1f5fc9", "#2f86e0", "#7fd0f0", "#1aa3a0"]);
 
-  // 양옆 벽의 색유리: 왼쪽(동쪽)은 파랑·초록, 오른쪽(서쪽)은 빨강·주황·노랑.
-  // 양옆 벽에 곧게 선 창. 가운데(먼 쪽)로 갈수록 작아짐
+  // 양옆 벽: 소실점(200, 230)으로 모이는 원근 벽면. 그 위에 창을 벽 평면에 맞춰 사다리꼴로 그림.
+  // 가까운 창은 크고 높으며, 제단 쪽으로 갈수록 작아지고 소실점 쪽으로 몰림
   const coolGlass = ["#1f5fc9", "#2f86e0", "#1aa3a0", "#3cbf6a", "#7fd0f0", "#9ad84a"];
   const warmGlass = ["#d8324a", "#e0531f", "#f08a24", "#f2b632", "#ffd86a", "#c2185b"];
+  const VPX = 200;
+  const VPY = 230;
+  const FAR_Z = 170 / 82; // 가까운 벽 끝(x=30)에서 제단 벽 모서리(x=118)까지의 깊이 비율
   for (const side of [-1, 1]) {
     const palette = side < 0 ? coolGlass : warmGlass;
-    // 멀수록(가운데로 갈수록) 작고 높음. 기울이지 않고 곧게 세움
-    for (const [gx, w, h, top] of [
-      [96, 15, 62, 186],
-      [132, 10, 46, 198],
-      [157, 7, 32, 208],
-    ]) {
-      const x = side < 0 ? gx : 400 - gx;
-      // 아래 큰 창, 그 위 작은 장미창, 맨 위 작은 창
-      stainedWindow(g, rnd, x, top, w, h, palette, 1);
-      roseWindow(g, x, top - w * 0.75, w * 0.38, palette);
-      stainedWindow(g, rnd, x, top - w * 2.6 - h * 0.45, w * 0.7, h * 0.45, palette, 0.9);
-      // 창 아래 회랑 턱
-      g.fillStyle = "#e7d2ad";
-      g.fillRect(x - w * 0.9, top + h, w * 1.8, 2 + w * 0.15);
-      g.fillStyle = "rgba(110,80,50,0.4)";
-      g.fillRect(x - w * 0.9, top + h + 2 + w * 0.15, w * 1.8, 0.8);
+    // (u: 0 가까움 → 1 제단 쪽, v: 0 위 → 1 아래) → 화면 좌표
+    const map = (u, v) => {
+      const z = 1 + u * (FAR_Z - 1);
+      const worldY = 64 + v * 373;
+      return [VPX + (side * 170) / z, VPY + (worldY - VPY) / z];
+    };
+    const at = map;
+    const quad = (u0, v0, u1, v1) => {
+      g.beginPath();
+      g.moveTo(...at(u0, v0));
+      g.lineTo(...at(u1, v0));
+      g.lineTo(...at(u1, v1));
+      g.lineTo(...at(u0, v1));
+      g.closePath();
+    };
+    // 벽면: 가까운 쪽은 그늘, 제단 쪽은 밝음
+    const [nx] = at(0, 0.5);
+    const [fx] = at(1, 0.5);
+    const wallGrad = g.createLinearGradient(nx, 0, fx, 0);
+    wallGrad.addColorStop(0, "#c9ad84");
+    wallGrad.addColorStop(1, "#f2e2c4");
+    g.fillStyle = wallGrad;
+    quad(0, 0.15, 1, 1);
+    g.fill();
+    // 벽의 가로 띠(회랑 턱)와 세로 기둥띠: 모두 소실점으로 모임
+    for (const v of [0.34, 0.66]) {
+      g.fillStyle = "#ecd8b2";
+      quad(0, v, 1, v + 0.012);
+      g.fill();
+      g.fillStyle = "rgba(110,80,50,0.35)";
+      quad(0, v + 0.012, 1, v + 0.018);
+      g.fill();
+    }
+    for (const u of [0.08, 0.36, 0.62, 0.84]) {
+      g.fillStyle = "rgba(150,120,85,0.22)";
+      quad(u, 0.15, u + 0.025, 1);
+      g.fill();
+    }
+    // 창: 아래 큰 창 + 위 작은 창 + 그 사이 장미창
+    for (const [u0, u1] of [[0.13, 0.31], [0.42, 0.56], [0.68, 0.79]]) {
+      perspWindow(g, rnd, at, u0, 0.4, u1, 0.63, palette);
+      perspWindow(g, rnd, at, u0 + (u1 - u0) * 0.2, 0.19, u1 - (u1 - u0) * 0.2, 0.31, palette);
+      const [rx, ry] = at((u0 + u1) / 2, 0.375);
+      const [rx2] = at(u1, 0.375);
+      roseWindow(g, rx, ry, Math.abs(rx2 - rx) * 0.5, palette);
     }
     // 창 둘레로 번지는 색빛
     g.save();
     g.globalCompositeOperation = "lighter";
-    const spill = g.createRadialGradient(200 + side * 120, 230, 0, 200 + side * 120, 230, 100);
-    spill.addColorStop(0, side < 0 ? "rgba(60,140,230,0.28)" : "rgba(240,110,50,0.28)");
+    const [gx, gy] = at(0.35, 0.5);
+    const spill = g.createRadialGradient(gx, gy, 0, gx, gy, 110);
+    spill.addColorStop(0, side < 0 ? "rgba(60,140,230,0.25)" : "rgba(240,110,50,0.25)");
     spill.addColorStop(1, "rgba(0,0,0,0)");
     g.fillStyle = spill;
     g.fillRect(left, 120, size, 250);
@@ -338,6 +371,82 @@ function roseWindow(g, cx, cy, rr, palette) {
   g.beginPath();
   g.arc(cx, cy, rr * 0.35, 0, Math.PI * 2);
   g.fill();
+}
+
+// 원근 창: 벽 평면 좌표 (u, v)를 화면으로 옮기는 at()을 받아 창틀·색유리·납선을 모두 사다리꼴로 그림.
+// 위쪽은 반원 아치. 가까운 쪽 세로선이 길고 먼 쪽은 짧아 벽에 붙어 보임
+function perspWindow(g, rnd, at, u0, v0, u1, v1, palette) {
+  const um = (u0 + u1) / 2;
+  const hu = (u1 - u0) / 2;
+  const archV = Math.min((v1 - v0) * 0.35, hu * 1.4);
+  const outline = (pad) => {
+    g.beginPath();
+    g.moveTo(...at(u0 - pad, v1 + pad));
+    g.lineTo(...at(u0 - pad, v0 + archV));
+    for (let k = 0; k <= 16; k++) {
+      const a = Math.PI + (k / 16) * Math.PI;
+      g.lineTo(...at(um + Math.cos(a) * (hu + pad), v0 + archV + Math.sin(a) * (archV + pad)));
+    }
+    g.lineTo(...at(u1 + pad, v1 + pad));
+    g.closePath();
+  };
+  // 돌 창틀과 창틀 안쪽 그늘(두께)
+  g.fillStyle = "#cdb48e";
+  outline(hu * 0.25);
+  g.fill();
+  g.save();
+  outline(0);
+  g.clip();
+  const cols = 3;
+  const rows = 7;
+  const grid = [];
+  for (let j = 0; j <= rows; j++) {
+    grid.push([]);
+    for (let i = 0; i <= cols; i++) {
+      const edge = i === 0 || i === cols || j === 0 || j === rows;
+      const ju = edge ? 0 : (rnd() - 0.5) * 0.3;
+      const jv = edge ? 0 : (rnd() - 0.5) * 0.3;
+      grid[j].push(at(u0 + ((i + ju) / cols) * (u1 - u0), v0 + ((j + jv) / rows) * (v1 - v0)));
+    }
+  }
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      g.fillStyle = palette[Math.floor(rnd() * palette.length)];
+      g.beginPath();
+      g.moveTo(...grid[j][i]);
+      g.lineTo(...grid[j][i + 1]);
+      g.lineTo(...grid[j + 1][i + 1]);
+      g.lineTo(...grid[j + 1][i]);
+      g.closePath();
+      g.fill();
+      if (rnd() < 0.3) {
+        g.fillStyle = "rgba(255,255,240,0.3)";
+        g.fill();
+      }
+    }
+  }
+  g.strokeStyle = "rgba(35,28,40,0.65)";
+  g.lineWidth = 0.5;
+  for (let j = 0; j <= rows; j++) {
+    g.beginPath();
+    grid[j].forEach((pt, i) => (i ? g.lineTo(...pt) : g.moveTo(...pt)));
+    g.stroke();
+  }
+  for (let i = 0; i <= cols; i++) {
+    g.beginPath();
+    for (let j = 0; j <= rows; j++) (j ? g.lineTo : g.moveTo).call(g, ...grid[j][i]);
+    g.stroke();
+  }
+  // 창틀 두께: 가까운 쪽 안쪽 벽면의 그늘
+  g.fillStyle = "rgba(60,40,25,0.35)";
+  g.beginPath();
+  g.moveTo(...at(u0, v1));
+  g.lineTo(...at(u0, v0 + archV));
+  g.lineTo(...at(u0 + hu * 0.25, v0 + archV));
+  g.lineTo(...at(u0 + hu * 0.25, v1));
+  g.closePath();
+  g.fill();
+  g.restore();
 }
 
 // 스테인드글라스 창: 위가 둥근 긴 창. 칸마다 색유리, 사이사이 짙은 납선, 창 둘레로 색빛이 번짐
