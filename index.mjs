@@ -9,6 +9,7 @@ import { paris } from "./scene-paris.mjs";
 import { istanbul } from "./scene-istanbul.mjs";
 import { openPicker } from "./picker.mjs";
 import * as sfx from "./sound.mjs";
+import { startTutorial, tutorialDone, openHelp } from "./tutorial.mjs";
 
 const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul];
 
@@ -113,6 +114,7 @@ function pop(power) {
   startAutoShake(power);
   squashVel += 0.16 * power;
   sfx.pop(power, scene.id);
+  window.dispatchEvent(new Event("snowball:pop"));
 
   // 번쩍임, 두 번째 고리, 불꽃 줄기
   const now = performance.now();
@@ -262,6 +264,7 @@ function switchScene(id) {
   }
   history.replaceState(null, "", `#${id}`);
   loadScene(id);
+  window.dispatchEvent(new Event("snowball:scene"));
 }
 
 // 1이면 다음 나라, -1이면 이전 나라. 끝에서는 처음으로 돌아감
@@ -276,6 +279,22 @@ for (const button of document.querySelectorAll("[data-scene]")) {
 
 // 지구본 선택창
 document.querySelector(".globe-open").addEventListener("click", () => openPicker(SCENES, scene.id, switchScene));
+
+// 처음 방문이면 튜토리얼 (지구본 선택창이 떠 있으면 닫힌 뒤에)
+function maybeTutorial() {
+  if (!tutorialDone()) setTimeout(startTutorial, 300);
+}
+
+document.querySelector(".help-toggle").addEventListener("click", openHelp);
+
+// 배경음악은 화면을 처음 누르거나 키를 누른 뒤 시작 (브라우저 정책)
+function firstGesture() {
+  sfx.startMusic();
+  window.removeEventListener("pointerdown", firstGesture);
+  window.removeEventListener("keydown", firstGesture);
+}
+window.addEventListener("pointerdown", firstGesture);
+window.addEventListener("keydown", firstGesture);
 
 // 주소의 # 뒤를 직접 바꿔도 그 나라로 넘어감
 window.addEventListener("hashchange", () => switchScene(location.hash.slice(1)));
@@ -599,8 +618,22 @@ soundButton.addEventListener("click", () => {
 });
 showSound();
 
+const musicButton = document.querySelector(".music-toggle");
+function showMusic() {
+  const on = sfx.isMusicOn();
+  musicButton.dataset.off = String(!on);
+  musicButton.setAttribute("aria-label", on ? "배경음악 끄기" : "배경음악 켜기");
+  musicButton.title = on ? "배경음악 끄기" : "배경음악 켜기";
+}
+musicButton.addEventListener("click", () => {
+  sfx.setMusic(!sfx.isMusicOn());
+  showMusic();
+});
+showMusic();
+
 // 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
-if (!location.hash) openPicker(SCENES, scene.id, switchScene);
+if (!location.hash) openPicker(SCENES, scene.id, switchScene, maybeTutorial);
+else maybeTutorial();
 
 function frame(t) {
   // 스노우볼이 손을 스프링처럼 따라가고, 놓으면 살짝 출렁이며 제자리로 돌아감

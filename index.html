@@ -12,7 +12,6 @@
       <div class="stage">
         <canvas id="globe"></canvas>
         <p class="scene-name" id="scene-name" aria-live="polite"></p>
-        <p class="hint">꾹 눌렀다 떼면 팡! 좌우로 밀면 다른 나라로 바뀌어요</p>
       </div>
       <nav class="scenes" aria-label="나라 선택">
         <button type="button" class="sound-toggle" aria-label="소리 끄기" title="소리 끄기">
@@ -20,6 +19,20 @@
             <path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4Z" fill="#cfd8ea" />
             <path class="sound-on" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />
             <path class="sound-off" d="m16 9.5 5 5M21 9.5l-5 5" />
+          </svg>
+        </button>
+        <button type="button" class="music-toggle" aria-label="배경음악 끄기" title="배경음악 끄기">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#cfd8ea" stroke-width="1.8" stroke-linecap="round">
+            <path d="M9 17V5l10-2v12" />
+            <circle cx="6.5" cy="17" r="2.5" fill="#cfd8ea" />
+            <circle cx="16.5" cy="15" r="2.5" fill="#cfd8ea" />
+            <path class="music-off" d="M3 3l18 18" stroke="#ff8a8a" />
+          </svg>
+        </button>
+        <button type="button" class="help-toggle" aria-label="조작법 보기" title="조작법 보기">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#cfd8ea" stroke-width="1.8" stroke-linecap="round">
+            <path d="M9.2 9a3 3 0 1 1 4.2 2.7c-.9.4-1.4 1.1-1.4 2v.6" />
+            <circle cx="12" cy="17.6" r="0.6" fill="#cfd8ea" />
           </svg>
         </button>
         <button type="button" class="globe-open" aria-label="지구본에서 나라 고르기" title="지구본에서 고르기">

@@ -2,11 +2,14 @@
 // 브라우저는 사용자가 화면을 처음 누른 뒤에만 소리를 낼 수 있어서, 첫 누름에서 준비함.
 
 let ac = null;
-let master = null;
+let comp = null;
+let master = null; // 효과음 버스
 let charge = null;
 let muted = false;
+let musicOn = true;
 try {
   muted = localStorage.getItem("snowball-muted") === "1";
+  musicOn = localStorage.getItem("snowball-music") !== "0";
 } catch {}
 
 function ensure() {
@@ -17,7 +20,7 @@ function ensure() {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return null;
   ac = new Ctx();
-  const comp = ac.createDynamicsCompressor();
+  comp = ac.createDynamicsCompressor();
   comp.threshold.value = -14;
   comp.ratio.value = 4;
   master = ac.createGain();
@@ -338,3 +341,162 @@ export function whoosh() {
   src.connect(bp).connect(g).connect(master);
   src.start(t);
 }
+
+// ── 배경음악: 잔잔한 피아노 ─────────────────────────────────────
+// 느린 템포로 네 코드를 돌며 낮은 베이스, 부드러운 아르페지오, 가끔 떨어지는 멜로디 음을 만듦.
+// 매번 조금씩 다르게 치도록 세기와 멜로디를 무작위로 고름.
+
+const BPM = 66;
+const BEAT = 60 / BPM;
+const MUSIC_LEVEL = 0.22;
+// 코드: [베이스 근음(MIDI), 아르페지오 음들(MIDI)]
+const CHORDS = [
+  [48, [60, 64, 67, 71, 74]], // Cmaj9
+  [45, [57, 60, 64, 67, 71]], // Am9
+  [41, [57, 60, 64, 65, 69]], // Fmaj9
+  [43, [55, 60, 62, 67, 69]], // G6/9sus
+];
+const MELODY = [72, 74, 76, 79, 81, 84]; // C 5음계, 높은 음역
+const ARP = [0, 2, 1, 3, 2, 4, 3, 1]; // 한 마디 8분음표 순서
+
+let musicBus = null;
+let musicTimer = null;
+let nextTime = 0;
+let step = 0;
+
+const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+function reverbBuffer(seconds) {
+  const len = Math.floor(ac.sampleRate * seconds);
+  const buf = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  }
+  return buf;
+}
+
+function ensureMusicBus() {
+  if (musicBus) return;
+  musicBus = ac.createGain();
+  musicBus.gain.value = 0;
+  const dry = ac.createGain();
+  dry.gain.value = 0.75;
+  const wet = ac.createGain();
+  wet.gain.value = 0.45;
+  const verb = ac.createConvolver();
+  verb.buffer = reverbBuffer(2.8);
+  musicBus.connect(dry).connect(comp);
+  musicBus.connect(verb).connect(wet).connect(comp);
+}
+
+// 피아노 한 음: 망치로 친 듯 빠르게 울리고, 높은 배음부터 먼저 사라짐
+function piano(m, t, vel, { pan = 0 } = {}) {
+  const f = midi(m);
+  const length = 1.6 + (84 - m) * 0.05; // 낮은 음일수록 길게 울림
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vel, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(vel * 0.35, t + 0.25);
+  g.gain.exponentialRampToValueAtTime(0.0005, t + length);
+  const tone = ac.createBiquadFilter();
+  tone.type = "lowpass";
+  tone.frequency.setValueAtTime(1200 + vel * 9000, t);
+  tone.frequency.exponentialRampToValueAtTime(600, t + length * 0.7);
+  let node = g;
+  if (ac.createStereoPanner) {
+    const p = ac.createStereoPanner();
+    p.pan.value = pan;
+    g.connect(p);
+    node = p;
+  }
+  node.connect(musicBus);
+  tone.connect(g);
+  for (const [mult, amp, detune] of [[1, 1, 0], [1, 0.5, 4], [2, 0.35, 0], [3, 0.12, 0], [4.02, 0.06, 0]]) {
+    const o = ac.createOscillator();
+    o.type = "sine";
+    o.frequency.value = f * mult;
+    o.detune.value = detune;
+    const og = ac.createGain();
+    og.gain.value = amp;
+    o.connect(og).connect(tone);
+    o.start(t);
+    o.stop(t + length + 0.1);
+  }
+}
+
+// 8분음표 하나만큼 연주를 예약
+function playStep(t) {
+  const bar = Math.floor(step / 8);
+  const pos = step % 8;
+  const [bass, tones] = CHORDS[bar % CHORDS.length];
+  if (pos === 0) {
+    piano(bass, t, 0.16, { pan: -0.2 });
+    piano(bass + 7, t + 0.02, 0.09, { pan: -0.2 });
+  }
+  if (pos === 4 && Math.random() < 0.5) piano(bass + 12, t, 0.07, { pan: -0.1 });
+  // 아르페지오: 가끔 한 음을 쉬어서 기계적으로 들리지 않게
+  if (Math.random() < 0.85) {
+    const m = tones[ARP[pos] % tones.length];
+    piano(m, t + Math.random() * 0.015, 0.05 + Math.random() * 0.04, { pan: 0.15 });
+  }
+  // 멜로디: 박자 앞에서 가끔 높은 음 하나
+  if (pos % 2 === 0 && Math.random() < 0.28) {
+    const m = MELODY[Math.floor(Math.random() * MELODY.length)];
+    piano(m, t + 0.01, 0.06 + Math.random() * 0.04, { pan: 0.35 });
+  }
+  step++;
+}
+
+function scheduler() {
+  while (nextTime < ac.currentTime + 0.6) {
+    playStep(nextTime);
+    nextTime += BEAT / 2;
+  }
+}
+
+export function isMusicOn() {
+  return musicOn;
+}
+
+// 첫 누름 이후 호출. 음악이 켜져 있으면 천천히 소리를 키우며 시작
+export function startMusic() {
+  if (!ensure() || !musicOn) return;
+  ensureMusicBus();
+  if (musicTimer) return;
+  nextTime = ac.currentTime + 0.1;
+  musicTimer = setInterval(scheduler, 150);
+  musicBus.gain.cancelScheduledValues(ac.currentTime);
+  musicBus.gain.setTargetAtTime(MUSIC_LEVEL, ac.currentTime, 1.2);
+}
+
+export function setMusic(on) {
+  musicOn = on;
+  try {
+    localStorage.setItem("snowball-music", on ? "1" : "0");
+  } catch {}
+  if (!ac) return;
+  if (on) {
+    startMusic();
+  } else if (musicBus) {
+    musicBus.gain.setTargetAtTime(0, ac.currentTime, 0.3);
+    clearInterval(musicTimer);
+    musicTimer = null;
+  }
+}
+
+// 다른 탭으로 가면 음악을 멈추고, 돌아오면 이어서 침
+document.addEventListener("visibilitychange", () => {
+  if (!ac) return;
+  if (document.hidden) {
+    clearInterval(musicTimer);
+    musicTimer = null;
+    ac.suspend();
+  } else {
+    ac.resume();
+    if (musicOn && musicBus) {
+      nextTime = ac.currentTime + 0.1;
+      musicTimer = setInterval(scheduler, 150);
+    }
+  }
+});
