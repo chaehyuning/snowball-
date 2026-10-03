@@ -22,14 +22,24 @@ body {
   font-family: sans-serif;
 }
 
-/* 스노우볼 왼쪽, 나라 선택 기호는 오른쪽 세로 한 줄 */
+/* 왼쪽: 소리·음악·도움말 / 가운데: 스노우볼 / 오른쪽: 지구본 + 나라 3열 */
 #app {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  grid-template-areas: "tools stage scenes";
   align-items: center;
-  gap: 14px;
+  gap: 18px;
+}
+
+.tools {
+  grid-area: tools;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .stage {
+  grid-area: stage;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -38,7 +48,7 @@ body {
 }
 
 #globe {
-  width: min(calc(100vw - 32px - 46px - 14px), 400px);
+  width: min(calc(100vw - 32px - 46px - 154px - 36px), 400px);
   max-width: 100%;
   aspect-ratio: 2 / 3;
   cursor: pointer;
@@ -46,12 +56,28 @@ body {
 }
 
 .scenes {
-  display: flex;
-  flex-direction: column;
+  grid-area: scenes;
+  display: grid;
+  grid-template-columns: repeat(3, 46px);
   gap: 8px;
 }
 
-.scenes button {
+/* 지구본 버튼은 나라 격자 위에 넓게 */
+.scenes .globe-open {
+  grid-column: 1 / -1;
+  width: auto;
+  border-radius: 999px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  color: #cfd8ea;
+  font: inherit;
+  font-size: 13px;
+}
+
+.scenes button,
+.tools button {
   display: grid;
   place-items: center;
   width: 46px;
@@ -64,17 +90,20 @@ body {
   transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
-.scenes button svg {
+.scenes button svg,
+.tools button svg {
   width: 26px;
   height: 26px;
 }
 
-.scenes button:hover {
+.scenes button:hover,
+.tools button:hover {
   border-color: rgba(207, 216, 234, 0.6);
   transform: translateY(-2px);
 }
 
-.scenes button:focus-visible {
+.scenes button:focus-visible,
+.tools button:focus-visible {
   outline: 2px solid #cfd8ea;
   outline-offset: 3px;
 }
@@ -249,26 +278,46 @@ body {
   }
 }
 
-/* 좁은 화면: 기호 버튼을 작게 해서 세로 한 줄에 모두 들어가게 */
-@media (max-width: 520px) {
+/* 좁은 화면: 설정은 스노우볼 위 왼쪽에 가로로, 나라는 아래에 5열 2줄 */
+@media (max-width: 640px) {
   #app {
-    gap: 8px;
+    grid-template-columns: 1fr;
+    grid-template-areas: "tools" "stage" "scenes";
+    gap: 10px;
+    justify-items: center;
+  }
+
+  .tools {
+    flex-direction: row;
+    justify-self: start;
   }
 
   #globe {
-    width: min(calc(100vw - 32px - 38px - 8px), 400px);
+    width: min(calc(100vw - 32px), calc((100vh - 230px) / 1.5), 400px);
   }
 
   .scenes {
+    grid-template-columns: repeat(5, 40px);
     gap: 6px;
   }
 
-  .scenes button {
-    width: 38px;
-    height: 38px;
+  .scenes .globe-open {
+    grid-column: auto;
+    border-radius: 50%;
   }
 
-  .scenes button svg {
+  .globe-label {
+    display: none;
+  }
+
+  .scenes button,
+  .tools button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .scenes button svg,
+  .tools button svg {
     width: 22px;
     height: 22px;
   }
