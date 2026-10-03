@@ -104,6 +104,37 @@ function paintSydney(g, globe, groundAt) {
     g.stroke();
   }
 
+  // 바다 깊이: 기슭 가까운 얕은 곳은 청록, 가운데 깊은 곳은 짙은 남색 얼룩
+  const rw = seeded(2000);
+  g.save();
+  g.filter = "blur(8px)";
+  for (let i = 0; i < 10; i++) {
+    const wx = left + rw() * size;
+    const wy = 250 + rw() * 70;
+    g.fillStyle = i % 2 ? "rgba(40,170,190,0.18)" : "rgba(5,40,90,0.22)";
+    g.beginPath();
+    g.ellipse(wx, wy, 30 + rw() * 40, 4 + rw() * 5, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+  // 다리와 빌딩이 물에 비친 흐린 세로 그림자: 물결에 끊김
+  g.fillStyle = "rgba(30,60,95,0.18)";
+  for (let y = 245; y < 262; y += 1.5) {
+    for (let x = 60; x < 320; x += 3 + rw() * 5) {
+      if (rw() < 0.5) g.fillRect(x, y, 1 + rw() * 3, 0.7);
+    }
+  }
+  // 바람이 스친 물결 띠: 가로로 길게 옅게 밝은 결
+  g.strokeStyle = "rgba(200,235,255,0.18)";
+  g.lineWidth = 0.6;
+  for (let i = 0; i < 6; i++) {
+    const y = 250 + i * 8 + rw() * 4;
+    g.beginPath();
+    g.moveTo(left, y);
+    for (let x = left; x <= right; x += 10) g.lineTo(x, y + Math.sin(x * 0.04 + i) * 1.2);
+    g.stroke();
+  }
+
   // 햇빛 반사
   g.globalCompositeOperation = "lighter";
   for (let i = 0; i < 60; i++) {
@@ -174,39 +205,86 @@ function paintBridge(g) {
   const x1 = 318;
   const deck = 236;
   const arch = (x) => deck - 54 * (1 - ((2 * (x - x0)) / (x1 - x0) - 1) ** 2);
+  const lower = (x) => arch(x) + 5 + 3 * (1 - ((2 * (x - x0)) / (x1 - x0) - 1) ** 2);
 
-  g.strokeStyle = "rgba(70,90,110,0.85)";
-  g.lineWidth = 0.6;
-  for (let x = x0 + 6; x < x1 - 4; x += 5) {
+  // 다리 밑 물 위로 떨어진 그늘
+  g.fillStyle = "rgba(40,70,100,0.12)";
+  g.fillRect(x0 - 20, deck + 1.4, x1 - x0 + 40, 3);
+
+  // 위·아래 현 사이 트러스 판: 강철 회청색, 위 가장자리는 하늘빛을 받아 밝음
+  g.fillStyle = "rgba(96,116,136,0.55)";
+  g.beginPath();
+  for (let x = x0; x <= x1; x += 2) g.lineTo(x, arch(x));
+  for (let x = x1; x >= x0; x -= 2) g.lineTo(x, lower(x));
+  g.closePath();
+  g.fill();
+  // X자 가새: 칸마다 두 줄
+  g.strokeStyle = "rgba(60,78,98,0.85)";
+  g.lineWidth = 0.45;
+  for (let x = x0 + 2; x < x1 - 5; x += 5.2) {
     g.beginPath();
     g.moveTo(x, arch(x));
+    g.lineTo(x + 5.2, lower(x + 5.2));
+    g.moveTo(x, lower(x));
+    g.lineTo(x + 5.2, arch(x + 5.2));
+    g.stroke();
+  }
+  // 상판을 매다는 수직 행어: 아치 아래 현에서 상판까지, 가운데로 갈수록 김
+  g.strokeStyle = "rgba(70,90,110,0.8)";
+  g.lineWidth = 0.5;
+  for (let x = x0 + 8; x < x1 - 6; x += 5.2) {
+    if (lower(x) > deck - 1) continue;
+    g.beginPath();
+    g.moveTo(x, lower(x));
     g.lineTo(x, deck);
     g.stroke();
   }
-  // 아치 위아래 두 줄 사이 트러스
-  g.lineWidth = 0.5;
-  for (let x = x0 + 4; x < x1 - 4; x += 6) {
-    g.beginPath();
-    g.moveTo(x, arch(x));
-    g.lineTo(x + 6, arch(x + 6) + 5);
-    g.stroke();
-  }
-  for (const [off, w] of [[0, 2.6], [5, 1.4]]) {
-    g.lineWidth = w;
-    g.beginPath();
-    for (let x = x0; x <= x1; x += 2) g.lineTo(x, arch(x) + off);
-    g.stroke();
-  }
-  g.fillStyle = "#56697c";
-  g.fillRect(x0 - 20, deck - 1, x1 - x0 + 40, 2.4);
+  // 위·아래 현: 위는 굵고 밝은 테, 아래는 가늘게
+  g.strokeStyle = "#4e6276";
+  g.lineWidth = 2.4;
+  g.beginPath();
+  for (let x = x0; x <= x1; x += 2) g.lineTo(x, arch(x));
+  g.stroke();
+  g.strokeStyle = "rgba(220,235,248,0.7)";
+  g.lineWidth = 0.6;
+  g.beginPath();
+  for (let x = x0; x <= x1; x += 2) g.lineTo(x, arch(x) - 0.9);
+  g.stroke();
+  g.strokeStyle = "#5a6e82";
+  g.lineWidth = 1.2;
+  g.beginPath();
+  for (let x = x0; x <= x1; x += 2) g.lineTo(x, lower(x));
+  g.stroke();
 
-  // 화강암 기둥: 아치형 구멍이 뚫린 탑
+  // 상판: 도로 가장자리, 가운데 차들(작은 색 점), 철길 난간
+  const road = g.createLinearGradient(0, deck - 1.5, 0, deck + 1.6);
+  road.addColorStop(0, "#7d90a2");
+  road.addColorStop(1, "#46596b");
+  g.fillStyle = road;
+  g.fillRect(x0 - 20, deck - 1.5, x1 - x0 + 40, 3.1);
+  g.fillStyle = "rgba(230,240,250,0.6)";
+  g.fillRect(x0 - 20, deck - 1.5, x1 - x0 + 40, 0.4);
+  const rcars = seeded(1932);
+  for (let x = x0 - 10; x < x1 + 14; x += 3 + rcars() * 7) {
+    g.fillStyle = ["#e04b4b", "#f3f1ea", "#2f5f9a", "#e9c23a", "#3a3a3a"][Math.floor(rcars() * 5)];
+    g.fillRect(x, deck - 1.1, 1.4, 0.8);
+  }
+
+  // 화강암 탑문: 돌단 결, 왼쪽은 밝고 오른쪽은 그늘, 위 난간과 아치 구멍
   for (const px of [x0 - 5, x1 - 5]) {
-    g.fillStyle = "#cdb995";
+    const stone = g.createLinearGradient(px, 0, px + 11, 0);
+    stone.addColorStop(0, "#e2cfaa");
+    stone.addColorStop(0.6, "#cdb995");
+    stone.addColorStop(1, "#a8936f");
+    g.fillStyle = stone;
     g.fillRect(px, deck - 18, 11, 24);
+    g.fillStyle = "rgba(120,100,70,0.25)";
+    for (let by = deck - 15; by < deck + 6; by += 2.4) g.fillRect(px, by, 11, 0.4);
     g.fillStyle = "#b39f7c";
-    g.fillRect(px, deck - 18, 11, 2);
-    g.fillStyle = "#7d8fa0";
+    g.fillRect(px - 0.6, deck - 18.5, 12.2, 1.6);
+    g.fillStyle = "#f0e2c4";
+    g.fillRect(px - 0.6, deck - 18.5, 12.2, 0.4);
+    g.fillStyle = "#6f8396";
     g.beginPath();
     g.moveTo(px + 3, deck + 2);
     g.lineTo(px + 3, deck - 6);
@@ -214,6 +292,8 @@ function paintBridge(g) {
     g.lineTo(px + 8, deck + 2);
     g.closePath();
     g.fill();
+    g.fillStyle = "rgba(255,255,255,0.25)";
+    g.fillRect(px + 3, deck - 6, 0.6, 8);
   }
 
   // 아치 꼭대기의 호주 국기
