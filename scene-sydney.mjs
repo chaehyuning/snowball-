@@ -83,41 +83,31 @@ function paintSydney(g, globe, groundAt) {
 
   paintBridge(g);
 
-  // 바다: 수평선 쪽은 하늘을 비춰 밝고, 앞으로 올수록 짙은 남색
+  // 바다: 잔잔한 항구의 청록빛. 수평선 쪽은 하늘을 비춰 옅고, 앞으로 올수록 깊은 청록
   const sea = g.createLinearGradient(0, 244, 0, 332);
-  sea.addColorStop(0, "#79bfe6");
-  sea.addColorStop(0.12, "#3f99d2");
-  sea.addColorStop(0.55, "#1c6fb0");
-  sea.addColorStop(1, "#0a4a86");
+  sea.addColorStop(0, "#7cc0cf");
+  sea.addColorStop(0.15, "#3f9ab6");
+  sea.addColorStop(0.6, "#23779c");
+  sea.addColorStop(1, "#175d82");
   g.fillStyle = sea;
   g.fillRect(left, 244, size, 100);
-  // 수평선에 닿은 밝은 띠
-  g.fillStyle = "rgba(235,248,255,0.55)";
-  g.fillRect(left, 244, size, 1.2);
+  g.fillStyle = "rgba(235,248,255,0.45)";
+  g.fillRect(left, 244, size, 1);
 
-  // 바다 깊이: 기슭 가까운 얕은 곳은 청록, 가운데 깊은 곳은 짙은 남색 얼룩
+  // 바다 깊이: 얕은 곳은 밝은 청록, 깊은 곳은 짙은 청색이 넓고 흐리게 번짐
   const rw = seeded(2000);
   g.save();
-  g.filter = "blur(8px)";
+  g.filter = "blur(10px)";
   for (let i = 0; i < 12; i++) {
     const wx = left + rw() * size;
-    const wy = 252 + rw() * 72;
-    g.fillStyle = i % 2 ? "rgba(40,170,190,0.2)" : "rgba(5,40,90,0.24)";
+    const wy = 254 + rw() * 70;
+    g.fillStyle = i % 2 ? "rgba(70,190,200,0.16)" : "rgba(10,60,95,0.18)";
     g.beginPath();
-    g.ellipse(wx, wy, 30 + rw() * 40, 4 + rw() * 6, 0, 0, Math.PI * 2);
+    g.ellipse(wx, wy, 40 + rw() * 50, 5 + rw() * 7, 0, 0, Math.PI * 2);
     g.fill();
   }
   g.restore();
 
-  // 물에 비친 하버브리지 아치: 위아래가 뒤집혀 납작하고, 물결에 끊긴 가로 획으로만 보임
-  const bx0 = 58;
-  const bx1 = 318;
-  const archAt = (x) => 54 * (1 - ((2 * (x - bx0)) / (bx1 - bx0) - 1) ** 2);
-  g.fillStyle = "rgba(40,66,96,0.32)";
-  for (let x = bx0; x < bx1; x += 1.5) {
-    const ry = 245 + archAt(x) * 0.42;
-    if (rw() < 0.7) g.fillRect(x, ry + (rw() - 0.5) * 1.2, 1.5 + rw() * 3, 0.8);
-  }
   // 도심 빌딩이 비친 흐린 세로 그림자
   g.fillStyle = "rgba(60,95,130,0.16)";
   for (let y = 245; y < 264; y += 1.4) {
@@ -126,28 +116,18 @@ function paintSydney(g, globe, groundAt) {
     }
   }
 
-  // 물결: 줄마다 햇빛 받은 마루와 그늘진 골. 멀리는 가늘고 촘촘하게, 가까이는 굵고 성기게
+  // 잔물결: 짧고 옅은 밝은 결과 그 아래 그늘이 촘촘히 깔린 결. 멀리는 가늘고 빽빽하게, 가까이는 조금 길게
   const rv = seeded(4242);
-  for (let y = 247; y < 334; ) {
+  for (let y = 246; y < 334; ) {
     const near = (y - 246) / 88;
-    const len = 3 + near * 15;
-    const amp = 0.5 + near * 2.4;
-    for (let x = left - rv() * len * 2; x < right; x += len * (1.4 + rv() * 1.4)) {
-      const l = len * (0.7 + rv() * 0.6);
-      g.strokeStyle = `rgba(6,38,78,${0.16 + near * 0.24})`;
-      g.lineWidth = 0.4 + near * 1.2;
-      g.beginPath();
-      g.moveTo(x, y + amp * 0.5);
-      g.quadraticCurveTo(x + l / 2, y + amp * 1.5, x + l, y + amp * 0.5);
-      g.stroke();
-      g.strokeStyle = `rgba(210,242,255,${0.2 + near * 0.32})`;
-      g.lineWidth = 0.35 + near * 0.9;
-      g.beginPath();
-      g.moveTo(x, y);
-      g.quadraticCurveTo(x + l / 2, y - amp, x + l, y);
-      g.stroke();
+    for (let x = left - rv() * 6; x < right; x += 2 + near * 7 + rv() * (3 + near * 8)) {
+      const l = 1.5 + near * 6 * (0.5 + rv());
+      g.fillStyle = `rgba(8,55,85,${0.1 + near * 0.12})`;
+      g.fillRect(x + l * 0.2, y + 0.6 + near * 0.8, l, 0.5 + near * 0.6);
+      g.fillStyle = `rgba(200,240,245,${0.1 + near * 0.16})`;
+      g.fillRect(x, y, l, 0.4 + near * 0.5);
     }
-    y += 1.1 + near * near * 6 + rv() * 0.8;
+    y += 0.9 + near * 2.4 + rv() * 0.6;
   }
 
   // 바람이 스친 물결 띠: 가로로 길게 옅게 밝은 결
@@ -163,36 +143,17 @@ function paintSydney(g, globe, groundAt) {
 
   // 햇빛 윤슬: 해 아래로 길게 뻗는 반짝이는 길. 앞으로 올수록 넓게 퍼짐
   g.globalCompositeOperation = "lighter";
-  for (let i = 0; i < 170; i++) {
+  for (let i = 0; i < 90; i++) {
     const y = 246 + Math.pow(rv(), 1.3) * 82;
     const near = (y - 246) / 82;
     const spread = 12 + near * 58;
     const dx = (rv() - 0.5) * 2 * spread * rv();
     const w = 1 + near * 5 * rv();
-    g.fillStyle = `rgba(255,252,228,${(0.18 + 0.5 * rv()) * (1 - (Math.abs(dx) / spread) * 0.7)})`;
+    g.fillStyle = `rgba(255,252,228,${(0.12 + 0.3 * rv()) * (1 - (Math.abs(dx) / spread) * 0.7)})`;
     g.fillRect(300 + dx - w / 2, y, w, 0.5 + near * 0.7);
   }
   g.globalCompositeOperation = "source-over";
 
-  // 항로 표지 부표: 초록 원뿔, 물에 비친 그림자
-  g.fillStyle = "rgba(20,90,60,0.35)";
-  g.fillRect(70.5, 272, 3, 4);
-  g.fillStyle = "#2f8a55";
-  g.beginPath();
-  g.moveTo(72, 262);
-  g.lineTo(75.5, 271.5);
-  g.lineTo(68.5, 271.5);
-  g.closePath();
-  g.fill();
-  g.fillStyle = "rgba(255,255,255,0.4)";
-  g.fillRect(70.5, 266, 1, 5);
-  g.strokeStyle = "rgba(230,248,255,0.7)";
-  g.lineWidth = 0.6;
-  g.beginPath();
-  g.ellipse(72, 272, 5, 0.9, 0, 0, Math.PI * 2);
-  g.stroke();
-
-  paintWaterTaxi(g, 128, 284);
 
   // 멀리 떠 있는 작은 요트 두 척: 햇빛 받는 돛과 그늘진 돛
   for (const [bx, by, bs] of [[96, 252, 0.8], [132, 256, 1]]) {
@@ -615,43 +576,6 @@ function shell(g, ax, ay, w, by) {
   g.moveTo(ax, ay);
   backTo();
   g.stroke();
-}
-
-// 노란 수상 택시: 물살을 가르며 오른쪽으로 달림
-function paintWaterTaxi(g, x, y) {
-  g.strokeStyle = "rgba(240,252,255,0.75)";
-  g.lineCap = "round";
-  for (const [dy, len, lw] of [[-1, 34, 0.8], [1.5, 40, 1.1], [0.2, 22, 1.6]]) {
-    g.lineWidth = lw;
-    g.beginPath();
-    g.moveTo(x - 2, y + 0.5);
-    g.quadraticCurveTo(x - len * 0.5, y + dy * 1.5, x - len, y + dy * 3);
-    g.stroke();
-  }
-  g.fillStyle = "rgba(255,255,255,0.8)";
-  g.beginPath();
-  g.ellipse(x + 15, y + 0.8, 3, 1, 0, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = "rgba(5,40,80,0.35)";
-  g.fillRect(x - 1, y + 1, 17, 1.5);
-  const hull = g.createLinearGradient(0, y - 4, 0, y + 1);
-  hull.addColorStop(0, "#ffd84a");
-  hull.addColorStop(1, "#d9a316");
-  g.fillStyle = hull;
-  g.beginPath();
-  g.moveTo(x, y - 4);
-  g.lineTo(x + 13, y - 4);
-  g.quadraticCurveTo(x + 17, y - 3.5, x + 18, y - 2);
-  g.lineTo(x + 14, y + 1);
-  g.lineTo(x + 1, y + 1);
-  g.closePath();
-  g.fill();
-  g.fillStyle = "#f6f2e6";
-  g.fillRect(x + 3, y - 8, 8, 4);
-  g.fillStyle = "#2b3f55";
-  g.fillRect(x + 4, y - 7, 6, 1.6);
-  g.fillStyle = "rgba(255,255,255,0.6)";
-  g.fillRect(x + 3, y - 8.4, 8, 0.6);
 }
 
 // 시드니 페리: 초록 선체에 크림색 선실, 노란 굴뚝

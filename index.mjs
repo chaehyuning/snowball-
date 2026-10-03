@@ -11,7 +11,7 @@ import { barcelona } from "./scene-barcelona.mjs";
 import { openPicker } from "./picker.mjs";
 import * as sfx from "./sound.mjs";
 import { showSceneInfo, fillTicker, setupMetaToggle } from "./editorial.mjs";
-import { setupKeepsakes, stampVisit } from "./keepsake.mjs";
+import { setupKeepsakes } from "./keepsake.mjs";
 import { startTutorial, tutorialDone, openHelp } from "./tutorial.mjs";
 
 const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul, barcelona];
@@ -332,9 +332,7 @@ function loadScene(id) {
   for (const button of document.querySelectorAll("[data-scene]")) {
     button.setAttribute("aria-pressed", String(button.dataset.scene === scene.id));
   }
-  document.getElementById("scene-name").textContent = scene.label;
   showSceneInfo(scene.id, SCENES.indexOf(scene), SCENES.length);
-  stampVisit(scene.id);
 }
 
 // 장면이 바뀔 때 직전 화면을 잠깐 겹쳐 그려 부드럽게 넘어가게 함
@@ -809,7 +807,7 @@ function paintBaseFront(g) {
 // 주소에 나라가 없으면 한국부터
 fillTicker(SCENES.map((s) => s.id));
 setupMetaToggle();
-setupKeepsakes({ capture: capturePostcard, ids: SCENES.map((s) => s.id) });
+setupKeepsakes({ capture: capturePostcard });
 loadScene(location.hash.slice(1) || "korea");
 
 // 소리 켜기/끄기
