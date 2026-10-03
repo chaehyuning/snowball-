@@ -637,6 +637,7 @@ function drawGrain(ctx, p, t) {
 // 모래 폭풍: 흐린 모래 장막 몇 겹이 바람을 타고 오른쪽으로 천천히 흘러감.
 // 장막은 한 번만 그려 두고(가로로 이어지게) 매 프레임 옮겨 그림. 세기는 20초쯤 주기로 일었다 잦아듦
 let veils = null;
+let grains = null;
 function makeVeil(seed, w, h, tint) {
   const scale = 2;
   const c = document.createElement("canvas");
@@ -657,21 +658,6 @@ function makeVeil(seed, w, h, tint) {
       g.beginPath();
       g.ellipse(x + off, y, rx, ry, (rnd() - 0.5) * 0.12, 0, Math.PI * 2);
       g.fill();
-    }
-  }
-  // 바람결: 가로로 길게 끌린 옅은 줄
-  g.filter = "blur(1.5px)";
-  for (let i = 0; i < 40; i++) {
-    const x = rnd() * w;
-    const y = h * (0.25 + rnd() * 0.55);
-    const len = 30 + rnd() * 80;
-    g.strokeStyle = `rgba(255,226,180,${0.12 + rnd() * 0.2})`;
-    g.lineWidth = 0.6 + rnd() * 1.2;
-    for (const off of [-w, 0, w]) {
-      g.beginPath();
-      g.moveTo(x + off, y);
-      g.quadraticCurveTo(x + off + len / 2, y - 2 - rnd() * 3, x + off + len, y + 1);
-      g.stroke();
     }
   }
   return { c, w, h };
@@ -697,19 +683,34 @@ function animateEgypt(ctx, t, globe) {
       ctx.drawImage(v.c, x, v.y - v.h / 2 + bob, v.w, v.h);
     }
   }
-  // 땅 가까이 낮게 휩쓸려 가는 모래 알갱이 줄
-  ctx.globalAlpha = 0.25 + gust * 0.35;
-  ctx.strokeStyle = "#f3cf9c";
-  ctx.lineWidth = 0.7;
-  ctx.lineCap = "round";
-  for (let i = 0; i < 26; i++) {
-    const speed = 0.05 + (i % 5) * 0.012;
-    const x = left + ((t * speed + i * 97) % (globe.r * 2 + 60)) - 30;
-    const y = 300 + ((i * 37) % 40) + Math.sin(t * 0.003 + i) * 2;
+  // 흩날리는 모래 알갱이: 크기와 빠르기가 제각각이고, 바람에 출렁이며 오른쪽으로 날아감.
+  // 땅 가까이일수록 많고 굵으며, 위로 갈수록 드물고 가늘게
+  if (!grains) {
+    const rnd = seeded(4711);
+    grains = Array.from({ length: 150 }, () => {
+      const h = Math.pow(rnd(), 1.8); // 0 땅 가까이 → 1 높이
+      return {
+        y: 322 - h * 130,
+        off: rnd() * 1000,
+        speed: 0.035 + rnd() * 0.05 + (1 - h) * 0.02,
+        size: 0.5 + rnd() * 1.1 * (1 - h * 0.6),
+        wave: 2 + rnd() * 6,
+        freq: 0.0015 + rnd() * 0.003,
+        phase: rnd() * Math.PI * 2,
+        color: SAND[Math.floor(rnd() * SAND.length)],
+        alpha: 0.45 + rnd() * 0.5,
+      };
+    });
+  }
+  const span = globe.r * 2 + 40;
+  for (const s of grains) {
+    const x = left - 20 + ((t * s.speed * (0.6 + gust * 0.8) + s.off) % span);
+    const y = s.y + Math.sin(t * s.freq + s.phase) * s.wave + Math.sin(x * 0.03 + s.phase) * 2;
+    ctx.globalAlpha = s.alpha * (0.3 + gust * 0.7);
+    ctx.fillStyle = s.color;
     ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 6 + (i % 3) * 4, y - 0.8);
-    ctx.stroke();
+    ctx.arc(x, y, s.size, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.restore();
 }
