@@ -115,6 +115,10 @@ function paintNamsan(g, globe, groundAt) {
 
   paintCity(g, r, rnd, left, right);
 
+  // 왼쪽 앞 팔각정과 맨 앞 사랑의 자물쇠 울타리 (가까워서 크고 또렷함)
+  pavilion(g, 92, 302);
+  loveLocks(g, rnd, left, right);
+
   // 바닥: 불빛이 비치는 광장
   const floorTop = groundAt(globe.x);
   const floor = g.createLinearGradient(0, floorTop, 0, floorTop + 60);
@@ -249,6 +253,93 @@ function paintCity(g, r, rnd, left, right) {
   }
 }
 
+// 팔각정: 붉은 기둥, 단청 띠, 끝이 들린 기와지붕, 처마 밑 초롱
+function pavilion(g, x, baseY) {
+  // 기단
+  g.fillStyle = "#6b6a78";
+  g.fillRect(x - 30, baseY - 5, 60, 5);
+  // 기둥
+  for (const dx of [-24, -12, 0, 12, 24]) {
+    g.fillStyle = "#9a2a22";
+    g.fillRect(x + dx - 1.6, baseY - 30, 3.2, 25);
+  }
+  // 난간
+  g.strokeStyle = "#7a2a22";
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(x - 26, baseY - 12);
+  g.lineTo(x + 26, baseY - 12);
+  g.stroke();
+  // 처마 밑 단청 띠 (초록·파랑)
+  g.fillStyle = "#2f7a5a";
+  g.fillRect(x - 28, baseY - 34, 56, 4);
+  g.fillStyle = "#3d6fae";
+  for (let dx = -27; dx < 27; dx += 5) g.fillRect(x + dx, baseY - 33, 2.5, 2);
+  // 기와지붕: 처마 끝이 위로 들림
+  g.fillStyle = "#2a2d3a";
+  g.beginPath();
+  g.moveTo(x - 40, baseY - 40);
+  g.quadraticCurveTo(x - 28, baseY - 33, x, baseY - 34);
+  g.quadraticCurveTo(x + 28, baseY - 33, x + 40, baseY - 40);
+  g.quadraticCurveTo(x + 22, baseY - 46, x + 10, baseY - 56);
+  g.lineTo(x - 10, baseY - 56);
+  g.quadraticCurveTo(x - 22, baseY - 46, x - 40, baseY - 40);
+  g.closePath();
+  g.fill();
+  g.strokeStyle = "rgba(160,170,200,0.35)";
+  g.lineWidth = 0.6;
+  for (let k = -8; k <= 8; k++) {
+    g.beginPath();
+    g.moveTo(x + k * 1.2, baseY - 56);
+    g.lineTo(x + k * 4.4, baseY - 35);
+    g.stroke();
+  }
+  g.fillStyle = "#3a3d4a";
+  g.fillRect(x - 11, baseY - 58, 22, 2.5);
+  // 처마 밑 초롱
+  for (const dx of [-20, 20]) {
+    const glow = g.createRadialGradient(x + dx, baseY - 27, 0, x + dx, baseY - 27, 9);
+    glow.addColorStop(0, "rgba(255,190,110,0.8)");
+    glow.addColorStop(1, "rgba(255,190,110,0)");
+    g.fillStyle = glow;
+    g.fillRect(x + dx - 9, baseY - 36, 18, 18);
+    g.fillStyle = "#ff9a5a";
+    g.beginPath();
+    g.ellipse(x + dx, baseY - 27, 2.5, 3.2, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+// 사랑의 자물쇠 울타리: 화면 맨 앞을 가로지르는 난간에 알록달록한 자물쇠가 빼곡함
+function loveLocks(g, rnd, left, right) {
+  const LOCK = ["#ff5a7a", "#ffd34a", "#5ab8ff", "#7ee08a", "#c77dff", "#ff9a4a", "#ffffff"];
+  const railY = [296, 304, 312];
+  g.strokeStyle = "#7c8496";
+  g.lineWidth = 1.6;
+  for (const y of railY) {
+    g.beginPath();
+    g.moveTo(left, y);
+    g.lineTo(right, y);
+    g.stroke();
+  }
+  g.fillStyle = "#5c6476";
+  for (let x = left + 10; x < right; x += 40) g.fillRect(x - 1.6, 290, 3.2, 30);
+  for (const y of railY) {
+    for (let x = left; x < right; x += 2.6 + rnd() * 2.2) {
+      const w = 2.6 + rnd() * 1.8;
+      const h = 3 + rnd() * 1.6;
+      const dy = rnd() * 1.5;
+      g.fillStyle = LOCK[Math.floor(rnd() * LOCK.length)];
+      g.fillRect(x - w / 2, y + 1.5 + dy, w, h);
+      g.strokeStyle = "rgba(200,205,215,0.8)";
+      g.lineWidth = 0.6;
+      g.beginPath();
+      g.arc(x, y + 1.5 + dy, w * 0.32, Math.PI, 0);
+      g.stroke();
+    }
+  }
+}
+
 // 매 프레임 그리는 것: 깜빡이는 항공 장애등과 반짝이는 별
 function animateNamsan(ctx, t) {
   ctx.save();
@@ -318,8 +409,8 @@ export const namsan = {
     body: ["#05070f", "#1c2440", "#283258", "#141a33", "#04060d"],
     collar: "#0b0f1e",
     trim: ["#5d6475", "#e9edf5", "#a7afc0", "#4f5666"],
-    plate: "N서울타워 · N SEOUL TOWER",
-    plateFont: "600 11px 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif",
+    plate: "N서울타워",
+    plateFont: "700 15px 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif",
     plateInk: "#1a1f2e",
   },
   // 반짝이 가루는 아주 가벼워서 오래 떠다님

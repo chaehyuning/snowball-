@@ -417,8 +417,8 @@ export const egypt = {
     body: ["#1e0d05", "#6e3519", "#8a4a26", "#4e2510", "#160903"],
     collar: "#2a1308",
     trim: ["#7a5a1c", "#f2d17a", "#c99a35", "#6b4d16"],
-    plate: "PYRAMIDS OF GIZA · EGYPT",
-    plateFont: "600 11px 'Optima', 'Candara', sans-serif",
+    plate: "أهرامات الجيزة",
+    plateFont: "600 15px 'Geeza Pro', 'Noto Naskh Arabic', 'Segoe UI', sans-serif",
     plateInk: "#2b1d10",
   },
   // 모래알은 작고 무거워서 꽃잎보다 빨리 떨어짐
