@@ -2,7 +2,7 @@
 // 육지 윤곽은 Natural Earth 1:110m (world-atlas, 퍼블릭 도메인)을 0.5도 단위로 줄인 land.json
 
 // 각 나라 핀의 위치(위도, 경도)와 카드에 보여줄 내용.
-// 핀 머리는 실제 위치에서 위로 stem, 옆으로 dx만큼 떨어져 있음.
+// 핀 머리는 실제 위치에서 위로 stem, 옆으로 dx만큼 떨어져 있음. stem이 음수면 아래로 내려감.
 // 한중일은 서로 가까워서 중국은 왼쪽 위, 한국은 바로 위로 높게, 일본은 오른쪽 위로 벌려 둠
 export const PLACES = {
   japan: { lat: 35.36, lon: 138.73, landmark: "후지산", particle: "벚꽃잎", color: "#f6a3ba", stem: 24, dx: 30 },
@@ -11,9 +11,9 @@ export const PLACES = {
   australia: { lat: -33.86, lon: 151.21, landmark: "오페라하우스", particle: "물방울", color: "#4fb0e8", stem: 22, dx: 0 },
   finland: { lat: 66.54, lon: 25.85, landmark: "산타마을", particle: "눈꽃", color: "#e8f2ff", stem: 26, dx: 0 },
   china: { lat: 39.92, lon: 116.39, landmark: "자금성", particle: "은행잎", color: "#f2c230", stem: 24, dx: -30 },
-  egypt: { lat: 29.98, lon: 31.13, landmark: "기자 피라미드", particle: "모래알", color: "#d48a52", stem: 14, dx: -24 },
+  egypt: { lat: 29.98, lon: 31.13, landmark: "기자 피라미드", particle: "모래알", color: "#d48a52", stem: -30, dx: -8 },
   france: { lat: 48.86, lon: 2.29, landmark: "에펠탑", particle: "장미 꽃잎", color: "#d81b4a", stem: 22, dx: -24 },
-  turkey: { lat: 41.01, lon: 28.98, landmark: "블루 모스크", particle: "나비", color: "#2ec4c9", stem: 20, dx: 30 },
+  turkey: { lat: 41.01, lon: 28.98, landmark: "블루 모스크", particle: "나비", color: "#2ec4c9", stem: -14, dx: 36 },
   spain: { lat: 41.4, lon: 2.17, landmark: "사그라다 파밀리아", particle: "스테인드글라스 조각", color: "#3cbf6a", stem: 12, dx: -34 },
 };
 

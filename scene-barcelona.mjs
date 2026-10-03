@@ -22,10 +22,10 @@ function paintBarcelona(g, globe, groundAt) {
 
   // 햇빛이 스며든 따뜻한 돌빛: 천장은 금빛, 아래는 크림색
   const base = g.createLinearGradient(0, top, 0, globe.y + globe.r);
-  base.addColorStop(0, "#f3c98a");
-  base.addColorStop(0.35, "#f4e3c6");
-  base.addColorStop(0.75, "#e6d4b8");
-  base.addColorStop(1, "#b9a283");
+  base.addColorStop(0, "#efbf78");
+  base.addColorStop(0.35, "#efd9b4");
+  base.addColorStop(0.7, "#cfb48c");
+  base.addColorStop(1, "#8e7556");
   g.fillStyle = base;
   g.fillRect(left, top, size, size);
 
@@ -108,6 +108,33 @@ function paintBarcelona(g, globe, groundAt) {
   g.closePath();
   g.fill();
   roseWindow(g, 200, 308, 11, ["#1f5fc9", "#2f86e0", "#7fd0f0", "#1aa3a0"]);
+
+  // 양옆 벽의 색유리: 왼쪽(동쪽)은 파랑·초록, 오른쪽(서쪽)은 빨강·주황·노랑. 올려다봐서 위로 갈수록 가운데로 기울어짐
+  const coolGlass = ["#1f5fc9", "#2f86e0", "#1aa3a0", "#3cbf6a", "#7fd0f0", "#9ad84a"];
+  const warmGlass = ["#d8324a", "#e0531f", "#f08a24", "#f2b632", "#ffd86a", "#c2185b"];
+  for (const side of [-1, 1]) {
+    for (const [cx, cy, w, h] of [
+      [200 + side * 66, 222, 12, 54],
+      [200 + side * 98, 236, 16, 70],
+      [200 + side * 136, 248, 20, 84],
+    ]) {
+      g.save();
+      g.translate(cx, cy + h / 2);
+      g.rotate(side * 0.12);
+      g.translate(-cx, -(cy + h / 2));
+      stainedWindow(g, rnd, cx, cy, w, h, side < 0 ? coolGlass : warmGlass, 1);
+      g.restore();
+    }
+    // 창 둘레로 번지는 색빛
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    const spill = g.createRadialGradient(200 + side * 110, 260, 0, 200 + side * 110, 260, 90);
+    spill.addColorStop(0, side < 0 ? "rgba(60,140,230,0.25)" : "rgba(240,110,50,0.25)");
+    spill.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = spill;
+    g.fillRect(left, 150, size, 220);
+    g.restore();
+  }
 
   // 나무 기둥: 아래에서 올려다봐서 위로 갈수록 가운데로 모임. 먼 것부터
   for (const [bx, tx, w, d] of [
@@ -239,67 +266,126 @@ function roseWindow(g, cx, cy, rr, palette) {
   g.fill();
 }
 
-// 올려다본 나무 기둥: 아래는 회청색 반암, 위는 크림색 사암. 마디 고리에서 가지가 천장으로 퍼짐
+// 올려다본 나무 기둥: 곧은 막대가 아니라 아래가 불룩하고 위로 갈수록 가늘어지며 살짝 휘는 몸통.
+// 여러 면으로 깎인 기둥이라 면마다 밝기가 다르고, 가운데(제단 빛) 쪽이 밝고 바깥쪽은 깊은 그늘.
+// 아래는 짙은 회색 반암, 마디 위는 크림색 사암. 마디에서 굵은 가지가 천장으로 퍼지고, 가지 사이 천장엔 그늘이 짐
 function leaningColumn(g, bx, tx, baseY, topY, w, side, d) {
   const knotY = topY + (baseY - topY) * 0.42;
-  const xAt = (y) => bx + (tx - bx) * ((baseY - y) / (baseY - topY));
-  const wAt = (y) => w * (0.6 + 0.4 * ((y - topY) / (baseY - topY)));
-  g.save();
-  g.globalAlpha = 0.7 + 0.3 * d;
-  const body = (y0, y1, c0, c1, c2) => {
-    const grad = g.createLinearGradient(xAt((y0 + y1) / 2) - w / 2, 0, xAt((y0 + y1) / 2) + w / 2, 0);
-    grad.addColorStop(0, side < 0 ? c0 : c2);
-    grad.addColorStop(0.5, c1);
-    grad.addColorStop(1, side < 0 ? c2 : c0);
-    g.fillStyle = grad;
-    g.beginPath();
-    g.moveTo(xAt(y1) - wAt(y1) / 2, y1);
-    g.lineTo(xAt(y0) - wAt(y0) / 2, y0);
-    g.lineTo(xAt(y0) + wAt(y0) / 2, y0);
-    g.lineTo(xAt(y1) + wAt(y1) / 2, y1);
-    g.closePath();
-    g.fill();
+  const bend = -side * w * 0.35;
+  const xAt = (y) => {
+    const t = (baseY - y) / (baseY - topY);
+    return bx + (tx - bx) * t + Math.sin(t * Math.PI) * bend;
   };
-  body(knotY, baseY, "#c9cfda", "#98a3b6", "#6f7a8e");
-  body(topY, knotY, "#fbf3e4", "#e8dcc6", "#c2b08f");
-  // 세로 홈
-  g.strokeStyle = "rgba(80,90,110,0.25)";
-  g.lineWidth = Math.max(0.3, w * 0.04);
-  for (const k of [-0.25, 0, 0.25]) {
+  const wAt = (y) => {
+    const t = (baseY - y) / (baseY - topY);
+    return w * (1.05 - 0.3 * t + 0.06 * Math.sin(t * Math.PI * 2));
+  };
+  const outline = (y0, y1) => {
     g.beginPath();
-    g.moveTo(xAt(baseY) + k * wAt(baseY), baseY);
-    g.lineTo(xAt(topY) + k * wAt(topY), topY);
+    for (let y = y1; y >= y0; y -= 3) g.lineTo(xAt(y) - wAt(y) / 2, y);
+    for (let y = y0; y <= y1; y += 3) g.lineTo(xAt(y) + wAt(y) / 2, y);
+    g.closePath();
+  };
+
+  g.save();
+  // 뒤 벽에 드리운 그림자: 바깥쪽으로 번진 어두운 띠
+  g.save();
+  g.filter = `blur(${3 + 4 * d}px)`;
+  g.fillStyle = `rgba(50,30,15,${0.22 + 0.15 * d})`;
+  g.translate(-side * w * 0.7, 4);
+  outline(topY, baseY);
+  g.fill();
+  g.restore();
+
+  g.globalAlpha = 0.85 + 0.15 * d;
+  const facets = 7;
+  const paintPart = (y0, y1, light, mid, dark) => {
+    g.save();
+    outline(y0, y1);
+    g.clip();
+    for (let f = 0; f < facets; f++) {
+      const t = f / (facets - 1);
+      const towardCenter = side < 0 ? t : 1 - t;
+      const shade = Math.pow(towardCenter, 1.3);
+      g.fillStyle = shade > 0.66 ? light : shade > 0.33 ? mid : dark;
+      g.beginPath();
+      for (let y = y1; y >= y0 - 3; y -= 3) g.lineTo(xAt(y) - wAt(y) / 2 + (wAt(y) * f) / facets, y);
+      for (let y = y0 - 3; y <= y1; y += 3) g.lineTo(xAt(y) - wAt(y) / 2 + (wAt(y) * (f + 1)) / facets, y);
+      g.closePath();
+      g.fill();
+    }
+    // 바깥쪽 깊은 그늘
+    const gx = xAt((y0 + y1) / 2);
+    const gw = wAt((y0 + y1) / 2);
+    const occ = g.createLinearGradient(gx - (side * gw) / 2, 0, gx + (side * gw) / 2, 0);
+    occ.addColorStop(0, "rgba(20,15,15,0.5)");
+    occ.addColorStop(0.55, "rgba(20,15,15,0)");
+    g.fillStyle = occ;
+    g.fillRect(gx - gw, y0 - 3, gw * 2, y1 - y0 + 6);
+    // 창 쪽 면에 비친 색빛
+    const tint = g.createLinearGradient(gx + (side * gw) / 2, 0, gx - (side * gw) / 2, 0);
+    tint.addColorStop(0, side < 0 ? "rgba(70,150,230,0.18)" : "rgba(240,120,60,0.18)");
+    tint.addColorStop(0.5, "rgba(0,0,0,0)");
+    g.fillStyle = tint;
+    g.fillRect(gx - gw, y0 - 3, gw * 2, y1 - y0 + 6);
+    g.restore();
+  };
+  paintPart(knotY, baseY, "#8d8f96", "#5f6168", "#383a41");
+  paintPart(topY, knotY, "#f6ecdc", "#d9c6a6", "#a48a66");
+  // 면 사이 모서리: 아주 가는 밝은 선
+  g.strokeStyle = "rgba(255,250,240,0.18)";
+  g.lineWidth = Math.max(0.3, w * 0.03);
+  for (let f = 1; f < facets; f++) {
+    g.beginPath();
+    for (let y = baseY; y >= topY; y -= 4) g.lineTo(xAt(y) - wAt(y) / 2 + (wAt(y) * f) / facets, y);
     g.stroke();
   }
-  // 마디 고리: 꽃받침처럼 둥근 덩어리
+  // 마디: 꽃받침처럼 겹친 둥근 덩어리, 아래는 그늘
   const kx = xAt(knotY);
-  const knot = g.createRadialGradient(kx - w * 0.2, knotY - w * 0.2, 0, kx, knotY, w * 0.9);
-  knot.addColorStop(0, "#d9dde6");
-  knot.addColorStop(1, "#7d889c");
-  g.fillStyle = knot;
+  const kw = wAt(knotY);
   for (let k = -2; k <= 2; k++) {
+    const nx = kx + k * kw * 0.24;
+    const knot = g.createRadialGradient(nx + side * kw * 0.1, knotY - kw * 0.15, 0, nx, knotY, kw * 0.45);
+    knot.addColorStop(0, "#b9bcc4");
+    knot.addColorStop(1, "#45474f");
+    g.fillStyle = knot;
     g.beginPath();
-    g.ellipse(kx + k * w * 0.22, knotY, w * 0.28, w * 0.38, 0, 0, Math.PI * 2);
+    g.ellipse(nx, knotY, kw * 0.3, kw * 0.42, 0, 0, Math.PI * 2);
     g.fill();
   }
-  // 위로 퍼지는 가지 (불투명하게)
+  g.fillStyle = "rgba(20,18,22,0.35)";
+  g.beginPath();
+  g.ellipse(kx, knotY + kw * 0.38, kw * 0.75, kw * 0.12, 0, 0, Math.PI * 2);
+  g.fill();
+
+  // 가지: 굵게 시작해 휘면서 가늘어짐. 아랫면은 그늘, 윗면은 밝음
   g.globalAlpha = 1;
   const tX = xAt(topY);
-  for (const [dx, lift] of [[-1.6, 0.7], [-0.6, 1], [0.6, 1], [1.6, 0.7]]) {
-    const ex = tX + dx * w * 2.4;
-    const ey = topY - 60 * lift;
-    for (const [color, extra, off] of [["#c2b08f", 0.9, 0.6], ["#f6ecda", 0, 0]]) {
+  const tW = wAt(topY);
+  const ao = g.createRadialGradient(tX, topY - 20, 0, tX, topY - 20, 50);
+  ao.addColorStop(0, "rgba(90,60,30,0.28)");
+  ao.addColorStop(1, "rgba(90,60,30,0)");
+  g.fillStyle = ao;
+  g.fillRect(tX - 50, topY - 70, 100, 100);
+  for (const [dx, lift, curl] of [[-1.7, 0.65, -0.3], [-0.6, 1, 0.15], [0.6, 1, -0.15], [1.7, 0.65, 0.3]]) {
+    const ex = tX + dx * tW * 2.6;
+    const ey = topY - 62 * lift;
+    const cx = tX + dx * tW * 1.1 + curl * tW;
+    const cy = topY - 24 * lift;
+    const pt = (t) => {
+      const u = 1 - t;
+      return [u * u * tX + 2 * u * t * cx + t * t * ex, u * u * topY + 2 * u * t * cy + t * t * ey];
+    };
+    for (const [color, extra, off] of [["#9f875f", 1.4, 0.9], ["#f2e6cf", 0, 0], ["#fffaf0", -0.55, -0.4]]) {
       g.strokeStyle = color;
       g.lineCap = "round";
-      for (let k = 0; k < 6; k++) {
-        const t0 = k / 6;
-        const t1 = (k + 1) / 6;
-        const px = (t) => tX + (ex - tX) * t;
-        const py = (t) => topY + (ey - topY) * t;
-        g.lineWidth = Math.max(0.8, w * 0.5 * (1 - t0 * 0.6)) + extra;
+      for (let k = 0; k < 8; k++) {
+        const [x0, y0] = pt(k / 8);
+        const [x1, y1] = pt((k + 1) / 8);
+        g.lineWidth = Math.max(0.6, tW * 0.45 * (1 - (k / 8) * 0.7) + extra * (1 - k / 10));
         g.beginPath();
-        g.moveTo(px(t0) + off, py(t0) + off);
-        g.lineTo(px(t1) + off, py(t1) + off);
+        g.moveTo(x0 - off * side, y0 + Math.abs(off));
+        g.lineTo(x1 - off * side, y1 + Math.abs(off));
         g.stroke();
       }
     }
