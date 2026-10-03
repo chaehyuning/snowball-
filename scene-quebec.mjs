@@ -119,6 +119,30 @@ function paintQuebec(g, globe, groundAt) {
     }
   }
 
+  // 퀘벡–레비 페리: 흰 배에 파란 띠
+  g.fillStyle = "#f2f2f2";
+  g.fillRect(318, 245, 24, 4);
+  g.fillStyle = "#2f5aa0";
+  g.fillRect(318, 248, 24, 1.4);
+  g.fillStyle = "#f2f2f2";
+  g.fillRect(324, 241, 12, 4);
+  g.fillStyle = "#2a2a3a";
+  g.fillRect(328, 238, 2, 3);
+  g.strokeStyle = "rgba(255,240,220,0.7)";
+  g.lineWidth = 0.7;
+  g.beginPath();
+  g.moveTo(342, 250);
+  g.quadraticCurveTo(352, 249, 362, 251);
+  g.stroke();
+
+  // 성과 강 건너편을 덮는 옅은 노을 안개 (멀어서 흐릿함)
+  const farMist = g.createLinearGradient(0, 220, 0, 290);
+  farMist.addColorStop(0, "rgba(246,190,150,0)");
+  farMist.addColorStop(0.5, "rgba(246,190,150,0.18)");
+  farMist.addColorStop(1, "rgba(246,190,150,0.05)");
+  g.fillStyle = farMist;
+  g.fillRect(left, 220, size, 70);
+
   // 앞쪽 잔디 언덕: 왼쪽이 높고 오른쪽 아래로 내려감
   const hillY = (x) => 212 + 95 / (1 + Math.exp(-(x - 170) / 45)) + 1.5 * Math.sin(x * 0.17);
   const grass = g.createLinearGradient(0, 212, 0, 335);
@@ -348,8 +372,8 @@ export const quebec = {
     body: ["#140904", "#40241a", "#553222", "#2a170e", "#0e0603"],
     collar: "#1a0d07",
     trim: ["#6b3e1f", "#e8a86a", "#b8703a", "#5a3218"],
-    plate: "CHÂTEAU FRONTENAC · QUÉBEC",
-    plateFont: "600 11px 'Baskerville', 'Times New Roman', serif",
+    plate: "Château Frontenac",
+    plateFont: "italic 600 15px 'Baskerville', 'Times New Roman', serif",
     plateInk: "#2a160a",
   },
   // 단풍잎은 꽃잎보다 크고 조금 무거워서 더 크게 뒤집히며 떨어짐

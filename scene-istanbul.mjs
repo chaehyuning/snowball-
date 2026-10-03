@@ -418,8 +418,8 @@ export const istanbul = {
     body: ["#021416", "#0c4a50", "#14626a", "#08363a", "#020e10"],
     collar: "#041c1e",
     trim: ["#1b6f73", "#9ff0ea", "#2ec4c9", "#145a5e"],
-    plate: "BLUE MOSQUE · İSTANBUL",
-    plateFont: "600 12px 'Gill Sans', 'Trebuchet MS', sans-serif",
+    plate: "Sultanahmet Camii",
+    plateFont: "600 14px 'Gill Sans', 'Trebuchet MS', sans-serif",
     plateInk: "#04282c",
   },
   // 나비는 가볍게 떠다니며 천천히 내려앉음

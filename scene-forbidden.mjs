@@ -76,6 +76,30 @@ function paintForbidden(g, globe, groundAt) {
   paintTree(g, rnd, 24, 356, 48, -1.2, 8, 5, ginkgo);
   paintTree(g, rnd, 378, 358, 48, -1.95, 8, 5, ginkgo);
 
+  // 맨 앞 흰 대리석 난간: 연꽃 머리 기둥 사이로 판이 이어짐 (가까워서 크고 또렷함)
+  const railTop = 298;
+  g.fillStyle = "#f4f1e8";
+  g.fillRect(left, railTop + 4, size, 3);
+  g.fillRect(left, railTop + 14, size, 4);
+  for (let x = left + 4; x < right; x += 26) {
+    g.fillStyle = "#ebe6da";
+    g.fillRect(x + 4, railTop + 7, 18, 7);
+    g.strokeStyle = "rgba(150,140,120,0.5)";
+    g.lineWidth = 0.6;
+    g.strokeRect(x + 6, railTop + 8.5, 14, 4);
+    g.fillStyle = "#f8f6ef";
+    g.fillRect(x - 2, railTop, 5, 20);
+    g.beginPath();
+    g.ellipse(x + 0.5, railTop - 1, 3.4, 3, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "rgba(140,130,110,0.35)";
+    g.fillRect(x + 1.5, railTop + 1, 1.5, 19);
+  }
+
+  // 위에서 늘어진 버드나무 가지가 화면을 액자처럼 감쌈
+  willow(g, rnd, left + 10, top + 40, 1);
+  willow(g, rnd, right - 10, top + 40, -1);
+
   // 바닥: 은행잎이 깔린 돌마당
   const floorTop = groundAt(globe.x);
   const floor = g.createLinearGradient(0, floorTop, 0, floorTop + 60);
@@ -95,6 +119,29 @@ function paintForbidden(g, globe, groundAt) {
   g.globalAlpha = 1;
 
   g.restore();
+}
+
+// 버드나무 가지: 위에서 아래로 늘어진 가는 줄기와 연둣빛 잎
+function willow(g, rnd, x, y, dir) {
+  for (let i = 0; i < 9; i++) {
+    const sx = x + dir * i * 7;
+    const len = 60 + rnd() * 70;
+    const sway = dir * (8 + rnd() * 14);
+    g.strokeStyle = "rgba(90,80,40,0.8)";
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.moveTo(sx, y - 20);
+    g.quadraticCurveTo(sx + sway, y + len * 0.4, sx + sway * 0.6, y + len);
+    g.stroke();
+    for (let t = 0.1; t < 1; t += 0.06) {
+      const px = (1 - t) ** 2 * sx + 2 * (1 - t) * t * (sx + sway) + t * t * (sx + sway * 0.6);
+      const py = (1 - t) ** 2 * (y - 20) + 2 * (1 - t) * t * (y + len * 0.4) + t * t * (y + len);
+      g.fillStyle = ["#b8c44a", "#cfd35a", "#a9b440", "#e0d070"][Math.floor(rnd() * 4)];
+      g.beginPath();
+      g.ellipse(px + dir * 1.5, py, 1, 3, dir * 0.4, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
 }
 
 // 태화전: 3단 흰 대리석 기단, 붉은 기둥과 벽, 처마가 들린 2층 황금 지붕
@@ -347,8 +394,8 @@ export const forbidden = {
     body: ["#03100b", "#123a2b", "#1b4c39", "#0c2a1f", "#020a06"],
     collar: "#06150f",
     trim: ["#7a5a1c", "#f2d17a", "#c99a35", "#6b4d16"],
-    plate: "故宫 · FORBIDDEN CITY",
-    plateFont: "600 12px 'Songti SC', 'SimSun', serif",
+    plate: "故宫",
+    plateFont: "600 17px 'Songti SC', 'STSong', 'SimSun', serif",
     plateInk: "#2b1d10",
   },
   // 은행잎은 단풍잎보다 작고 가벼워서 팔랑이며 천천히 내림

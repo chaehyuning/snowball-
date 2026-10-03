@@ -128,6 +128,27 @@ function paintSanta(g, globe, groundAt) {
 
   lights = [];
 
+  // 앞에서 본관 문까지 좁아지며 이어지는 눈길과 썰매 자국 (원근감)
+  const path = g.createLinearGradient(0, 278, 0, 330);
+  path.addColorStop(0, "#e6ecf4");
+  path.addColorStop(1, "#cbd7e6");
+  g.fillStyle = path;
+  g.beginPath();
+  g.moveTo(194, 278);
+  g.lineTo(206, 278);
+  g.lineTo(262, 330);
+  g.lineTo(138, 330);
+  g.closePath();
+  g.fill();
+  g.strokeStyle = "rgba(120,145,185,0.55)";
+  g.lineWidth = 0.8;
+  for (const k of [-0.35, -0.25, 0.25, 0.35]) {
+    g.beginPath();
+    g.moveTo(200 + k * 12, 279);
+    g.lineTo(200 + k * 124, 330);
+    g.stroke();
+  }
+
   // 왼쪽: 산타클로스 중앙우체국과 빨간 우체통
   cabin(g, 102, 282, 42, 22, 20);
   sign(g, 102, 256, 22, 6, "#b52a2a", "POST", 4.5);
@@ -198,6 +219,14 @@ function paintSanta(g, globe, groundAt) {
   g.textBaseline = "middle";
   g.fillText("ARCTIC CIRCLE", 255, 256);
   g.fillText("66°33′07″", 255, 260);
+
+  // 길가 가로등: 멀수록 작게
+  for (const k of [0.25, 0.55, 0.9]) {
+    const y = 278 + 52 * k;
+    const half = 6 + 56 * k;
+    const sc = 0.35 + 0.65 * k;
+    for (const side of [-1, 1]) streetLamp(g, 200 + side * (half + 6 * sc), y, sc);
+  }
 
   snowman(g, 228, 304);
 
@@ -360,6 +389,26 @@ function sign(g, x, y, w, h, color, text, fontSize) {
   g.textAlign = "center";
   g.textBaseline = "middle";
   g.fillText(text, x, y + 0.3);
+}
+
+// 눈 덮인 갓이 달린 가로등. sc는 원근에 따른 크기
+function streetLamp(g, x, baseY, sc) {
+  const h = 34 * sc;
+  g.fillStyle = "#2a2f3a";
+  g.fillRect(x - 0.8 * sc, baseY - h, 1.6 * sc, h);
+  const glow = g.createRadialGradient(x, baseY - h, 0, x, baseY - h, 10 * sc);
+  glow.addColorStop(0, "rgba(255,214,140,0.85)");
+  glow.addColorStop(1, "rgba(255,214,140,0)");
+  g.fillStyle = glow;
+  g.fillRect(x - 10 * sc, baseY - h - 10 * sc, 20 * sc, 20 * sc);
+  g.fillStyle = "#ffe0a0";
+  g.beginPath();
+  g.arc(x, baseY - h, 2.2 * sc, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#ffffff";
+  g.beginPath();
+  g.ellipse(x, baseY - h - 2.4 * sc, 3.2 * sc, 1.4 * sc, 0, Math.PI, 0);
+  g.fill();
 }
 
 // 편지를 넣는 빨간 우체통
@@ -599,8 +648,8 @@ export const santa = {
     body: ["#8b96a3", "#dde4ec", "#f7f9fb", "#c4ced9", "#7f8b98"],
     collar: "#aab4c0",
     trim: ["#7a1c1c", "#e25555", "#b52a2a", "#6a1515"],
-    plate: "SANTA CLAUS VILLAGE · ROVANIEMI",
-    plateFont: "600 10px 'Helvetica Neue', Arial, sans-serif",
+    plate: "Joulupukin Pajakylä",
+    plateFont: "600 13px 'Helvetica Neue', Arial, sans-serif",
     plateInk: "#ffffff",
   },
   // 눈꽃은 가볍고 천천히 돌며 내림

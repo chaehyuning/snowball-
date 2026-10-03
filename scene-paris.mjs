@@ -385,8 +385,8 @@ export const paris = {
     body: ["#0a0608", "#2a1a22", "#3a2430", "#1c1016", "#060304"],
     collar: "#140a0e",
     trim: ["#7a3a3a", "#f2b8a8", "#c97c74", "#6b3030"],
-    plate: "TOUR EIFFEL · PARIS",
-    plateFont: "italic 600 13px 'Didot', 'Bodoni 72', Georgia, serif",
+    plate: "Tour Eiffel",
+    plateFont: "italic 600 16px 'Didot', 'Bodoni 72', Georgia, serif",
     plateInk: "#3a0d18",
   },
   // 장미 꽃잎은 벚꽃잎보다 크고 도톰해서 조금 더 빨리 떨어짐

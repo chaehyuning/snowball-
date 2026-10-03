@@ -53,40 +53,64 @@ function paintFuji(g, globe, groundAt) {
   g.fillStyle = mist;
   g.fillRect(left, 235, size, 90);
 
+  // 주레이토 탑 구도: 언덕 위에서 내려다봄.
+  // 뒤에서 앞으로: 후지산 → 골짜기의 흐린 후지요시다 마을 → 오층탑 → 발아래 벚꽃 구름
+
   // 먼 산줄기
-  const farY = (x) => 280 + 7 * Math.sin(x * 0.03 + 1) + 3 * Math.sin(x * 0.09);
-  g.fillStyle = "rgba(128,146,172,0.8)";
+  const farY = (x) => 272 + 6 * Math.sin(x * 0.03 + 1) + 3 * Math.sin(x * 0.09);
+  g.fillStyle = "rgba(128,146,172,0.75)";
   fillSilhouette(g, farY, left, right, 400);
 
-  const mist2 = g.createLinearGradient(0, 275, 0, 305);
+  // 골짜기 마을: 작은 지붕들이 안개에 묻혀 흐릿함
+  for (let i = 0; i < 90; i++) {
+    const x = r(left, right);
+    const y = r(276, 292);
+    const w = r(3, 7);
+    g.globalAlpha = 0.45 + (y - 276) / 40;
+    g.fillStyle = ["#9aa3b8", "#b4a9b6", "#8e9bb0"][Math.floor(rnd() * 3)];
+    g.fillRect(x, y, w, 2.5);
+    g.fillStyle = "#e9e3e8";
+    g.fillRect(x, y + 2.5, w, 2);
+  }
+  g.globalAlpha = 1;
+
+  const mist2 = g.createLinearGradient(0, 268, 0, 300);
   mist2.addColorStop(0, "rgba(248,228,234,0)");
-  mist2.addColorStop(1, "rgba(248,228,234,0.7)");
+  mist2.addColorStop(1, "rgba(248,228,234,0.6)");
   g.fillStyle = mist2;
-  g.fillRect(left, 270, size, 50);
+  g.fillRect(left, 266, size, 40);
 
-  // 가까운 언덕과 숲, 군데군데 핀 벚나무
-  const nearY = (x) => 300 + 9 * Math.sin(x * 0.025 + 2) + 3 * Math.sin(x * 0.11);
-  g.fillStyle = "#62806a";
-  fillSilhouette(g, nearY, left, right, 400);
-  paintPagoda(g, 258, nearY(258) + 4, 0.85);
+  // 탑이 선 언덕 비탈 (오른쪽 앞)
+  const slopeY = (x) => 300 - 0.0016 * (x - 290) ** 2;
+  g.fillStyle = "#5d7d64";
+  fillSilhouette(g, slopeY, 190, right, 400);
 
-  // 숲: 작은 나무 덩어리를 뒷줄(어둡게)과 앞줄(밝게)로 겹쳐 찍음
-  for (const row of [0, 1]) {
-    for (let x = left; x < right; x += r(2, 5)) {
-      if (Math.abs(x - 258) < 10 && row === 0) continue; // 탑 앞은 비워 둠
-      const pink = rnd() < 0.25;
-      const greens = row ? ["#5f7f66", "#6d8d72", "#7b9a7c"] : ["#46644f", "#4f6e58", "#58775f"];
-      g.fillStyle = pink ? SAKURA_COLORS[2 + Math.floor(rnd() * 3)] : greens[Math.floor(rnd() * 3)];
-      g.beginPath();
-      g.arc(x, nearY(x) + 2 + row * 6 + r(-1, 1), r(2.5, 5.5), 0, Math.PI * 2);
-      g.fill();
+  // 오층탑: 가까워서 크고 진하게
+  paintPagoda(g, 284, 300, 1.55);
+
+  // 발아래 벚꽃 구름: 내려다본 벚나무 꼭대기들이 화면 아래를 덮음
+  for (let c = 0; c < 46; c++) {
+    const cx = r(left, right);
+    const cy = r(296, 326);
+    const cr = r(10, 22) * (0.7 + (cy - 296) / 60);
+    for (const pass of [0, 1]) {
+      const count = Math.round(cr * (pass ? 2.4 : 1.4));
+      for (let i = 0; i < count; i++) {
+        const a = r(0, Math.PI * 2);
+        const d = Math.sqrt(rnd()) * cr;
+        g.globalAlpha = pass ? r(0.7, 0.95) : 0.55;
+        g.fillStyle = pass ? SAKURA_COLORS[Math.floor(rnd() * 4)] : "#d97f9c";
+        g.beginPath();
+        g.arc(cx + Math.cos(a) * d + (pass ? -1 : 1.5), cy + Math.sin(a) * d * 0.7 + (pass ? -1 : 1.5), r(1.4, 3.2), 0, Math.PI * 2);
+        g.fill();
+      }
     }
   }
+  g.globalAlpha = 1;
 
-  // 앞쪽 벚나무 두 그루가 양옆에서 풍경을 감쌈
+  // 왼쪽 위에서 늘어진 벚나무 가지가 앞을 감쌈
   const cherry = { trunk: "#3e2c2c", shade: "#d97f9c", colors: SAKURA_COLORS.slice(0, 4) };
-  paintTree(g, rnd, 34, 352, 50, -1.3, 7, 5, cherry);
-  paintTree(g, rnd, 368, 354, 50, -1.85, 7, 5, cherry);
+  paintTree(g, rnd, 22, 300, 52, -0.75, 7, 5, cherry);
 
   // 꽃잎이 깔린 바닥
   const floorTop = groundAt(globe.x);
@@ -259,8 +283,8 @@ export const fuji = {
     body: ["#0e0809", "#3a2426", "#4a2f30", "#24161a", "#0b0607"],
     collar: "#1d1214",
     trim: ["#7a5a1c", "#f2d17a", "#c99a35", "#6b4d16"],
-    plate: "富士山 · MT. FUJI",
-    plateFont: "600 13px 'Hiragino Mincho ProN', 'Yu Mincho', serif",
+    plate: "富士山",
+    plateFont: "600 17px 'Hiragino Mincho ProN', 'Yu Mincho', serif",
     plateInk: "#2b1d10",
   },
   // 꽃잎은 눈보다 가볍고 넓어서 천천히 가라앉고 물살을 잘 탄다
