@@ -921,7 +921,7 @@ body {
     width: min(calc(100vw - 32px), calc((100vh - 320px) / 1.5), 400px);
   }
 
-  /* 나라는 5개·4개 두 줄, 그 아래 지구본 버튼을 따로 */
+  /* 지구본 버튼 아래 나라 5열 2줄 */
   .scenes {
     align-items: center;
     gap: 12px;
@@ -936,10 +936,17 @@ body {
   }
 
   .scenes-or {
+    order: -1;
     width: 180px;
   }
 
+  .deco-left {
+    display: none;
+  }
+
+  /* 폰에서는 지구본 버튼이 먼저, 그 아래 or, 나라 격자 */
   .scenes .globe-open {
+    order: -2;
     width: auto;
     height: 36px;
   }
@@ -1121,67 +1128,7 @@ body {
   }
 }
 
-/* 여권 도장 수 배지 */
-.passport-toggle {
-  position: relative;
-}
-
-.passport-count {
-  position: absolute;
-  right: -4px;
-  bottom: -4px;
-  min-width: 22px;
-  padding: 1px 4px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #111;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 14px;
-  text-align: center;
-}
-
-/* 도장 알림 */
-.stamp-toast {
-  position: fixed;
-  left: 50%;
-  top: calc(64px + env(safe-area-inset-top, 0px));
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px 8px 8px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(20, 20, 24, 0.92);
-  color: var(--ink);
-  font-size: 13px;
-  transform: translate(-50%, -20px);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform 0.35s ease, opacity 0.35s ease;
-}
-
-.stamp-toast.show {
-  transform: translate(-50%, 0);
-  opacity: 1;
-}
-
-.stamp-toast-icon {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 2px solid var(--accent);
-  border-radius: 50%;
-}
-
-.stamp-toast-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* 여권·엽서 창: 도움말 창 모양을 어두운 톤으로 */
+/* 엽서 창: 도움말 창 모양을 밝은 종이 톤으로 */
 .keep-modal .help-card {
   width: min(420px, 100%);
   max-height: calc(100vh - 32px);
@@ -1189,94 +1136,19 @@ body {
   background: #f8f3e8;
 }
 
-.passport-kicker {
+.postcard-kicker {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.24em;
   color: #b0763a;
 }
 
-.passport-sub {
+.postcard-sub {
   margin-top: 4px;
   font-size: 13px;
   line-height: 1.5;
   color: #5a4e5c;
   word-break: keep-all;
-}
-
-.passport-bar {
-  height: 6px;
-  margin-top: 14px;
-  border-radius: 3px;
-  background: #e6dccb;
-  overflow: hidden;
-}
-
-.passport-bar span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, #b0763a, #e0a63a);
-  transition: width 0.6s ease;
-}
-
-.passport-progress {
-  margin-top: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #2a2130;
-}
-
-.passport-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px 6px;
-  margin-top: 14px;
-}
-
-.passport-stamp {
-  display: grid;
-  justify-items: center;
-  gap: 3px;
-  text-align: center;
-  opacity: 0.4;
-}
-
-.passport-stamp.got {
-  opacity: 1;
-}
-
-.stamp-ring {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border: 2px dashed #9a8e98;
-  border-radius: 50%;
-  filter: grayscale(1);
-}
-
-.passport-stamp.got .stamp-ring {
-  border: 3px double var(--stamp);
-  background: color-mix(in srgb, var(--stamp) 14%, #fff);
-  filter: none;
-  transform: rotate(var(--tilt));
-}
-
-.stamp-ring svg {
-  width: 28px;
-  height: 28px;
-}
-
-.stamp-name {
-  font-size: 10px;
-  font-weight: 700;
-  color: #2a2130;
-}
-
-.stamp-date {
-  font-size: 9px;
-  color: #7a6e7c;
-  font-variant-numeric: tabular-nums;
 }
 
 .postcard-field {
@@ -1318,13 +1190,3 @@ body {
   opacity: 0.4;
 }
 
-@media (max-width: 640px) {
-  .passport-grid {
-    gap: 10px 4px;
-  }
-
-  .stamp-ring {
-    width: 44px;
-    height: 44px;
-  }
-}
