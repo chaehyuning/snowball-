@@ -37,10 +37,23 @@
       <rect width="1600" height="1000" filter="url(#grain)" opacity="0.05" />
     </svg>
 
+    <!-- 편집 디자인처럼 화면을 나누는 가는 기준선 -->
+    <div class="rules" aria-hidden="true"></div>
+
     <header class="masthead">
-      <span class="brand">❄ SNOWBALL</span>
-      <span class="edition">9 LANDMARKS · IN GLASS</span>
+      <span class="brand">❄ SNOWBALL <em>Vol. 01</em></span>
+      <span class="edition"><span class="edition-index"></span><span class="edition-coord"></span></span>
     </header>
+
+    <aside class="meta" aria-label="장면 정보">
+      <p class="meta-num"><span class="meta-index"></span><span class="meta-total"></span></p>
+      <p class="meta-title"></p>
+      <p class="meta-region"></p>
+      <dl class="meta-list">
+        <dt>Coordinates</dt><dd class="meta-coord"></dd>
+        <dt>Falling</dt><dd class="meta-particle"></dd>
+      </dl>
+    </aside>
 
     <p class="deco deco-left" aria-hidden="true"><span class="deco-script">L</span><span class="deco-sans">et it snow</span><span class="deco-sub">Press, hold, and let it fall.</span></p>
     <p class="deco deco-right" aria-hidden="true"><span class="deco-script">W</span><span class="deco-sans">onders</span><span class="deco-sub">Fuji · Namsan · Québec · Sydney<br />Rovaniemi · Beijing · Giza · Paris · İstanbul</span></p>
@@ -70,6 +83,7 @@
         </button>
       </div>
       <div class="stage">
+        <p class="ghost" aria-hidden="true"></p>
         <canvas id="globe"></canvas>
         <p class="scene-name" id="scene-name" aria-live="polite"></p>
       </div>
@@ -149,6 +163,7 @@
       </nav>
     </div>
 
+    <div class="ticker" aria-hidden="true"><div class="ticker-track"></div></div>
     <footer class="colophon">© 2026 SNOWBALL. ALL RIGHTS RESERVED.</footer>
 
     <script src="./index.mjs" type="module"></script>

@@ -19,16 +19,26 @@
   font-display: swap;
 }
 
+/* 장면 색이 바뀔 때 부드럽게 번지도록 색 변수로 등록 */
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ffd27a;
+}
+
 :root {
+  --accent: #ffd27a;
   --ink: #ecebe8;
   --ink-dim: rgba(236, 235, 232, 0.55);
   --ink-faint: rgba(236, 235, 232, 0.28);
   --line: rgba(236, 235, 232, 0.16);
+  --line-faint: rgba(236, 235, 232, 0.05);
   --glass: rgba(255, 255, 255, 0.045);
   --bg: #0d0d0f;
   --sans: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --script: "Pinyon Script", "Snell Roundhand", cursive;
   color-scheme: dark;
+  transition: --accent 1.2s ease;
 }
 
 /* 바탕색은 html에 칠해야 그 위의 빛줄기(z-index -1)가 가려지지 않음 */
@@ -43,7 +53,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 64px 16px 52px;
+  position: relative;
+  padding: 64px 16px 84px;
   overflow-x: hidden;
   color: var(--ink);
   font-family: var(--sans);
@@ -93,9 +104,190 @@ body {
   pointer-events: none;
 }
 
-.edition {
+.brand em {
+  margin-left: 10px;
+  font-style: normal;
   font-weight: 500;
+  color: var(--ink-faint);
+}
+
+.edition {
+  display: flex;
+  gap: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-dim);
+}
+
+.edition-index {
+  color: var(--ink);
+}
+
+/* 가는 기준선: 세로 네 칸 + 머리·발 가로줄 */
+.rules {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--line-faint), var(--line-faint)) 0 48px / 100% 1px no-repeat,
+    linear-gradient(var(--line-faint), var(--line-faint)) 0 calc(100% - 64px) / 100% 1px no-repeat,
+    linear-gradient(90deg, var(--line-faint) 1px, transparent 1px) 0 0 / 25% 100%;
+  background-position-x: 0, 0, 25%;
+}
+
+/* 스노우볼 뒤에 장면 색으로 번지는 빛 */
+.stage {
+  position: relative;
+}
+
+.stage::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  z-index: -1;
+  width: 130%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 26%, transparent), transparent 62%);
+  pointer-events: none;
+}
+
+/* 스노우볼 뒤에 크게 깔리는 필기체 지명 */
+.ghost {
+  position: absolute;
+  left: 50%;
+  top: 4%;
+  z-index: -1;
+  transform: translateX(-50%);
+  font-family: var(--script);
+  font-size: clamp(120px, 15vw, 230px);
+  line-height: 1;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(236, 235, 232, 0.16);
+  pointer-events: none;
+}
+
+.ghost-in {
+  animation: ghost-in 1.1s ease-out;
+}
+
+@keyframes ghost-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px);
+  }
+}
+
+/* 왼쪽 아래 장면 정보 */
+.meta {
+  position: absolute;
+  left: clamp(16px, 4vw, 72px);
+  bottom: 110px;
+  width: 230px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.meta-num {
+  font-size: 44px;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta-total {
+  margin-left: 6px;
+  font-size: 13px;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+}
+
+.meta-title {
+  margin-top: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.meta-region {
+  margin-top: 2px;
+  color: var(--ink-dim);
+}
+
+.meta-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+.meta-list dt {
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+  align-self: center;
+}
+
+.meta-list dd {
+  color: var(--ink-dim);
+  white-space: pre;
+}
+
+.meta-particle::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* 아래쪽에 천천히 흐르는 랜드마크 이름 띠 */
+.ticker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: 22px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-faint);
+  animation: ticker 70s linear infinite;
+}
+
+.ticker-track i {
+  font-style: normal;
+  color: var(--accent);
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .colophon {
@@ -121,8 +313,7 @@ body {
 
 .deco-left {
   left: clamp(16px, 4vw, 72px);
-  top: 50%;
-  transform: translateY(-60%);
+  top: 22%;
 }
 
 .deco-right {
@@ -161,10 +352,40 @@ body {
   color: var(--ink-dim);
 }
 
-/* 장식 글씨가 버튼과 겹칠 만큼 좁아지면 숨김 */
+/* 장식 글씨와 장면 정보가 버튼과 겹칠 만큼 좁아지면 숨김 */
 @media (max-width: 1180px) {
-  .deco {
+  .deco-right,
+  .meta {
     display: none;
+  }
+
+  .deco-left .deco-sub {
+    display: none;
+  }
+
+  /* 왼쪽 글씨는 작게 줄여서 위쪽 오른편에 둠 */
+  .deco-left {
+    position: absolute;
+    top: 50px;
+    left: auto;
+    right: 16px;
+    z-index: 0;
+  }
+
+  .deco-left .deco-script {
+    font-size: 64px;
+  }
+
+  .deco-left .deco-sans {
+    font-size: 22px;
+    margin-bottom: 0.3em;
+  }
+}
+
+@media (max-width: 1180px) and (min-width: 641px) {
+  .deco-left {
+    top: 40px;
+    right: 32px;
   }
 }
 
@@ -279,7 +500,9 @@ body {
   }
 
   .silk-drift-a,
-  .silk-drift-b {
+  .silk-drift-b,
+  .ticker-track,
+  .ghost-in {
     animation: none;
   }
 }
@@ -433,6 +656,16 @@ body {
 
 /* 좁은 화면: 설정은 스노우볼 위 왼쪽에 가로로, 나라는 아래에 5열 2줄 */
 @media (max-width: 640px) {
+  /* 큰 필기체 지명이 화면 밖으로 넘쳐 가로 스크롤이 생기지 않게 */
+  .stage {
+    overflow-x: clip;
+  }
+
+  .edition-coord,
+  .brand em {
+    display: none;
+  }
+
   #app {
     grid-template-columns: 1fr;
     grid-template-areas: "tools" "stage" "scenes";
@@ -446,7 +679,7 @@ body {
   }
 
   #globe {
-    width: min(calc(100vw - 32px), calc((100vh - 230px) / 1.5), 400px);
+    width: min(calc(100vw - 32px), calc((100vh - 270px) / 1.5), 400px);
   }
 
   .scenes {
