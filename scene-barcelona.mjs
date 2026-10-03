@@ -1,4 +1,4 @@
-// 스페인: 바르셀로나 사그라다 파밀리아 실내. 금빛 별 천장과 나무처럼 갈라지는 기둥,
+// 스페인: 바르셀로나 사그라다 파밀리아 실내. 금빛 별 천장,
 // 제단 쪽 벽의 장미창과 스테인드글라스, 흩날리는 유리 조각
 
 import { seeded, fillSilhouette } from "./util.mjs";
@@ -6,7 +6,7 @@ import { seeded, fillSilhouette } from "./util.mjs";
 const JEWEL = ["#2f6fd6", "#1aa3a0", "#3cbf6a", "#7fd0f0", "#f2b632", "#f06a2a", "#d8324a", "#ffd86a"];
 
 // 신랑에서 제단 쪽 벽을 올려다본 구도:
-// 위로 모이는 나무 기둥 → 금빛 별 천장 → 큰 장미창 → 두 쌍의 긴 창 → 성가대 회랑 → 아래 문과 작은 장미창
+// 금빛 별 천장 → 큰 장미창 → 두 쌍의 긴 창 → 성가대 회랑 → 아래 문과 작은 장미창
 function paintBarcelona(g, globe, groundAt) {
   const rnd = seeded(1882);
   const r = (a, b) => a + rnd() * (b - a);
@@ -89,7 +89,7 @@ function paintBarcelona(g, globe, groundAt) {
   }
   g.restore();
 
-  // 제단 쪽 벽: 크림색 돌, 세로 기둥띠와 위쪽 아치
+  // 제단 쪽 벽: 크림색 돌, 세로 띠와 위쪽 아치
   const wall = g.createLinearGradient(0, 150, 0, 330);
   wall.addColorStop(0, "#f6ead6");
   wall.addColorStop(1, "#dcc6a4");
@@ -155,12 +155,12 @@ function paintBarcelona(g, globe, groundAt) {
   roseWindow(g, 200, 308, 11, ["#1f5fc9", "#2f86e0", "#7fd0f0", "#1aa3a0"]);
 
   // 양옆 벽의 색유리: 왼쪽(동쪽)은 파랑·초록, 오른쪽(서쪽)은 빨강·주황·노랑.
-  // 기둥 사이 틈으로 곧게 선 창이 보이고, 가운데(먼 쪽)로 갈수록 작아짐
+  // 양옆 벽에 곧게 선 창. 가운데(먼 쪽)로 갈수록 작아짐
   const coolGlass = ["#1f5fc9", "#2f86e0", "#1aa3a0", "#3cbf6a", "#7fd0f0", "#9ad84a"];
   const warmGlass = ["#d8324a", "#e0531f", "#f08a24", "#f2b632", "#ffd86a", "#c2185b"];
   for (const side of [-1, 1]) {
     const palette = side < 0 ? coolGlass : warmGlass;
-    // 기둥 사이 틈으로 보이는 창. 멀수록(가운데로 갈수록) 작고 높음. 기울이지 않고 곧게 세움
+    // 멀수록(가운데로 갈수록) 작고 높음. 기울이지 않고 곧게 세움
     for (const [gx, w, h, top] of [
       [96, 15, 62, 186],
       [132, 10, 46, 198],
@@ -188,14 +188,6 @@ function paintBarcelona(g, globe, groundAt) {
     g.restore();
   }
 
-  // 나무 기둥: 아래에서 올려다봐서 위로 갈수록 가운데로 모임. 먼 것부터
-  for (const [bx, tx, w, d] of [
-    [116, 142, 22, 0.6],
-    [50, 100, 34, 1],
-  ]) {
-    leaningColumn(g, bx, tx, 372, 110, w, -1, d);
-    leaningColumn(g, 400 - bx, 400 - tx, 372, 110, w, 1, d);
-  }
   // 바닥: 따뜻한 돌. 창빛이 색 웅덩이로 비침
   const floorTop = groundAt(globe.x);
   const floor = g.createLinearGradient(0, floorTop - 40, 0, globe.y + globe.r);
@@ -348,155 +340,6 @@ function roseWindow(g, cx, cy, rr, palette) {
   g.fill();
 }
 
-// 올려다본 나무 기둥: 곧은 막대가 아니라 아래가 불룩하고 위로 갈수록 가늘어지며 살짝 휘는 몸통.
-// 여러 면으로 깎인 기둥이라 면마다 밝기가 다르고, 가운데(제단 빛) 쪽이 밝고 바깥쪽은 깊은 그늘.
-// 아래는 짙은 회색 반암, 마디 위는 크림색 사암. 마디에서 굵은 가지가 천장으로 퍼지고, 가지 사이 천장엔 그늘이 짐
-function leaningColumn(g, bx, tx, baseY, topY, w, side, d) {
-  const knotY = topY + (baseY - topY) * 0.3;
-  const bend = -side * w * 0.08;
-  const xAt = (y) => {
-    const t = (baseY - y) / (baseY - topY);
-    return bx + (tx - bx) * t + Math.sin(t * Math.PI) * bend;
-  };
-  const wAt = (y) => {
-    const t = (baseY - y) / (baseY - topY);
-    return w * (1 - 0.15 * t);
-  };
-  const outline = (y0, y1) => {
-    g.beginPath();
-    for (let y = y1; y >= y0; y -= 3) g.lineTo(xAt(y) - wAt(y) / 2, y);
-    for (let y = y0; y <= y1; y += 3) g.lineTo(xAt(y) + wAt(y) / 2, y);
-    g.closePath();
-  };
-
-  g.save();
-  // 뒤 벽에 드리운 그림자: 바깥쪽으로 번진 어두운 띠
-  g.save();
-  g.filter = `blur(${3 + 4 * d}px)`;
-  g.fillStyle = `rgba(50,30,15,${0.22 + 0.15 * d})`;
-  g.translate(-side * w * 0.7, 4);
-  outline(topY, baseY);
-  g.fill();
-  g.restore();
-
-  g.globalAlpha = 0.88 + 0.12 * d;
-  // 둥근 몸통: 가운데(제단 빛) 쪽에 밝은 줄이 서고 바깥으로 둥글게 어두워짐. 위로 갈수록 빛을 받아 밝음
-  const paintPart = (y0, y1, hi, mid, lo) => {
-    g.save();
-    outline(y0, y1);
-    g.clip();
-    const yc = (y0 + y1) / 2;
-    const x0 = xAt(yc) - wAt(yc) * 0.6;
-    const x1 = xAt(yc) + wAt(yc) * 0.6;
-    const round = g.createLinearGradient(side < 0 ? x1 : x0, 0, side < 0 ? x0 : x1, 0);
-    round.addColorStop(0, mid);
-    round.addColorStop(0.18, hi);
-    round.addColorStop(0.45, mid);
-    round.addColorStop(1, lo);
-    g.fillStyle = round;
-    g.fillRect(x0 - 10, y0 - 4, x1 - x0 + 20, y1 - y0 + 8);
-    const vertical = g.createLinearGradient(0, y0, 0, y1);
-    vertical.addColorStop(0, "rgba(255,240,215,0.18)");
-    vertical.addColorStop(1, "rgba(20,15,15,0.25)");
-    g.fillStyle = vertical;
-    g.fillRect(x0 - 10, y0 - 4, x1 - x0 + 20, y1 - y0 + 8);
-    // 창 쪽 가장자리에 비친 색빛
-    const tint = g.createLinearGradient(side < 0 ? x0 : x1, 0, xAt(yc), 0);
-    tint.addColorStop(0, side < 0 ? "rgba(70,150,230,0.3)" : "rgba(240,120,60,0.3)");
-    tint.addColorStop(1, "rgba(0,0,0,0)");
-    g.fillStyle = tint;
-    g.fillRect(x0 - 10, y0 - 4, x1 - x0 + 20, y1 - y0 + 8);
-    g.restore();
-  };
-  paintPart(knotY, baseY, "#b4b6bc", "#7a7c84", "#3a3b42");
-  // 마디 위 크림색 몸통은 짧게: 곧 굵은 가지 서너 갈래로 나뉨
-  const splitY = knotY - (knotY - topY) * 0.35;
-  paintPart(splitY, knotY, "#fff6e6", "#dccaa8", "#9a8160");
-  // 깎인 면의 모서리: 몸통을 따라 휘는 아주 옅은 세로줄 (가장자리로 갈수록 촘촘)
-  g.lineWidth = Math.max(0.3, w * 0.02);
-  for (const f of [-0.3, 0, 0.3]) {
-    g.strokeStyle = f * side < 0 ? "rgba(255,250,240,0.1)" : "rgba(0,0,0,0.08)";
-    g.beginPath();
-    for (let y = baseY; y >= splitY; y -= 4) g.lineTo(xAt(y) + f * wAt(y), y);
-    g.stroke();
-  }
-  // 마디: 몸통이 살짝 부풀어 오른 둥근 띠. 위는 밝고 아래 가장자리는 그늘
-  const kx = xAt(knotY);
-  const kw = wAt(knotY);
-  const knot = g.createLinearGradient(0, knotY - kw * 0.2, 0, knotY + kw * 0.2);
-  knot.addColorStop(0, "#d8d2c4");
-  knot.addColorStop(0.5, "#9b968c");
-  knot.addColorStop(1, "#4a4a50");
-  g.fillStyle = knot;
-  g.beginPath();
-  g.ellipse(kx, knotY, kw * 0.6, kw * 0.18, 0, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = "rgba(20,18,22,0.3)";
-  g.beginPath();
-  g.ellipse(kx, knotY + kw * 0.18, kw * 0.55, kw * 0.06, 0, 0, Math.PI * 2);
-  g.fill();
-
-  // 가지: 몸통이 그대로 갈라진 굵은 가지 네 갈래. 바깥 가지는 옆으로 눕고 안쪽 가지는 곧게 오름.
-  // 가지마다 중간에서 다시 두 갈래로 나뉘어 천장을 받침. 아랫면 그늘 → 크림색 몸 → 윗면 빛
-  g.globalAlpha = 1;
-  const sx = xAt(splitY);
-  const sw = wAt(splitY);
-  const ao = g.createRadialGradient(sx, splitY - 30, 0, sx, splitY - 30, 70);
-  ao.addColorStop(0, "rgba(120,80,30,0.12)");
-  ao.addColorStop(1, "rgba(90,60,30,0)");
-  g.fillStyle = ao;
-  g.fillRect(sx - 70, splitY - 100, 140, 140);
-  const limb = (x0, y0, cx, cy, ex, ey, w0, w1) => {
-    const pt = (t) => {
-      const u = 1 - t;
-      return [u * u * x0 + 2 * u * t * cx + t * t * ex, u * u * y0 + 2 * u * t * cy + t * t * ey];
-    };
-    const steps = 10;
-    // 양옆 윤곽을 따라 채운 테이퍼 모양 (선이 아니라 면이라 마디가 생기지 않음)
-    const leftEdge = [];
-    const rightEdge = [];
-    for (let k = 0; k <= steps; k++) {
-      const t = k / steps;
-      const [px, py] = pt(t);
-      const [qx, qy] = pt(Math.min(1, t + 0.01));
-      const ang = Math.atan2(qy - py, qx - px) + Math.PI / 2;
-      const half = (w0 + (w1 - w0) * t) / 2;
-      leftEdge.push([px + Math.cos(ang) * half, py + Math.sin(ang) * half]);
-      rightEdge.push([px - Math.cos(ang) * half, py - Math.sin(ang) * half]);
-    }
-    const shape = () => {
-      g.beginPath();
-      leftEdge.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py)));
-      for (let i = rightEdge.length - 1; i >= 0; i--) g.lineTo(...rightEdge[i]);
-      g.closePath();
-    };
-    const body = g.createLinearGradient(x0 - w0, 0, x0 + w0, 0);
-    body.addColorStop(0, side < 0 ? "#a88f6c" : "#fff6e6");
-    body.addColorStop(0.5, "#e6d7ba");
-    body.addColorStop(1, side < 0 ? "#fff6e6" : "#a88f6c");
-    g.fillStyle = body;
-    shape();
-    g.fill();
-    g.strokeStyle = "rgba(110,85,55,0.35)";
-    g.lineWidth = 0.5;
-    g.stroke();
-    return pt;
-  };
-  for (const [dx, rise] of [[-1.2, 0.6], [0, 0.95], [1.2, 0.6]]) {
-    const ex = sx + dx * sw * 1.4;
-    const ey = splitY - (splitY - 50) * rise;
-    const pt = limb(sx + dx * sw * 0.18, splitY + 2, sx + dx * sw * 0.55, splitY - (splitY - ey) * 0.4, ex, ey, sw * 0.34, sw * 0.16);
-    const [fx, fy] = pt(1);
-    if (Math.abs(dx) < 0.5) continue; // 가운데 가지만 곧게, 바깥 가지만 끝에서 두 갈래
-    for (const fork of [-1, 1]) {
-      const tx2 = fx + (fork * 0.6 + dx * 0.4) * sw * 0.9;
-      const ty2 = fy - (fy - 40) * 0.6 - 4;
-      limb(fx, fy, fx + fork * sw * 0.2, fy - 8, tx2, ty2, sw * 0.16, sw * 0.06);
-    }
-  }
-  g.restore();
-}
-
 // 스테인드글라스 창: 위가 둥근 긴 창. 칸마다 색유리, 사이사이 짙은 납선, 창 둘레로 색빛이 번짐
 function stainedWindow(g, rnd, cx, y, w, h, palette, alpha) {
   const shape = () => {
@@ -589,7 +432,6 @@ function stainedWindow(g, rnd, cx, y, w, h, palette, alpha) {
   g.restore();
 }
 
-// 가우디의 나무 기둥: 위로 갈수록 가늘어지는 몸통에 세로 홈, 갈라지는 자리의 마디,
 // 유리 조각: 3~5각의 날카로운 조각. 색유리 위에 한쪽 모서리만 하얗게 반짝임
 function drawShard(ctx, p) {
   ctx.save();
