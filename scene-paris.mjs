@@ -6,14 +6,18 @@ const ROSE = ["#b3123a", "#d81b4a", "#8e0f2e", "#e0405f", "#c2185b"];
 const IRON = ["#f2c66a", "#d9a441", "#9a6a24"]; // 조명을 받은 철골
 
 // 에펠탑 윤곽: 바닥에서 위로 갈수록 오목하게 좁아짐
-const TOWER = { cx: 200, base: 300, top: 78 };
+// 트로카데로에서 센강 건너 바라본 모습이라 탑은 강 너머에 서 있음
+const TOWER = { cx: 200, base: 262, top: 74, half: 46 };
 function towerHalf(y) {
   const t = (TOWER.base - y) / (TOWER.base - TOWER.top);
-  return 62 * Math.pow(1 - t, 2.2) + 2.5;
+  return TOWER.half * Math.pow(1 - t, 2.2) + 2;
 }
+const towerAt = (t) => TOWER.base - (TOWER.base - TOWER.top) * t; // 높이 비율 → y
 
 let sparkles = [];
 
+// 트로카데로 광장에서 본 구도. 앞에서부터 깊이 순서로:
+// 장미 덤불·가로등 → 트로카데로 분수 → 센강과 다리, 유람선 → 샹드마르스 나무 → 에펠탑 → 흐린 시가지
 function paintParis(g, globe, groundAt) {
   const rnd = seeded(1889);
   const r = (a, b) => a + rnd() * (b - a);
@@ -28,7 +32,7 @@ function paintParis(g, globe, groundAt) {
   g.clip();
 
   // 푸른 저녁: 위는 남보라, 지평선은 장밋빛
-  const sky = g.createLinearGradient(0, top, 0, 280);
+  const sky = g.createLinearGradient(0, top, 0, 270);
   sky.addColorStop(0, "#1b2452");
   sky.addColorStop(0.45, "#3f4385");
   sky.addColorStop(0.78, "#a36a98");
@@ -42,36 +46,23 @@ function paintParis(g, globe, groundAt) {
     g.fill();
   }
 
-  // 파리 지붕들: 회청색 함석지붕, 굴뚝, 불 켜진 창
+  // 멀리 흐릿한 시가지 (멀수록 하늘빛에 묻힘)
   for (let x = left; x < right; ) {
-    const w = r(14, 26);
-    const h = r(14, 30) * (0.6 + Math.abs(x + w / 2 - 200) / 200);
-    const roofTop = 282 - h;
-    g.fillStyle = ["#d9c7b4", "#cbb6a2", "#e2d2c0"][Math.floor(rnd() * 3)];
-    g.globalAlpha = 0.9;
-    g.fillRect(x, roofTop + 6, w - 1, h + 20);
-    g.fillStyle = "#5d6680";
-    g.beginPath();
-    g.moveTo(x - 1, roofTop + 7);
-    g.lineTo(x + 3, roofTop);
-    g.lineTo(x + w - 4, roofTop);
-    g.lineTo(x + w, roofTop + 7);
-    g.closePath();
-    g.fill();
-    g.fillStyle = "#8a6a5a";
-    g.fillRect(x + w * 0.3, roofTop - 5, 3, 5);
-    g.globalAlpha = 1;
-    for (let wy = roofTop + 10; wy < 300; wy += 6) {
-      for (let wx = x + 3; wx < x + w - 4; wx += 5) {
-        g.fillStyle = rnd() < 0.45 ? "#ffd58a" : "#6b6a80";
-        g.fillRect(wx, wy, 2, 3);
+    const w = r(8, 16);
+    const h = r(5, 14);
+    g.fillStyle = "rgba(150,110,160,0.55)";
+    g.fillRect(x, 262 - h, w - 1, h + 4);
+    for (let wx = x + 2; wx < x + w - 2; wx += 3) {
+      if (rnd() < 0.3) {
+        g.fillStyle = "rgba(255,210,150,0.6)";
+        g.fillRect(wx, 262 - h + 3, 1, 1.4);
       }
     }
     x += w;
   }
 
   // 탑 뒤로 번지는 조명
-  const glow = g.createRadialGradient(200, 200, 0, 200, 200, 130);
+  const glow = g.createRadialGradient(200, 180, 0, 200, 180, 120);
   glow.addColorStop(0, "rgba(255,200,120,0.35)");
   glow.addColorStop(1, "rgba(255,200,120,0)");
   g.fillStyle = glow;
@@ -79,23 +70,120 @@ function paintParis(g, globe, groundAt) {
 
   paintTower(g);
 
-  // 샹드마르스 공원 나무들
-  for (const [tx, ty, tr] of [[118, 300, 18], [92, 304, 15], [282, 300, 18], [308, 304, 15]]) {
-    g.fillStyle = "#1f3b3a";
+  // 탑 발치의 샹드마르스 나무 (작고 어둡게)
+  for (let i = 0; i < 26; i++) {
+    const side = i % 2 ? 1 : -1;
+    const tx = 200 + side * r(28, 120);
+    g.fillStyle = ["#24324a", "#2b3b52", "#1e2a40"][Math.floor(rnd() * 3)];
     g.beginPath();
-    g.ellipse(tx, ty - tr, tr, tr * 1.1, 0, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = "rgba(255,200,140,0.15)";
-    g.beginPath();
-    g.ellipse(tx + tr * 0.3, ty - tr * 1.3, tr * 0.5, tr * 0.5, 0, 0, Math.PI * 2);
+    g.ellipse(tx, 262 - r(2, 6), r(5, 9), r(5, 8), 0, 0, Math.PI * 2);
     g.fill();
   }
 
-  // 앞쪽 장미 덤불
-  roseBush(g, rnd, 52, 336, 46);
-  roseBush(g, rnd, 348, 338, 46);
+  // 센강: 탑의 금빛 조명이 물에 길게 비침
+  const river = g.createLinearGradient(0, 264, 0, 284);
+  river.addColorStop(0, "#3a3466");
+  river.addColorStop(1, "#1d1f40");
+  g.fillStyle = river;
+  g.fillRect(left, 264, size, 20);
+  g.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 40; i++) {
+    const y = r(265, 283);
+    const w = r(4, 18);
+    g.fillStyle = `rgba(255,200,110,${r(0.15, 0.4)})`;
+    g.fillRect(200 - w / 2 + r(-14, 14), y, w, 0.8);
+  }
+  g.globalCompositeOperation = "source-over";
 
-  // 바닥: 장미 꽃잎이 흩어진 산책로
+  // 왼쪽 멀리 비르아켐 다리: 아치가 이어진 돌다리
+  g.fillStyle = "#4a4060";
+  g.fillRect(left, 263, 150 - left, 4);
+  for (let x = left + 6; x < 150; x += 16) {
+    g.beginPath();
+    g.moveTo(x, 267);
+    g.quadraticCurveTo(x + 8, 274, x + 16, 267);
+    g.lineTo(x + 16, 267);
+    g.fill();
+    g.fillRect(x - 1, 267, 2, 6);
+  }
+
+  // 유람선(바토 무슈): 불 켜진 창
+  g.fillStyle = "#e9e2d6";
+  g.fillRect(238, 273, 46, 4);
+  g.fillStyle = "#2a2a3a";
+  g.fillRect(236, 277, 50, 3);
+  for (let x = 240; x < 282; x += 4) {
+    g.fillStyle = "#ffd88a";
+    g.fillRect(x, 274, 2, 2);
+  }
+
+  // 트로카데로 정원: 저녁빛에 잠긴 잔디와 돌길
+  const plaza = g.createLinearGradient(0, 283, 0, 340);
+  plaza.addColorStop(0, "#3d4a5e");
+  plaza.addColorStop(1, "#2a3244");
+  g.fillStyle = plaza;
+  g.fillRect(left, 283, size, 60);
+  g.fillStyle = "#2f4a3e";
+  for (const [x0, x1] of [[left, 120], [280, right]]) {
+    g.beginPath();
+    g.moveTo(x0, 290);
+    g.lineTo(x1 - 6, 290);
+    g.lineTo(x1 - 20, 320);
+    g.lineTo(x0, 320);
+    g.closePath();
+    g.fill();
+  }
+
+  // 트로카데로 분수: 원근이 잡힌 긴 연못과 탑 쪽으로 뿜는 물대포
+  const pool = g.createLinearGradient(0, 284, 0, 308);
+  pool.addColorStop(0, "#5a5a96");
+  pool.addColorStop(1, "#2c2c5a");
+  g.fillStyle = "#cbbca8";
+  g.beginPath();
+  g.moveTo(150, 284);
+  g.lineTo(250, 284);
+  g.lineTo(290, 310);
+  g.lineTo(110, 310);
+  g.closePath();
+  g.fill();
+  g.fillStyle = pool;
+  g.beginPath();
+  g.moveTo(154, 286);
+  g.lineTo(246, 286);
+  g.lineTo(283, 308);
+  g.lineTo(117, 308);
+  g.closePath();
+  g.fill();
+  g.strokeStyle = "rgba(235,240,255,0.7)";
+  g.lineCap = "round";
+  for (let i = 0; i < 6; i++) {
+    for (const side of [-1, 1]) {
+      const bx = 200 + side * (40 + i * 12);
+      const by = 306 - i * 3;
+      g.lineWidth = 1.6 - i * 0.15;
+      g.beginPath();
+      g.moveTo(bx, by);
+      g.quadraticCurveTo(bx - side * (20 + i * 4), by - 22 + i * 2, bx - side * (34 + i * 7), by - 6);
+      g.stroke();
+    }
+  }
+  g.lineWidth = 1.2;
+  for (let x = 160; x <= 240; x += 10) {
+    g.beginPath();
+    g.moveTo(x, 290);
+    g.lineTo(x, 280 - Math.abs(200 - x) * 0.1);
+    g.stroke();
+  }
+
+  // 앞쪽 가로등 두 개 (가까워서 크고 진하게)
+  lampPost(g, 84, 330, 104);
+  lampPost(g, 316, 330, 104);
+
+  // 앞쪽 장미 덤불
+  roseBush(g, rnd, 50, 338, 44);
+  roseBush(g, rnd, 350, 340, 44);
+
+  // 바닥: 장미 꽃잎이 흩어진 광장 돌바닥
   const floorTop = groundAt(globe.x);
   const floor = g.createLinearGradient(0, floorTop, 0, floorTop + 60);
   floor.addColorStop(0, "#d8c6b8");
@@ -116,11 +204,40 @@ function paintParis(g, globe, groundAt) {
   g.restore();
 }
 
+// 파리식 가로등: 짙은 녹색 주철 기둥과 등
+function lampPost(g, x, baseY, h) {
+  const topY = baseY - h;
+  g.fillStyle = "#1c2a24";
+  g.fillRect(x - 3, baseY - 10, 6, 10);
+  g.fillRect(x - 1.5, topY + 10, 3, h - 18);
+  g.fillRect(x - 6, topY + 10, 12, 1.6);
+  const glow = g.createRadialGradient(x, topY + 4, 0, x, topY + 4, 26);
+  glow.addColorStop(0, "rgba(255,220,150,0.7)");
+  glow.addColorStop(1, "rgba(255,220,150,0)");
+  g.fillStyle = glow;
+  g.fillRect(x - 26, topY - 22, 52, 52);
+  g.fillStyle = "#ffe2a0";
+  g.beginPath();
+  g.moveTo(x - 4, topY + 10);
+  g.lineTo(x - 5, topY + 1);
+  g.lineTo(x + 5, topY + 1);
+  g.lineTo(x + 4, topY + 10);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "#1c2a24";
+  g.beginPath();
+  g.moveTo(x - 6, topY + 1);
+  g.lineTo(x, topY - 5);
+  g.lineTo(x + 6, topY + 1);
+  g.closePath();
+  g.fill();
+}
+
 // 에펠탑: 아치가 뚫린 네 다리, 두 층 전망대, 꼭대기 안테나. 철골은 X자 격자
 function paintTower(g) {
   const { cx, base, top } = TOWER;
-  const archTop = 262;
-  const legInner = 36;
+  const archTop = towerAt(0.18);
+  const legInner = towerHalf(base) * 0.58;
 
   g.save();
   g.beginPath();
@@ -155,7 +272,7 @@ function paintTower(g) {
   g.restore();
 
   // 전망대 두 층
-  for (const [y, h] of [[245, 5], [195, 4]]) {
+  for (const [y, h] of [[towerAt(0.25), 4], [towerAt(0.476), 3]]) {
     const w = towerHalf(y) + 6;
     g.fillStyle = "#7a4e1a";
     g.fillRect(cx - w, y - h, w * 2, h);
