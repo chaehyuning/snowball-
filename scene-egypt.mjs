@@ -481,33 +481,99 @@ function sphinx(g) {
 
 // 사람을 태운 낙타 실루엣
 function camel(g, x, baseY) {
-  g.fillStyle = "#5c3420";
-  g.strokeStyle = "#5c3420";
+  // 해가 왼쪽 뒤에 있어 모래 위로 오른쪽으로 긴 그림자가 늘어짐
+  g.fillStyle = "rgba(70,30,15,0.28)";
   g.beginPath();
-  g.moveTo(x - 12, baseY - 12);
-  g.quadraticCurveTo(x - 8, baseY - 24, x - 2, baseY - 14);
-  g.quadraticCurveTo(x + 4, baseY - 22, x + 10, baseY - 13);
-  g.lineTo(x + 14, baseY - 18);
-  g.lineTo(x + 17, baseY - 24);
-  g.lineTo(x + 21, baseY - 23);
-  g.lineTo(x + 16, baseY - 14);
-  g.lineTo(x + 10, baseY - 9);
-  g.lineTo(x - 12, baseY - 9);
+  g.ellipse(x + 16, baseY + 0.8, 22, 1.6, 0, 0, Math.PI * 2);
+  g.fill();
+
+  function body() {
+    g.beginPath();
+    // 꼬리 쪽 엉덩이 → 혹 → 어깨 → 목 → 머리 → 턱 → 목 아래 → 가슴 → 배
+    g.moveTo(x - 12, baseY - 12);
+    g.quadraticCurveTo(x - 13, baseY - 17, x - 8, baseY - 18);
+    g.quadraticCurveTo(x - 3, baseY - 26, x + 3, baseY - 18);
+    g.quadraticCurveTo(x + 8, baseY - 16, x + 11, baseY - 15);
+    g.quadraticCurveTo(x + 14, baseY - 17, x + 15, baseY - 22);
+    g.quadraticCurveTo(x + 16, baseY - 25, x + 19, baseY - 25);
+    g.quadraticCurveTo(x + 22, baseY - 24.5, x + 22.5, baseY - 22.5);
+    g.lineTo(x + 19.5, baseY - 21.8);
+    g.quadraticCurveTo(x + 17.5, baseY - 18, x + 15, baseY - 13.5);
+    g.quadraticCurveTo(x + 12, baseY - 9.5, x + 8, baseY - 9.5);
+    g.quadraticCurveTo(x - 2, baseY - 8, x - 10, baseY - 9.5);
+    g.closePath();
+  }
+  const fur = g.createLinearGradient(x - 12, 0, x + 22, 0);
+  fur.addColorStop(0, "#6a3c22");
+  fur.addColorStop(1, "#42241a");
+  g.fillStyle = fur;
+  body();
+  g.fill();
+
+  // 다리: 허벅지는 굵고 무릎 아래로 가늘어짐. 먼 쪽 다리는 더 어둡게
+  function leg(x0, back, dark) {
+    g.fillStyle = dark ? "#3a1f14" : "#4e2a1a";
+    g.beginPath();
+    g.moveTo(x0 - 1.6, baseY - 11);
+    g.quadraticCurveTo(x0 - 1.2 + back, baseY - 6, x0 - 0.6 + back * 1.4, baseY - 4.5);
+    g.lineTo(x0 - 0.5 + back * 0.6, baseY - 0.4);
+    g.lineTo(x0 + 1.2 + back * 0.6, baseY - 0.4);
+    g.lineTo(x0 + 0.5 + back * 1.4, baseY - 4.5);
+    g.quadraticCurveTo(x0 + 1.4 + back, baseY - 6, x0 + 1.8, baseY - 11);
+    g.closePath();
+    g.fill();
+  }
+  leg(x - 6.5, -0.8, true);
+  leg(x + 9, 0.6, true);
+  leg(x - 9, -1, false);
+  leg(x + 11.5, 0.8, false);
+  // 꼬리
+  g.strokeStyle = "#42241a";
+  g.lineWidth = 0.9;
+  g.lineCap = "round";
+  g.beginPath();
+  g.moveTo(x - 12.3, baseY - 15);
+  g.quadraticCurveTo(x - 14.5, baseY - 11, x - 13.5, baseY - 8);
+  g.stroke();
+
+  // 탄 사람: 펄럭이는 옷자락, 머리를 감싼 천
+  g.fillStyle = "#2e1a12";
+  g.beginPath();
+  g.moveTo(x - 4, baseY - 21);
+  g.quadraticCurveTo(x - 3.5, baseY - 27, x - 1, baseY - 28.5);
+  g.quadraticCurveTo(x + 1.6, baseY - 27, x + 2, baseY - 21);
+  g.quadraticCurveTo(x + 3.5, baseY - 17, x + 2.5, baseY - 15);
+  g.lineTo(x - 5, baseY - 15.5);
   g.closePath();
   g.fill();
-  g.lineWidth = 1.3;
-  for (const lx of [x - 9, x - 6, x + 6, x + 9]) {
-    g.beginPath();
-    g.moveTo(lx, baseY - 9);
-    g.lineTo(lx + (lx > x ? 1 : -1), baseY);
-    g.stroke();
-  }
-  // 탄 사람
-  g.fillStyle = "#3a2216";
-  g.fillRect(x - 3, baseY - 26, 4, 8);
   g.beginPath();
-  g.arc(x - 1, baseY - 28, 2, 0, Math.PI * 2);
+  g.ellipse(x - 0.8, baseY - 30, 1.8, 2.1, 0, 0, Math.PI * 2);
   g.fill();
+  g.strokeStyle = "#2e1a12";
+  g.lineWidth = 0.8;
+  g.beginPath();
+  g.moveTo(x - 2.2, baseY - 30);
+  g.quadraticCurveTo(x - 4.5, baseY - 29, x - 5.5, baseY - 26);
+  g.stroke();
+
+  // 등 뒤에서 비치는 노을빛: 위쪽 윤곽을 따라 가늘고 밝은 테
+  g.save();
+  body();
+  g.clip();
+  g.strokeStyle = "rgba(255,190,120,0.55)";
+  g.lineWidth = 1.2;
+  g.beginPath();
+  g.moveTo(x - 13, baseY - 14);
+  g.quadraticCurveTo(x - 13, baseY - 17, x - 8, baseY - 18);
+  g.quadraticCurveTo(x - 3, baseY - 26, x + 3, baseY - 18);
+  g.stroke();
+  g.restore();
+  g.strokeStyle = "rgba(255,190,120,0.5)";
+  g.lineWidth = 0.5;
+  g.beginPath();
+  g.moveTo(x - 1, baseY - 28.5);
+  g.quadraticCurveTo(x - 3.5, baseY - 27, x - 4, baseY - 21);
+  g.stroke();
 }
 
 // 모래알: 작은 알갱이. 가끔 햇빛을 받아 반짝임
