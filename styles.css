@@ -45,14 +45,6 @@ body {
   touch-action: none;
 }
 
-.hint {
-  font-size: 14px;
-  opacity: 0.7;
-  text-align: center;
-  text-wrap: balance;
-  word-break: keep-all;
-}
-
 .scenes {
   display: flex;
   flex-direction: column;
@@ -289,4 +281,159 @@ body {
 
 .sound-toggle[data-muted="true"] .sound-off {
   display: inline;
+}
+
+.music-toggle .music-off {
+  display: none;
+}
+
+.music-toggle[data-off="true"] .music-off {
+  display: inline;
+}
+
+/* 튜토리얼: 대상만 밝게 비추고 나머지는 어둡게 */
+.tour-spot {
+  position: fixed;
+  z-index: 20;
+  border-radius: 18px;
+  box-shadow: 0 0 0 9999px rgba(4, 8, 20, 0.6), 0 0 0 2px rgba(255, 236, 190, 0.7);
+  pointer-events: none;
+  transition: left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease;
+}
+
+.tour-bubble {
+  position: fixed;
+  z-index: 21;
+  width: min(260px, calc(100vw - 24px));
+  padding: 14px 16px 12px;
+  border-radius: 14px;
+  background: #fdf7ea;
+  color: #2a2130;
+  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.6);
+  animation: tour-pop 0.25s ease-out;
+}
+
+.tour-spot[hidden],
+.tour-bubble[hidden],
+.help[hidden] {
+  display: none;
+}
+
+@keyframes tour-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+.tour-step {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #b0763a;
+}
+
+.tour-title {
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.tour-text {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5a4e5c;
+  word-break: keep-all;
+}
+
+.tour-actions,
+.help-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tour-actions button,
+.help-actions button {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tour-skip,
+.help-replay {
+  background: transparent;
+  color: #7a6e7c;
+}
+
+.tour-next,
+.help-close {
+  background: #2a2130;
+  color: #fdf7ea;
+  font-weight: 700;
+}
+
+.tour-actions button:focus-visible,
+.help-actions button:focus-visible {
+  outline: 2px solid #b0763a;
+  outline-offset: 2px;
+}
+
+/* 도움말 창 */
+.help {
+  position: fixed;
+  inset: 0;
+  z-index: 22;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(4, 8, 20, 0.6);
+}
+
+.help-card {
+  width: min(360px, 100%);
+  padding: 18px 18px 14px;
+  border-radius: 16px;
+  background: #fdf7ea;
+  color: #2a2130;
+}
+
+.help-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.help-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.help-list dt {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.help-list dd {
+  color: #5a4e5c;
+  word-break: keep-all;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-spot {
+    transition: none;
+  }
+
+  .tour-bubble {
+    animation: none;
+  }
 }

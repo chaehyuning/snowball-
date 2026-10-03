@@ -94,7 +94,7 @@ function buildUI() {
 
 const shortest = (a) => ((((a + 180) % 360) + 360) % 360) - 180;
 
-export async function openPicker(scenes, currentId, onSelect) {
+export async function openPicker(scenes, currentId, onSelect, onClose) {
   if (!ui) ui = buildUI();
   const ids = scenes.map((s) => s.id).filter((id) => PLACES[id]);
   const focusId = ids.includes(currentId) ? currentId : ids[0];
@@ -103,6 +103,7 @@ export async function openPicker(scenes, currentId, onSelect) {
     scenes,
     ids,
     onSelect,
+    onClose,
     focus: focusId,
     lon: start.lon - 40,
     lat: 0,
@@ -133,6 +134,7 @@ function closePicker() {
   ui.root.hidden = true;
   document.body.style.overflow = "";
   cancelAnimationFrame(state.raf);
+  state.onClose?.();
 }
 
 function choose(id) {
