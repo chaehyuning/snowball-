@@ -90,7 +90,8 @@ const TRAVEL = {
     "tz": "Australia/Sydney",
     "best": "해 질 녘 · 서큘러 키에서 지붕이 분홍빛으로 물들 때",
     "symbol": "물방울 — 항구를 가르는 물보라",
-    "title": "Sydney – Opera House",
+    "title": "Sydney Opera House",
+    "titleNarrow": "Sydney – Opera House",
     "story": "1957년, 덴마크 건축가 예른 웃손의 스케치가 국제 공모에서 뽑혔습니다. 조가비 같기도, 바람을 품은 돛 같기도 한 지붕은 너무 어려워 열두 번 넘게 설계를 고친 끝에, 1962년 모든 곡면을 지름 75m짜리 구 하나에서 잘라내는 방법으로 풀었어요. 그 위를 105만 장이 넘는 흰 타일이 덮습니다. 바로 뒤 강철 아치의 하버 브리지와 나란히 서면, 곧은 다리와 둥근 돛이 항구를 함께 완성해요."
   },
   "finland": {
@@ -162,8 +163,21 @@ export function showSceneInfo(id, index, total) {
   set(".meta-index", pad(index + 1));
   set(".meta-total", `/ ${pad(total)}`);
   const travel = TRAVEL[id] || {};
-  set(".meta-city", travel.title || info.city);
-  set(".sheet-title", travel.title || info.landmark);
+  // 폰에서는 줄인 제목(titleNarrow)을, 넓은 화면에서는 원래 제목을 보여 줌
+  const setTitle = (sel, wide) => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    el.textContent = "";
+    const w = document.createElement("span");
+    w.className = "t-wide";
+    w.textContent = wide;
+    const n = document.createElement("span");
+    n.className = "t-narrow";
+    n.textContent = travel.titleNarrow || wide;
+    el.append(w, n);
+  };
+  setTitle(".meta-city", travel.title || info.city);
+  setTitle(".sheet-title", travel.title || info.landmark);
   set(".meta-tagline", info.tagline);
   set(".meta-text", travel.story || info.text);
   set(".meta-landmark", info.landmark);
