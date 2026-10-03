@@ -185,14 +185,14 @@ const GRADE = {
   grain: 5,
 };
 
-// 종이 질감 잡음: 픽셀마다 Math.random을 부르지 않고 미리 만든 표를 돌려 씀
-const NOISE = Float32Array.from({ length: 4093 }, () => Math.random() - 0.5);
 function gradeLayer(g, w, h) {
   const img = g.getImageData(0, 0, w, h);
   const d = img.data;
   // 장면마다 grade로 일부 값을 바꿀 수 있음 (예: 후지산은 채도를 살리고, 퀘벡은 따뜻한 골든아워 필터)
   const { saturation, shadow, highlight, tint, floor, ceiling, grain } = { ...GRADE, ...(scene?.grade || {}) };
   const range = (ceiling - floor) / 255;
+  // 종이 질감 잡음: 빠른 정수 난수(LCG). 표를 되풀이해 쓰면 일정한 간격의 점무늬가 생겨서 쓰지 않음
+  let seed = (Math.random() * 4294967296) >>> 0;
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3] === 0) continue;
     let r = d[i];
@@ -207,7 +207,8 @@ function gradeLayer(g, w, h) {
     r += (shadow[0] + (highlight[0] - shadow[0]) * k - r) * tint;
     gg += (shadow[1] + (highlight[1] - shadow[1]) * k - gg) * tint;
     b += (shadow[2] + (highlight[2] - shadow[2]) * k - b) * tint;
-    const n = NOISE[(i >> 2) % 4093] * grain;
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const n = (seed / 4294967296 - 0.5) * grain;
     d[i] = floor + r * range + n;
     d[i + 1] = floor + gg * range + n;
     d[i + 2] = floor + b * range + n;
