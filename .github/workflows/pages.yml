@@ -1,10 +1,12 @@
 # GitHub Pages는 사이트를 하나만 배포할 수 있어서,
 # main은 사이트 루트에, preview 브랜치는 /preview/ 아래에 함께 올린다.
+# github-pages 환경은 main에서만 배포를 허용하므로 항상 main에서 실행한다.
+# preview에 푸시하면 preview-trigger.yml이 이 워크플로를 main에서 다시 실행시킨다.
 name: Deploy Pages
 
 on:
   push:
-    branches: [main, preview]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
