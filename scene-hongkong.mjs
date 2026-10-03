@@ -468,8 +468,10 @@ function animateHongKong(ctx, t) {
 // 바닥에 닿으면 살짝 눌린 물방울로 남음
 function drawRain(ctx, p) {
   const s = p.size * 1.25;
-  const squash = p.settled ? 0.7 : 1;
+  // 바닥에 내려앉은 방울은 납작하고 옅게: 땅 위에 점이 줄지어 박힌 듯 보이지 않고 젖은 빛으로만 남음
+  const squash = p.settled ? 0.4 : 1;
   ctx.save();
+  if (p.settled) ctx.globalAlpha = 0.35;
   ctx.translate(p.x, p.y);
   ctx.scale(1, squash);
   const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2.4);
@@ -485,10 +487,12 @@ function drawRain(ctx, p) {
   ctx.beginPath();
   ctx.arc(0, 0, s, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(-s * 0.35, -s * 0.4, s * 0.22, 0, Math.PI * 2);
-  ctx.fill();
+  if (!p.settled) {
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(-s * 0.35, -s * 0.4, s * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
