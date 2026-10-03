@@ -444,83 +444,6 @@ body {
   line-height: 1;
 }
 
-/* Let it snow는 누르는 버튼: 은은하게 숨 쉬는 빛과 흔들기 아이콘 */
-.let-snow {
-  z-index: 2;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-  pointer-events: auto;
-  cursor: pointer;
-  animation: snow-pulse 2.6s ease-in-out infinite;
-}
-
-.let-snow:hover .deco-script,
-.let-snow:focus-visible .deco-script {
-  text-shadow: 0 0 28px rgba(255, 255, 255, 0.6);
-}
-
-.let-snow:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 6px;
-  border-radius: 8px;
-}
-
-.let-snow:active {
-  transform: scale(0.97);
-}
-
-@keyframes snow-pulse {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
-  }
-  50% {
-    filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.45));
-  }
-}
-
-.let-snow-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 5px 10px 5px 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--glass);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
-}
-
-.let-snow-icon svg {
-  width: 16px;
-  height: 16px;
-  animation: icon-wiggle 2.6s ease-in-out infinite;
-}
-
-@keyframes icon-wiggle {
-  0%,
-  70%,
-  100% {
-    transform: rotate(0);
-  }
-  76% {
-    transform: rotate(-12deg);
-  }
-  82% {
-    transform: rotate(10deg);
-  }
-  88% {
-    transform: rotate(-6deg);
-  }
-}
-
 .deco-left {
   left: clamp(16px, 4vw, 72px);
   top: 13%;
@@ -820,8 +743,6 @@ body {
     transition: none;
   }
 
-  .let-snow,
-  .let-snow-icon svg,
   .silk-drift-a,
   .silk-drift-b,
   .ticker-track,

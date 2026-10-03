@@ -24,7 +24,6 @@ function saveStamps() {
   } catch {}
 }
 
-const sceneLabel = (id) => document.querySelector(`[data-scene="${id}"]`)?.getAttribute("aria-label") || id;
 const sceneIcon = (id) => document.querySelector(`[data-scene="${id}"] svg`)?.outerHTML || "";
 const today = () => new Date().toISOString().slice(0, 10).replaceAll("-", ".");
 
@@ -34,15 +33,7 @@ function stamp(id) {
   if (!id || stamps[id]) return;
   stamps[id] = today();
   saveStamps();
-  const count = Object.keys(stamps).length;
   updateBadge();
-  const done = count === ids.length;
-  toast(
-    done
-      ? `🎉 스노우볼 여권 완성! ${ids.length}개 나라 입국 도장을 모두 모았어요`
-      : `입국 도장 쾅! ${sceneLabel(id).split("·")[0].trim()} (${count}/${ids.length})`,
-    id,
-  );
   if (passport && !passport.hidden) renderPassport();
 }
 
@@ -50,24 +41,6 @@ export function stampVisit(id) {
   currentId = id;
   clearTimeout(dwellTimer);
   dwellTimer = setTimeout(() => currentId === id && stamp(id), DWELL_MS);
-}
-
-let toastEl = null;
-let toastTimer = null;
-function toast(text, id) {
-  if (!toastEl) {
-    toastEl = document.createElement("div");
-    toastEl.className = "stamp-toast";
-    toastEl.setAttribute("role", "status");
-    document.body.append(toastEl);
-  }
-  toastEl.innerHTML = `<span class="stamp-toast-icon">${sceneIcon(id)}</span><span></span>`;
-  toastEl.lastChild.textContent = text;
-  toastEl.classList.remove("show");
-  void toastEl.offsetWidth;
-  toastEl.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2800);
 }
 
 function updateBadge() {
