@@ -4,7 +4,7 @@
 // 각 나라 핀의 위치(위도, 경도)와 카드에 보여줄 내용.
 // 핀 머리는 실제 위치에서 위로 stem, 옆으로 dx만큼 떨어져 있음.
 // 한중일은 서로 가까워서 중국은 왼쪽 위, 한국은 바로 위로 높게, 일본은 오른쪽 위로 벌려 둠
-const PLACES = {
+export const PLACES = {
   japan: { lat: 35.36, lon: 138.73, landmark: "후지산", particle: "벚꽃잎", color: "#f6a3ba", stem: 24, dx: 30 },
   korea: { lat: 37.55, lon: 126.99, landmark: "N서울타워", particle: "반짝이는 불빛", color: "#ffd27a", stem: 42, dx: 0 },
   canada: { lat: 46.81, lon: -71.21, landmark: "샤토 프롱트낙", particle: "단풍잎", color: "#e0531f", stem: 22, dx: 0 },
