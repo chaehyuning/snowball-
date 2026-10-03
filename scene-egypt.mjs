@@ -103,6 +103,63 @@ function paintEgypt(g, globe, groundAt) {
   g.restore();
 }
 
+// 풍화된 석회암 층: 선을 긋는 대신 층마다 밝기를 조금씩 달리 칠하고,
+// 층 아래 움푹 들어간 곳에만 끊어진 그늘을 둠. 경계는 울퉁불퉁하고 군데군데 닳아 없어짐
+function strata(g, rnd, x0, x1, y0, y1, { light, dark, minH = 3, maxH = 6, shade = 0.22, tilt = 0, tone = [0.05, 0.16] }) {
+  const r = (a, b) => a + rnd() * (b - a);
+  let y = y0;
+  while (y < y1) {
+    const h = r(minH, maxH);
+    // 층 자체의 밝기: 밝은 층과 어두운 층이 불규칙하게 섞임
+    g.fillStyle = rnd() < 0.5 ? light : dark;
+    g.globalAlpha = r(tone[0], tone[1]);
+    g.beginPath();
+    g.moveTo(x0, y + tilt * 0);
+    for (let x = x0; x <= x1; x += 4) g.lineTo(x, y + (x - x0) * tilt + r(-0.6, 0.6));
+    for (let x = x1; x >= x0; x -= 4) g.lineTo(x, y + h + (x - x0) * tilt + r(-0.6, 0.6));
+    g.closePath();
+    g.fill();
+    // 층 아래 그늘: 짧게 끊기고 굵기가 들쭉날쭉
+    g.fillStyle = dark;
+    let x = x0;
+    while (x < x1) {
+      const len = r(6, 22);
+      if (rnd() < 0.72) {
+        g.globalAlpha = shade * r(0.5, 1);
+        const yy = y + h + (x - x0) * tilt;
+        g.beginPath();
+        g.moveTo(x, yy);
+        g.lineTo(x + len, yy + len * tilt + r(-0.4, 0.4));
+        g.lineTo(x + len, yy + len * tilt + r(0.5, 1.3));
+        g.lineTo(x, yy + r(0.5, 1.3));
+        g.closePath();
+        g.fill();
+      }
+      x += len + r(2, 8);
+    }
+    y += h;
+  }
+  g.globalAlpha = 1;
+}
+
+// 돌 표면의 얼룩: 부드러운 반점을 흩뿌려 매끈한 그라데이션을 깸
+function mottle(g, rnd, x0, x1, y0, y1, count, colors) {
+  const r = (a, b) => a + rnd() * (b - a);
+  for (let i = 0; i < count; i++) {
+    const x = r(x0, x1);
+    const y = r(y0, y1);
+    const rad = r(2, 7);
+    const spot = g.createRadialGradient(x, y, 0, x, y, rad);
+    const c = colors[Math.floor(rnd() * colors.length)];
+    spot.addColorStop(0, c);
+    spot.addColorStop(1, "rgba(0,0,0,0)");
+    g.globalAlpha = r(0.08, 0.2);
+    g.fillStyle = spot;
+    g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  }
+  g.globalAlpha = 1;
+}
+
 // 피라미드: 해를 받는 왼쪽 면은 밝고 오른쪽 면은 그늘. 돌단 줄무늬.
 // fade: 멀리 있을수록 하늘빛 먼지에 묻혀 흐려지는 정도
 function pyramid(g, cx, baseY, half, h, cap, fade) {
@@ -122,16 +179,40 @@ function pyramid(g, cx, baseY, half, h, cap, fade) {
   g.closePath();
   g.fill();
 
-  // 돌단
-  g.strokeStyle = "rgba(110,55,25,0.25)";
-  g.lineWidth = 0.5;
-  for (let k = 1; k < 18; k++) {
-    const y = apexY + (h * k) / 18;
-    const w = (half * k) / 18;
-    g.beginPath();
-    g.moveTo(cx - w, y);
-    g.lineTo(cx + w, y);
-    g.stroke();
+  // 돌단: 면 안에서만 층마다 밝기를 달리하고 끊어진 그늘을 둠
+  const rnd = seeded(Math.round(cx * 7 + h));
+  g.save();
+  g.beginPath();
+  g.moveTo(cx - half, baseY);
+  g.lineTo(cx, apexY);
+  g.lineTo(cx + half, baseY);
+  g.closePath();
+  g.clip();
+  const course = Math.max(2.2, h / 26);
+  strata(g, rnd, cx - half, cx + half, apexY, baseY, {
+    light: "#ffd9a8",
+    dark: "#6e3518",
+    minH: course * 0.8,
+    maxH: course * 1.2,
+    shade: 0.12,
+    tone: [0.03, 0.1],
+  });
+  mottle(g, rnd, cx - half, cx + half, apexY + h * 0.2, baseY, Math.round(h / 3), ["#7a3c1c", "#f2c08c"]);
+  // 해를 받는 쪽 모서리를 따라 가는 빛
+  g.strokeStyle = "rgba(255,226,180,0.45)";
+  g.lineWidth = 0.8;
+  g.beginPath();
+  g.moveTo(cx, apexY);
+  g.lineTo(cx + half * 0.25, baseY);
+  g.stroke();
+  g.restore();
+  // 바깥 모서리는 돌단이 깨져 살짝 들쭉날쭉
+  g.fillStyle = "#e3a66e";
+  for (let k = 3; k < 24; k++) {
+    const t = k / 24;
+    const ex = cx - half * t;
+    const ey = apexY + h * t;
+    if (rnd() < 0.5) g.fillRect(ex - 0.8, ey - 0.6, 0.9, 0.9);
   }
 
   if (cap) {
@@ -181,14 +262,11 @@ function sphinx(g) {
   g.lineTo(262, 304);
   g.closePath();
   g.fill();
-  g.strokeStyle = "rgba(90,40,15,0.35)";
-  g.lineWidth = 0.7;
-  for (let y = 272; y < 304; y += 5) {
-    g.beginPath();
-    g.moveTo(34, y);
-    g.lineTo(255, y + 2);
-    g.stroke();
-  }
+  const rnd = seeded(4500);
+  g.save();
+  g.clip();
+  strata(g, rnd, 30, 262, 266, 304, { light: "#f0b47c", dark: "#5e2a10", minH: 3, maxH: 6, shade: 0.14, tilt: 0.008, tone: [0.03, 0.08] });
+  g.restore();
 
   // 뒤쪽 앞발 (그늘져서 어둡게, 조금 위)
   g.fillStyle = "#9c5a30";
@@ -206,6 +284,10 @@ function sphinx(g) {
   body.addColorStop(0.5, "#cf8c56");
   body.addColorStop(1, "#9a5630");
   g.fillStyle = body;
+  g.shadowColor = "rgba(50,20,5,0.5)";
+  g.shadowBlur = 8;
+  g.shadowOffsetX = 3;
+  g.shadowOffsetY = 2;
   g.beginPath();
   g.moveTo(52, 300);
   g.quadraticCurveTo(46, 272, 70, 266);
@@ -218,6 +300,10 @@ function sphinx(g) {
   g.lineTo(52, 300);
   g.closePath();
   g.fill();
+  g.shadowColor = "transparent";
+  g.shadowBlur = 0;
+  g.shadowOffsetX = 0;
+  g.shadowOffsetY = 0;
 
   // 엉덩이 둥근 근육과 꼬리
   const haunch = g.createRadialGradient(72, 278, 2, 76, 284, 24);
@@ -246,21 +332,27 @@ function sphinx(g) {
   g.lineTo(52, 300);
   g.closePath();
   g.clip();
-  g.strokeStyle = "rgba(80,35,12,0.45)";
-  g.lineWidth = 0.9;
-  for (const y of [268, 274, 280, 287, 294]) {
-    g.beginPath();
-    g.moveTo(44, y);
-    for (let x = 44; x < 180; x += 6) g.lineTo(x, y + Math.sin(x * 0.3 + y) * 0.8);
-    g.stroke();
-  }
-  g.lineWidth = 0.5;
+  // 몸통은 여러 시대에 덧댄 석회암 층이라 가로로 켜켜이 보이고, 위쪽은 많이 닳아 둥글게 패임
+  strata(g, rnd, 44, 182, 262, 300, { light: "#ffd2a0", dark: "#5a2810", minH: 5, maxH: 8, shade: 0.2, tone: [0.04, 0.12] });
+  mottle(g, rnd, 50, 178, 262, 300, 18, ["#6a3014", "#ffd8a8"]);
+  // 군데군데 세로로 갈라진 틈: 짧고 굵기가 들쭉날쭉
+  g.fillStyle = "rgba(70,30,10,0.35)";
   for (const x of [88, 112, 131, 150]) {
+    const len = 4 + rnd() * 5;
     g.beginPath();
     g.moveTo(x, 262);
-    g.lineTo(x + 1.5, 270);
-    g.stroke();
+    g.lineTo(x + 1.2, 262 + len * 0.5);
+    g.lineTo(x + 0.6, 262 + len);
+    g.lineTo(x - 0.3, 262 + len * 0.4);
+    g.closePath();
+    g.fill();
   }
+  // 등 위로 비친 노을빛
+  const rim = g.createLinearGradient(0, 258, 0, 270);
+  rim.addColorStop(0, "rgba(255,214,160,0.35)");
+  rim.addColorStop(1, "rgba(255,214,160,0)");
+  g.fillStyle = rim;
+  g.fillRect(44, 256, 140, 14);
   g.restore();
 
   // 앞쪽 앞발 발가락
@@ -291,16 +383,46 @@ function sphinx(g) {
   g.lineTo(170, 262);
   g.closePath();
   g.fill();
-  // 두건 줄무늬
-  g.strokeStyle = "rgba(90,40,15,0.45)";
-  g.lineWidth = 0.8;
-  for (let k = 0; k < 9; k++) {
-    const y = 216 + k * 4.5;
-    g.beginPath();
-    g.moveTo(158, y + 2);
-    g.quadraticCurveTo(170, y - 1, 180, y + 1);
-    g.stroke();
+  // 두건 줄무늬: 머리 곡면을 따라 휘는 넓은 띠. 오랜 풍화로 흐려지고 군데군데 지워짐
+  g.save();
+  g.beginPath();
+  g.moveTo(156, 258);
+  g.lineTo(158, 228);
+  g.quadraticCurveTo(162, 212, 176, 211);
+  g.quadraticCurveTo(188, 212, 190, 222);
+  g.lineTo(191, 238);
+  g.lineTo(186, 254);
+  g.lineTo(180, 262);
+  g.lineTo(170, 262);
+  g.closePath();
+  g.clip();
+  for (let k = 0; k < 10; k++) {
+    const y = 214 + k * 4.6;
+    // 띠 하나를 몇 조각으로 나눠, 조각마다 진하기를 달리하고 일부는 건너뜀
+    for (let seg = 0; seg < 4; seg++) {
+      if (rnd() < 0.2) continue;
+      const x0 = 156 + seg * 6.5;
+      const x1 = x0 + 6.5;
+      const bend = (x) => y + 2 - Math.sin(((x - 156) / 26) * Math.PI) * 2.6;
+      g.fillStyle = `rgba(110,52,22,${0.12 + rnd() * 0.16})`;
+      g.beginPath();
+      g.moveTo(x0, bend(x0));
+      g.lineTo(x1, bend(x1));
+      g.lineTo(x1, bend(x1) + 2);
+      g.lineTo(x0, bend(x0) + 2);
+      g.closePath();
+      g.fill();
+    }
   }
+  // 두건 왼쪽 위로 받은 빛, 오른쪽 아래 그늘
+  const nemesLight = g.createLinearGradient(156, 212, 190, 260);
+  nemesLight.addColorStop(0, "rgba(255,220,170,0.3)");
+  nemesLight.addColorStop(0.5, "rgba(255,220,170,0)");
+  nemesLight.addColorStop(1, "rgba(60,25,8,0.25)");
+  g.fillStyle = nemesLight;
+  g.fillRect(150, 208, 45, 56);
+  mottle(g, rnd, 156, 192, 212, 262, 14, ["#6a3014", "#ffd8a8"]);
+  g.restore();
 
   // 얼굴: 해가 왼쪽 뒤에 있어 조금 그늘짐. 붉은 안료 흔적
   g.fillStyle = "#c27c4c";
