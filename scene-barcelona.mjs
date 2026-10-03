@@ -1,14 +1,12 @@
-// 스페인: 바르셀로나 사그라다 파밀리아 실내. 나무처럼 갈라지는 돌기둥 숲과
-// 동쪽(왼쪽)은 파랑·초록, 서쪽(오른쪽)은 주황·빨강인 스테인드글라스, 흩날리는 유리 조각
+// 스페인: 바르셀로나 사그라다 파밀리아 실내. 금빛 별 천장과 나무처럼 갈라지는 기둥,
+// 제단 쪽 벽의 장미창과 스테인드글라스, 흩날리는 유리 조각
 
 import { seeded, fillSilhouette } from "./util.mjs";
 
-const COOL = ["#1f5fc9", "#2f86e0", "#1aa3a0", "#3cbf6a", "#7fd0f0", "#9ad84a", "#2a4fa8"];
-const WARM = ["#f2b632", "#f08a24", "#e0531f", "#d8324a", "#ffd86a", "#c2185b", "#f5a05a"];
 const JEWEL = ["#2f6fd6", "#1aa3a0", "#3cbf6a", "#7fd0f0", "#f2b632", "#f06a2a", "#d8324a", "#ffd86a"];
-const STONE = ["#f3ece0", "#d6cbb8", "#9f917b"];
-const VP = { x: 200, y: 214 }; // 소실점: 신랑(가운데 통로) 끝 제단
 
+// 신랑에서 제단 쪽 벽을 올려다본 구도:
+// 위로 모이는 나무 기둥 → 금빛 별 천장 → 큰 장미창 → 두 쌍의 긴 창 → 성가대 회랑 → 아래 문과 작은 장미창
 function paintBarcelona(g, globe, groundAt) {
   const rnd = seeded(1882);
   const r = (a, b) => a + rnd() * (b - a);
@@ -22,129 +20,124 @@ function paintBarcelona(g, globe, groundAt) {
   g.arc(globe.x, globe.y, globe.r, 0, Math.PI * 2);
   g.clip();
 
-  // 실내 바탕: 위는 빛이 드는 밝은 돌, 아래로 갈수록 그늘. 왼쪽은 푸른 빛, 오른쪽은 노을빛이 번짐
+  // 햇빛이 스며든 따뜻한 돌빛: 천장은 금빛, 아래는 크림색
   const base = g.createLinearGradient(0, top, 0, globe.y + globe.r);
-  base.addColorStop(0, "#f6f0e4");
-  base.addColorStop(0.5, "#ddd4c6");
-  base.addColorStop(1, "#a99d8c");
+  base.addColorStop(0, "#f3c98a");
+  base.addColorStop(0.35, "#f4e3c6");
+  base.addColorStop(0.75, "#e6d4b8");
+  base.addColorStop(1, "#b9a283");
   g.fillStyle = base;
   g.fillRect(left, top, size, size);
-  const cool = g.createRadialGradient(left + 20, 200, 0, left + 20, 200, 220);
-  cool.addColorStop(0, "rgba(60,140,220,0.35)");
-  cool.addColorStop(1, "rgba(60,140,220,0)");
-  g.fillStyle = cool;
-  g.fillRect(left, top, size, size);
-  const warm = g.createRadialGradient(right - 20, 200, 0, right - 20, 200, 220);
-  warm.addColorStop(0, "rgba(245,140,60,0.38)");
-  warm.addColorStop(1, "rgba(245,140,60,0)");
-  g.fillStyle = warm;
-  g.fillRect(left, top, size, size);
 
-  // 원근 상자: 소실점으로 모이는 양쪽 벽, 천장, 바닥. 벽은 바닥 쪽이 어둡고 천장은 밝음
-  const box = (pts, c0, c1, y0, y1) => {
-    const grad = g.createLinearGradient(0, y0, 0, y1);
-    grad.addColorStop(0, c0);
-    grad.addColorStop(1, c1);
-    g.fillStyle = grad;
-    g.beginPath();
-    g.moveTo(...pts[0]);
-    for (const pt of pts.slice(1)) g.lineTo(...pt);
-    g.closePath();
-    g.fill();
-  };
-  const back = { l: VP.x - 30, r: VP.x + 30, t: VP.y - 110, b: VP.y + 20 };
-  box([[left, top], [back.l, back.t], [back.l, back.b], [left, 400]], "rgba(205,195,178,0.55)", "rgba(120,108,92,0.55)", top, 400);
-  box([[right, top], [back.r, back.t], [back.r, back.b], [right, 400]], "rgba(205,195,178,0.55)", "rgba(120,108,92,0.55)", top, 400);
-  box([[left, 400], [back.l, back.b], [back.r, back.b], [right, 400]], "rgba(190,178,160,0.6)", "rgba(110,98,84,0.7)", back.b, 400);
-  // 바닥 판석 줄: 소실점으로 모임
-  g.strokeStyle = "rgba(90,80,65,0.22)";
-  g.lineWidth = 0.6;
-  for (let k = -6; k <= 6; k++) {
-    g.beginPath();
-    g.moveTo(VP.x + k * 5, back.b);
-    g.lineTo(VP.x + k * 60, 400);
-    g.stroke();
-  }
-  for (let k = 1; k < 9; k++) {
-    const t = Math.pow(k / 9, 1.8);
-    const y = back.b + (400 - back.b) * t;
-    g.beginPath();
-    g.moveTo(left, y);
-    g.lineTo(right, y);
-    g.stroke();
-  }
-
-  // 제단 뒤 높은 창에서 쏟아지는 금빛
-  const apse = g.createRadialGradient(VP.x, VP.y - 30, 0, VP.x, VP.y - 30, 90);
-  apse.addColorStop(0, "rgba(255,236,190,0.95)");
-  apse.addColorStop(0.4, "rgba(255,220,160,0.4)");
-  apse.addColorStop(1, "rgba(255,220,160,0)");
-  g.fillStyle = apse;
-  g.fillRect(left, top, size, size);
-  stainedWindow(g, rnd, VP.x, VP.y - 78, 16, 58, [...WARM.slice(0, 3), ...COOL.slice(0, 3)], 1);
-
-  // 천장: 별처럼 갈라진 둥근 천창들. 가까울수록 크고, 가운데로 모이며 작아짐
+  // 천장: 가운데 줄로 이어지는 금빛 별 천창과 양옆의 작은 별들
   for (const [cx, cy, rr] of [
-    [200, 70, 26],
-    [128, 92, 20],
-    [272, 92, 20],
-    [160, 128, 13],
-    [240, 128, 13],
-    [200, 150, 9],
-    [70, 66, 24],
-    [330, 66, 24],
+    [200, 56, 26],
+    [200, 94, 20],
+    [200, 126, 15],
+    [146, 72, 17],
+    [254, 72, 17],
+    [160, 112, 12],
+    [240, 112, 12],
+    [104, 60, 14],
+    [296, 60, 14],
   ]) {
-    vault(g, cx, cy, rr);
+    starVault(g, cx, cy, rr);
   }
 
-  // 양쪽 벽 스테인드글라스: 먼 것부터. 왼쪽(동쪽)은 차가운 색, 오른쪽(서쪽)은 따뜻한 색
-  for (const d of [0.15, 0.4, 0.7]) {
-    for (const side of [-1, 1]) {
-      const x = VP.x + side * (34 + 150 * d);
-      const w = 8 + 26 * d;
-      const h = 34 + 120 * d;
-      const y = VP.y - 30 - 90 * d;
-      stainedWindow(g, rnd, x, y, w, h, side < 0 ? COOL : WARM, 0.75 + d * 0.25);
-    }
-  }
-
-  // 창에서 비스듬히 내려오는 색 빛줄기 (흐리게 번짐)
-  g.save();
-  g.globalCompositeOperation = "lighter";
-  g.filter = "blur(4px)";
-  for (const [x0, y0, x1, y1, color] of [
-    [62, 150, 150, 320, "rgba(60,150,230,0.16)"],
-    [100, 175, 180, 310, "rgba(60,200,150,0.13)"],
-    [338, 150, 250, 320, "rgba(245,150,60,0.17)"],
-    [300, 175, 220, 310, "rgba(230,70,80,0.13)"],
-  ]) {
-    g.fillStyle = color;
+  // 제단 쪽 벽: 크림색 돌, 세로 기둥띠와 위쪽 아치
+  const wall = g.createLinearGradient(0, 150, 0, 330);
+  wall.addColorStop(0, "#f6ead6");
+  wall.addColorStop(1, "#dcc6a4");
+  g.fillStyle = wall;
+  g.beginPath();
+  g.moveTo(118, 330);
+  g.lineTo(118, 168);
+  g.quadraticCurveTo(200, 120, 282, 168);
+  g.lineTo(282, 330);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(150,120,85,0.18)";
+  for (const px of [130, 150, 250, 270]) g.fillRect(px, 170, 2, 160);
+  // 장미창 위를 덮은 부채꼴 돌 차양 (가는 줄이 방사형으로 퍼짐)
+  g.strokeStyle = "rgba(160,130,95,0.35)";
+  g.lineWidth = 0.6;
+  for (let k = -8; k <= 8; k++) {
     g.beginPath();
-    g.moveTo(x0 - 8, y0);
-    g.lineTo(x0 + 8, y0);
-    g.lineTo(x1 + 22, y1);
-    g.lineTo(x1 - 22, y1);
+    g.moveTo(200, 168);
+    g.lineTo(200 + k * 9, 132 + Math.abs(k) * 2.4);
+    g.stroke();
+  }
+
+  // 큰 장미창: 파랑·초록·노랑 꽃잎이 방사형으로, 가운데는 노란 빛
+  roseWindow(g, 200, 182, 28, ["#1f5fc9", "#2f86e0", "#3cbf6a", "#1aa3a0", "#9ad84a", "#f2c232"]);
+
+  // 두 쌍의 긴 창과 그 위의 작은 장미창
+  const mixed = ["#2f6fd6", "#3cbf6a", "#f2b632", "#f06a2a", "#d8324a", "#7fd0f0", "#ffd86a"];
+  for (const [x0, x1] of [[159, 177], [223, 241]]) {
+    roseWindow(g, (x0 + x1) / 2, 218, 9, ["#3cbf6a", "#f2b632", "#2f86e0", "#f06a2a", "#d8324a"]);
+    stainedWindow(g, rnd, x0, 232, 11, 34, mixed, 1);
+    stainedWindow(g, rnd, x1, 232, 11, 34, mixed, 1);
+  }
+
+  // 성가대 회랑: 따뜻한 불빛이 비치는 작은 아치가 줄지어 있음
+  g.fillStyle = "#e9cfa3";
+  g.fillRect(118, 270, 164, 16);
+  for (let ax = 124; ax < 278; ax += 8) {
+    const glow = g.createLinearGradient(0, 272, 0, 284);
+    glow.addColorStop(0, "#ffd88a");
+    glow.addColorStop(1, "#c98a3a");
+    g.fillStyle = glow;
+    g.beginPath();
+    g.moveTo(ax, 284);
+    g.lineTo(ax, 276);
+    g.arc(ax + 2.5, 276, 2.5, Math.PI, 0);
+    g.lineTo(ax + 5, 284);
     g.closePath();
     g.fill();
   }
-  g.restore();
+  g.fillStyle = "rgba(120,85,50,0.35)";
+  g.fillRect(118, 286, 164, 1.2);
 
-  // 나무 기둥: 먼 것부터 가까운 것 순서로 (먼 기둥은 가늘고 흐림)
-  for (const d of [0.1, 0.3, 0.55, 0.9]) {
-    for (const side of [-1, 1]) {
-      const x = VP.x + side * (16 + 132 * d);
-      const baseY = VP.y + 18 + 112 * d;
-      const topY = VP.y - 40 - 70 * d;
-      const w = 4 + 17 * d;
-      treeColumn(g, x, baseY, topY, w, side, d);
-    }
+  // 아래 아치문과 파란 작은 장미창
+  g.fillStyle = "#cdb48e";
+  g.beginPath();
+  g.moveTo(172, 330);
+  g.lineTo(172, 304);
+  g.quadraticCurveTo(200, 286, 228, 304);
+  g.lineTo(228, 330);
+  g.closePath();
+  g.fill();
+  roseWindow(g, 200, 308, 11, ["#1f5fc9", "#2f86e0", "#7fd0f0", "#1aa3a0"]);
+
+  // 나무 기둥: 아래에서 올려다봐서 위로 갈수록 가운데로 모임. 먼 것부터
+  for (const [bx, tx, w, d] of [
+    [130, 166, 8, 0.35],
+    [100, 146, 11, 0.6],
+    [64, 124, 16, 1],
+  ]) {
+    leaningColumn(g, bx, tx, 336, 104, w, -1, d);
+    leaningColumn(g, 400 - bx, 400 - tx, 336, 104, w, 1, d);
+  }
+  // 기둥 위쪽의 타원 메달: 초록·노랑 유리
+  for (const [mx, my] of [[96, 122], [304, 122]]) {
+    const medal = g.createRadialGradient(mx - 3, my - 3, 0, mx, my, 12);
+    medal.addColorStop(0, "#fff3a0");
+    medal.addColorStop(0.55, "#d8d040");
+    medal.addColorStop(1, "#3a9a4a");
+    g.fillStyle = medal;
+    g.beginPath();
+    g.ellipse(mx, my, 9, 12, 0, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = "rgba(120,95,60,0.7)";
+    g.lineWidth = 1.2;
+    g.stroke();
   }
 
-  // 바닥: 윤이 나는 돌. 창빛이 색 웅덩이로 비침
+  // 바닥: 따뜻한 돌. 창빛이 색 웅덩이로 비침
   const floorTop = groundAt(globe.x);
   const floor = g.createLinearGradient(0, floorTop - 40, 0, globe.y + globe.r);
-  floor.addColorStop(0, "#cfc5b5");
-  floor.addColorStop(1, "#8f8473");
+  floor.addColorStop(0, "#d9c4a2");
+  floor.addColorStop(1, "#9c8566");
   g.fillStyle = floor;
   fillSilhouette(g, groundAt, left, right, globe.y + globe.r);
   g.save();
@@ -153,9 +146,8 @@ function paintBarcelona(g, globe, groundAt) {
   for (let i = 0; i < 12; i++) {
     const x = r(left + 30, right - 30);
     const y = groundAt(x) + r(4, 30);
-    const color = x < 200 ? COOL[Math.floor(rnd() * COOL.length)] : WARM[Math.floor(rnd() * WARM.length)];
-    g.fillStyle = color;
-    g.globalAlpha = r(0.12, 0.25);
+    g.fillStyle = JEWEL[Math.floor(rnd() * JEWEL.length)];
+    g.globalAlpha = r(0.12, 0.22);
     g.beginPath();
     g.ellipse(x, y, r(14, 28), r(3, 6), 0, 0, Math.PI * 2);
     g.fill();
@@ -165,37 +157,154 @@ function paintBarcelona(g, globe, groundAt) {
   g.restore();
 }
 
-// 천창: 가운데가 밝게 열린 별 모양. 둘레로 꽃잎처럼 갈라진 돌 결
-function vault(g, cx, cy, rr) {
-  const glow = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 1.6);
-  glow.addColorStop(0, "rgba(255,248,225,0.9)");
-  glow.addColorStop(0.4, "rgba(255,240,205,0.35)");
-  glow.addColorStop(1, "rgba(255,240,205,0)");
+// 금빛 별 천창: 주황 꽃잎이 뾰족하게 퍼지고 가운데는 노란 빛. 둘레로 크림색 돌 갈비뼈
+function starVault(g, cx, cy, rr) {
+  const glow = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 1.8);
+  glow.addColorStop(0, "rgba(255,210,110,0.7)");
+  glow.addColorStop(1, "rgba(255,210,110,0)");
   g.fillStyle = glow;
-  g.fillRect(cx - rr * 1.6, cy - rr * 1.6, rr * 3.2, rr * 3.2);
-  // 꽃잎 같은 돌 갈래: 가운데 쪽은 밝고 바깥은 그늘
-  const petals = 10;
-  for (let k = 0; k < petals; k++) {
-    const a = (k / petals) * Math.PI * 2;
-    const grad = g.createLinearGradient(cx, cy, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.6);
-    grad.addColorStop(0, "rgba(255,250,236,0.95)");
-    grad.addColorStop(1, "rgba(150,135,112,0.85)");
+  g.fillRect(cx - rr * 1.8, cy - rr * 1.8, rr * 3.6, rr * 3.6);
+  const spikes = 12;
+  for (let k = 0; k < spikes; k++) {
+    const a = (k / spikes) * Math.PI * 2;
+    const len = rr * (k % 2 ? 1.25 : 0.95);
+    const grad = g.createLinearGradient(cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len * 0.75);
+    grad.addColorStop(0, "#f39a2e");
+    grad.addColorStop(1, "#efd9b4");
     g.fillStyle = grad;
     g.beginPath();
-    g.moveTo(cx + Math.cos(a - 0.12) * rr * 0.3, cy + Math.sin(a - 0.12) * rr * 0.18);
-    g.quadraticCurveTo(
-      cx + Math.cos(a) * rr * 1.15,
-      cy + Math.sin(a) * rr * 0.7,
-      cx + Math.cos(a + 0.12) * rr * 0.3,
-      cy + Math.sin(a + 0.12) * rr * 0.18,
-    );
+    g.moveTo(cx + Math.cos(a - 0.22) * rr * 0.35, cy + Math.sin(a - 0.22) * rr * 0.26);
+    g.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len * 0.75);
+    g.lineTo(cx + Math.cos(a + 0.22) * rr * 0.35, cy + Math.sin(a + 0.22) * rr * 0.26);
     g.closePath();
     g.fill();
   }
-  g.fillStyle = "rgba(255,252,240,0.95)";
+  const core = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 0.42);
+  core.addColorStop(0, "#fff4c0");
+  core.addColorStop(0.6, "#ffcf4a");
+  core.addColorStop(1, "#d98a2a");
+  g.fillStyle = core;
   g.beginPath();
-  g.ellipse(cx, cy, rr * 0.28, rr * 0.17, 0, 0, Math.PI * 2);
+  g.ellipse(cx, cy, rr * 0.42, rr * 0.32, 0, 0, Math.PI * 2);
   g.fill();
+}
+
+// 장미창: 바깥 돌 테, 방사형 색유리 꽃잎, 가운데 노란 빛, 납선
+function roseWindow(g, cx, cy, rr, palette) {
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  const halo = g.createRadialGradient(cx, cy, rr * 0.5, cx, cy, rr * 1.8);
+  halo.addColorStop(0, `${palette[0]}44`);
+  halo.addColorStop(1, `${palette[0]}00`);
+  g.fillStyle = halo;
+  g.fillRect(cx - rr * 2, cy - rr * 2, rr * 4, rr * 4);
+  g.restore();
+  g.fillStyle = "#cdb48e";
+  g.beginPath();
+  g.arc(cx, cy, rr * 1.12, 0, Math.PI * 2);
+  g.fill();
+  const petals = Math.max(8, Math.round(rr * 0.8));
+  for (let k = 0; k < petals; k++) {
+    const a0 = (k / petals) * Math.PI * 2;
+    const a1 = ((k + 1) / petals) * Math.PI * 2;
+    for (const [r0, r1, shift] of [[0.35, 0.7, 0], [0.7, 1, 1]]) {
+      g.fillStyle = palette[(k + shift * 2) % palette.length];
+      g.beginPath();
+      g.arc(cx, cy, rr * r1, a0, a1);
+      g.arc(cx, cy, rr * r0, a1, a0, true);
+      g.closePath();
+      g.fill();
+    }
+  }
+  g.strokeStyle = "rgba(40,30,35,0.6)";
+  g.lineWidth = Math.max(0.3, rr * 0.03);
+  for (let k = 0; k < petals; k++) {
+    const a = (k / petals) * Math.PI * 2;
+    g.beginPath();
+    g.moveTo(cx + Math.cos(a) * rr * 0.35, cy + Math.sin(a) * rr * 0.35);
+    g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+    g.stroke();
+  }
+  for (const k of [0.35, 0.7, 1]) {
+    g.beginPath();
+    g.arc(cx, cy, rr * k, 0, Math.PI * 2);
+    g.stroke();
+  }
+  const core = g.createRadialGradient(cx, cy, 0, cx, cy, rr * 0.35);
+  core.addColorStop(0, "#fffbe0");
+  core.addColorStop(1, "#f2c232");
+  g.fillStyle = core;
+  g.beginPath();
+  g.arc(cx, cy, rr * 0.35, 0, Math.PI * 2);
+  g.fill();
+}
+
+// 올려다본 나무 기둥: 아래는 회청색 반암, 위는 크림색 사암. 마디 고리에서 가지가 천장으로 퍼짐
+function leaningColumn(g, bx, tx, baseY, topY, w, side, d) {
+  const knotY = topY + (baseY - topY) * 0.42;
+  const xAt = (y) => bx + (tx - bx) * ((baseY - y) / (baseY - topY));
+  const wAt = (y) => w * (0.6 + 0.4 * ((y - topY) / (baseY - topY)));
+  g.save();
+  g.globalAlpha = 0.7 + 0.3 * d;
+  const body = (y0, y1, c0, c1, c2) => {
+    const grad = g.createLinearGradient(xAt((y0 + y1) / 2) - w / 2, 0, xAt((y0 + y1) / 2) + w / 2, 0);
+    grad.addColorStop(0, side < 0 ? c0 : c2);
+    grad.addColorStop(0.5, c1);
+    grad.addColorStop(1, side < 0 ? c2 : c0);
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(xAt(y1) - wAt(y1) / 2, y1);
+    g.lineTo(xAt(y0) - wAt(y0) / 2, y0);
+    g.lineTo(xAt(y0) + wAt(y0) / 2, y0);
+    g.lineTo(xAt(y1) + wAt(y1) / 2, y1);
+    g.closePath();
+    g.fill();
+  };
+  body(knotY, baseY, "#c9cfda", "#98a3b6", "#6f7a8e");
+  body(topY, knotY, "#fbf3e4", "#e8dcc6", "#c2b08f");
+  // 세로 홈
+  g.strokeStyle = "rgba(80,90,110,0.25)";
+  g.lineWidth = Math.max(0.3, w * 0.04);
+  for (const k of [-0.25, 0, 0.25]) {
+    g.beginPath();
+    g.moveTo(xAt(baseY) + k * wAt(baseY), baseY);
+    g.lineTo(xAt(topY) + k * wAt(topY), topY);
+    g.stroke();
+  }
+  // 마디 고리: 꽃받침처럼 둥근 덩어리
+  const kx = xAt(knotY);
+  const knot = g.createRadialGradient(kx - w * 0.2, knotY - w * 0.2, 0, kx, knotY, w * 0.9);
+  knot.addColorStop(0, "#d9dde6");
+  knot.addColorStop(1, "#7d889c");
+  g.fillStyle = knot;
+  for (let k = -2; k <= 2; k++) {
+    g.beginPath();
+    g.ellipse(kx + k * w * 0.22, knotY, w * 0.28, w * 0.38, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  // 위로 퍼지는 가지 (불투명하게)
+  g.globalAlpha = 1;
+  const tX = xAt(topY);
+  for (const [dx, lift] of [[-1.6, 0.7], [-0.6, 1], [0.6, 1], [1.6, 0.7]]) {
+    const ex = tX + dx * w * 2.4;
+    const ey = topY - 60 * lift;
+    for (const [color, extra, off] of [["#c2b08f", 0.9, 0.6], ["#f6ecda", 0, 0]]) {
+      g.strokeStyle = color;
+      g.lineCap = "round";
+      for (let k = 0; k < 6; k++) {
+        const t0 = k / 6;
+        const t1 = (k + 1) / 6;
+        const px = (t) => tX + (ex - tX) * t;
+        const py = (t) => topY + (ey - topY) * t;
+        g.lineWidth = Math.max(0.8, w * 0.5 * (1 - t0 * 0.6)) + extra;
+        g.beginPath();
+        g.moveTo(px(t0) + off, py(t0) + off);
+        g.lineTo(px(t1) + off, py(t1) + off);
+        g.stroke();
+      }
+    }
+  }
+  g.restore();
 }
 
 // 스테인드글라스 창: 위가 둥근 긴 창. 칸마다 색유리, 사이사이 짙은 납선, 창 둘레로 색빛이 번짐
@@ -291,89 +400,6 @@ function stainedWindow(g, rnd, cx, y, w, h, palette, alpha) {
 }
 
 // 가우디의 나무 기둥: 위로 갈수록 가늘어지는 몸통에 세로 홈, 갈라지는 자리의 마디,
-// 마디에서 네 갈래 가지가 천장으로 뻗음. 빛을 받는 쪽은 창 색이 살짝 물듦
-function treeColumn(g, x, baseY, topY, w, side, d) {
-  const tint = side < 0 ? "rgba(70,150,230,0.22)" : "rgba(245,140,60,0.22)";
-  const fade = 0.75 + 0.25 * d; // 먼 기둥은 실내 공기에 묻혀 조금 흐림
-  g.save();
-  g.globalAlpha = fade;
-  const trunk = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
-  trunk.addColorStop(0, side < 0 ? STONE[0] : STONE[2]);
-  trunk.addColorStop(0.5, STONE[1]);
-  trunk.addColorStop(1, side < 0 ? STONE[2] : STONE[0]);
-  g.fillStyle = trunk;
-  g.beginPath();
-  g.moveTo(x - w / 2, baseY);
-  g.lineTo(x - w * 0.34, topY);
-  g.lineTo(x + w * 0.34, topY);
-  g.lineTo(x + w / 2, baseY);
-  g.closePath();
-  g.fill();
-  // 창 쪽 면에 물든 색빛
-  g.fillStyle = tint;
-  g.beginPath();
-  const lit = side < 0 ? -1 : 1;
-  g.moveTo(x + lit * w * 0.5, baseY);
-  g.lineTo(x + lit * w * 0.34, topY);
-  g.lineTo(x, topY);
-  g.lineTo(x, baseY);
-  g.closePath();
-  g.fill();
-  // 세로 홈
-  g.strokeStyle = "rgba(120,105,85,0.25)";
-  g.lineWidth = Math.max(0.3, w * 0.05);
-  for (let k = -1; k <= 1; k++) {
-    g.beginPath();
-    g.moveTo(x + k * w * 0.22, baseY);
-    g.lineTo(x + k * w * 0.15, topY);
-    g.stroke();
-  }
-  // 가지: 마디에서 바깥·위로 휘며 가늘어짐 (밑은 굵고 끝은 가늘게).
-  // 반투명으로 겹쳐 그리면 이음매가 점처럼 보여서 가지는 불투명하게 그림
-  g.globalAlpha = 1;
-  const ceilY = topY - (topY - 40) * 0.75;
-  for (const [dx, lift] of [
-    [-1.6, 0.9],
-    [-0.6, 1],
-    [0.6, 1],
-    [1.6, 0.9],
-  ]) {
-    const ex = x + dx * w * 2.2;
-    const ey = topY - (topY - ceilY) * lift;
-    const segs = 6;
-    const px = (t) => x + (ex - x) * t + Math.sin(t * Math.PI) * dx * w * 0.2;
-    const py = (t) => topY + (ey - topY) * Math.pow(t, 0.8);
-    // 아래쪽 그늘 한 번, 위쪽 밝은 면 한 번. 같은 색으로 이어 그려 마디가 끊겨 보이지 않게
-    for (const [color, extra, off] of [["#b3a58e", 0.9, 0.6], [STONE[0], 0, 0]]) {
-      g.strokeStyle = color;
-      g.lineCap = "round";
-      for (let k = 0; k < segs; k++) {
-        const t0 = k / segs;
-        const t1 = (k + 1) / segs;
-        g.lineWidth = Math.max(0.8, w * 0.6 * (1 - t0 * 0.65)) + extra;
-        g.beginPath();
-        g.moveTo(px(t0) + off, py(t0) + off);
-        g.lineTo(px(t1) + off, py(t1) + off);
-        g.stroke();
-      }
-    }
-  }
-  // 갈라지는 마디: 둥근 옹이
-  const knot = g.createRadialGradient(x - w * 0.2, topY - w * 0.2, 0, x, topY, w * 0.7);
-  knot.addColorStop(0, "#fbf6ec");
-  knot.addColorStop(1, STONE[2]);
-  g.fillStyle = knot;
-  g.beginPath();
-  g.ellipse(x, topY, w * 0.62, w * 0.5, 0, 0, Math.PI * 2);
-  g.fill();
-  // 바닥 받침
-  g.fillStyle = "rgba(90,80,65,0.35)";
-  g.beginPath();
-  g.ellipse(x, baseY, w * 0.7, w * 0.16, 0, 0, Math.PI * 2);
-  g.fill();
-  g.restore();
-}
-
 // 유리 조각: 3~5각의 날카로운 조각. 색유리 위에 한쪽 모서리만 하얗게 반짝임
 function drawShard(ctx, p) {
   ctx.save();
