@@ -13,6 +13,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  deployments: write
 
 concurrency:
   group: pages
@@ -48,3 +49,25 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      # 저장소 Deployments 목록에 Production(main)과 Preview(preview)를
+      # 각각의 주소와 함께 띄운다.
+      - name: Record Production and Preview deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SITE: ${{ steps.deployment.outputs.page_url }}
+          LOG: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          record() {
+            local env="$1" ref="$2" url="$3" production="$4"
+            id=$(gh api "repos/$GITHUB_REPOSITORY/deployments" --jq .id --input - <<JSON
+          {"ref": "$ref", "environment": "$env", "description": "GitHub Pages",
+           "auto_merge": false, "required_contexts": [],
+           "production_environment": $production, "transient_environment": false}
+          JSON
+            )
+            gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses" \
+              -f state=success -f environment_url="$url" -f log_url="$LOG" > /dev/null
+          }
+          record Production main "$SITE" true
+          record Preview preview "${SITE}preview/" false
