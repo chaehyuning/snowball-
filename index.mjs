@@ -114,7 +114,7 @@ function pop(power) {
   startAutoShake(power);
   squashVel += 0.16 * power;
   sfx.pop(power, scene.id);
-  window.dispatchEvent(new Event("snowball:pop"));
+  window.dispatchEvent(new CustomEvent("snowball:pop", { detail: { power } }));
 
   // 번쩍임, 두 번째 고리, 불꽃 줄기
   const now = performance.now();
