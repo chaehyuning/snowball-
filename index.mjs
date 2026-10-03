@@ -22,7 +22,7 @@ const globe = { x: 200, y: 210, r: 170 };
 const mound = { x: 200, y: 360, rx: 190, ry: 50 };
 const MAX_OFFSET = 50; // 흔들 수 있는 최대 거리
 // 화면에서는 흔들림을 이만큼만 보여줌. 입자가 받는 힘은 그대로라 눈은 똑같이 날림
-const VISUAL_SHAKE = 0.45;
+const VISUAL_SHAKE = 0.35;
 
 // 흔들기 상태 (스노우볼은 손을 스프링처럼 따라감)
 let dragging = false;
@@ -39,7 +39,7 @@ let stir = 0;
 // 클릭하면 스노우볼이 저절로 위아래로 몇 번 흔들림
 const AUTO_SHAKE_MS = 900;
 const AUTO_SHAKE_PERIOD = 250; // 한 번 오르내리는 시간
-const AUTO_SHAKE_HEIGHT = 45;
+const AUTO_SHAKE_HEIGHT = 60;
 let autoShakeStart = -Infinity;
 
 function startAutoShake() {
@@ -95,7 +95,7 @@ function flowAt(x, y, t) {
   const h = 1;
   const u = (streamAt(x, y + h, t) - streamAt(x, y - h, t)) / (2 * h);
   const v = -(streamAt(x + h, y, t) - streamAt(x - h, y, t)) / (2 * h);
-  return { x: u * stir * 0.5, y: v * stir * 0.5 };
+  return { x: u * stir * 0.8, y: v * stir * 0.8 };
 }
 
 function settle(p) {
@@ -203,8 +203,8 @@ canvas.addEventListener("pointercancel", release);
 
 function update(t, accel) {
   // 흔든 만큼 물이 휘저어지고, 몇 초에 걸쳐 잦아든다
-  stir = Math.min(stir + Math.abs(accel) * 0.12, 3);
-  stir *= 0.99;
+  stir = Math.min(stir + Math.abs(accel) * 0.25, 5);
+  stir *= 0.993;
 
   for (const p of particles) {
     const flow = flowAt(p.x, p.y, t);
@@ -214,8 +214,8 @@ function update(t, accel) {
       const lift = accel * p.inertia - flow.y + Math.hypot(flow.x, flow.y) * 0.3;
       if (lift > p.grip) {
         p.settled = false;
-        p.vy = -Math.min(lift * rand(0.5, 1), 4);
-        p.vx = flow.x + rand(-0.6, 0.6) * Math.min(lift, 3);
+        p.vy = -Math.min(lift * rand(0.7, 1.3), 7);
+        p.vx = flow.x + rand(-0.9, 0.9) * Math.min(lift, 5);
       }
       continue;
     }
@@ -243,7 +243,7 @@ function update(t, accel) {
     p.angle += p.spin * (1 + speed * 2);
     p.flip += p.flipSpeed * (1 + speed);
 
-    // 유리 벽에 닿으면 벽을 따라 미끄러짐
+    // 유리 벽에 닿으면 벽을 따라 미끄러지며 살짝 튕김
     const dx = p.x - globe.x;
     const dy = p.y - globe.y;
     const d = Math.hypot(dx, dy);
@@ -253,8 +253,9 @@ function update(t, accel) {
       const ny = dy / d;
       const out = p.vx * nx + p.vy * ny;
       if (out > 0) {
-        p.vx -= out * nx;
-        p.vy -= out * ny;
+        // 벽에 부딪히면 살짝 튕겨 나와 천장에 몰리지 않게 함
+        p.vx -= 1.5 * out * nx;
+        p.vy -= 1.5 * out * ny;
       }
       p.x = globe.x + nx * max;
       p.y = globe.y + ny * max;
@@ -278,7 +279,7 @@ function drawParticles(t) {
   ctx.beginPath();
   ctx.arc(globe.x, globe.y, globe.r, 0, Math.PI * 2);
   ctx.clip();
-  scene.animate?.(ctx, t);
+  scene.animate?.(ctx, t, globe);
   ctx.globalCompositeOperation = scene.particles.blend;
   for (const p of particles) scene.particles.draw(ctx, p, t);
   ctx.restore();

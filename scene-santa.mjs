@@ -4,6 +4,62 @@ import { seeded, fillSilhouette } from "./util.mjs";
 
 const WINDOW = "#ffcf7a";
 
+let aurora = null;
+const AURORA_H = 200; // 유리구 위쪽에서 이 높이까지만 그림
+
+// 오로라 커튼: 물결치는 띠에서 아래로 빛줄기가 내려오고, 위 가장자리는 분홍빛
+function paintAurora(left, top, size, rnd) {
+  const scale = 2;
+  const c = document.createElement("canvas");
+  c.width = size * scale;
+  c.height = AURORA_H * scale;
+  const g = c.getContext("2d");
+  g.scale(scale, scale);
+  g.translate(-left, -top);
+  g.globalCompositeOperation = "lighter";
+  g.filter = "blur(2px)";
+
+  const ribbons = [
+    { base: 92, amp: 16, freq: 0.018, phase: 0.4, len: 60, color: [80, 255, 170] },
+    { base: 118, amp: 12, freq: 0.024, phase: 2.1, len: 46, color: [60, 230, 210] },
+    { base: 74, amp: 10, freq: 0.03, phase: 4.0, len: 34, color: [150, 255, 160] },
+  ];
+  for (const rb of ribbons) {
+    for (let x = left; x <= left + size; x += 1.5) {
+      const y = rb.base + rb.amp * Math.sin(x * rb.freq + rb.phase) + 4 * Math.sin(x * 0.11 + rb.phase);
+      const fade = Math.sin(((x - left) / size) * Math.PI); // 가장자리로 갈수록 옅게
+      const len = rb.len * (0.6 + rnd() * 0.6);
+      const [cr, cg, cb] = rb.color;
+      const ray = g.createLinearGradient(0, y - 8, 0, y + len);
+      ray.addColorStop(0, "rgba(255,120,200,0)");
+      ray.addColorStop(0.12, `rgba(255,120,200,${0.25 * fade})`);
+      ray.addColorStop(0.3, `rgba(${cr},${cg},${cb},${0.55 * fade})`);
+      ray.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      g.strokeStyle = ray;
+      g.lineWidth = 1.6;
+      g.beginPath();
+      g.moveTo(x, y - 8);
+      g.lineTo(x, y + len);
+      g.stroke();
+    }
+  }
+  return c;
+}
+
+// 오로라가 천천히 밝아졌다 어두워지며 옆으로 일렁임
+function animateSanta(ctx, t, globe) {
+  if (!aurora) return;
+  const left = globe.x - globe.r;
+  const top = globe.y - globe.r;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 0.0009);
+  ctx.drawImage(aurora, left + 6 * Math.sin(t * 0.0004), top, globe.r * 2, AURORA_H);
+  ctx.globalAlpha = 0.3 + 0.2 * Math.sin(t * 0.0013 + 1);
+  ctx.drawImage(aurora, left - 8 * Math.sin(t * 0.0006), top + 4, globe.r * 2, AURORA_H);
+  ctx.restore();
+}
+
 function paintSanta(g, globe, groundAt) {
   const rnd = seeded(1950);
   const r = (a, b) => a + rnd() * (b - a);
@@ -17,26 +73,25 @@ function paintSanta(g, globe, groundAt) {
   g.arc(globe.x, globe.y, globe.r, 0, Math.PI * 2);
   g.clip();
 
-  // 북극의 푸른 한낮: 위는 옅은 청회색, 지평선은 거의 흰색
+  // 북극의 해 질 녘: 위는 짙은 남보라, 지평선은 눈빛을 받아 밝음
   const sky = g.createLinearGradient(0, top, 0, 260);
-  sky.addColorStop(0, "#9db3d4");
-  sky.addColorStop(0.55, "#d9e3f0");
-  sky.addColorStop(1, "#f6f4f2");
+  sky.addColorStop(0, "#1c2550");
+  sky.addColorStop(0.45, "#3d4f86");
+  sky.addColorStop(0.8, "#a9b8d6");
+  sky.addColorStop(1, "#eef1f6");
   g.fillStyle = sky;
   g.fillRect(left, top, size, size);
 
-  // 아주 옅은 오로라
-  g.filter = "blur(8px)";
-  for (let i = 0; i < 3; i++) {
-    g.strokeStyle = `rgba(150,230,210,${0.12 + i * 0.04})`;
-    g.lineWidth = 10 - i * 2;
+  // 별
+  for (let i = 0; i < 70; i++) {
+    g.fillStyle = `rgba(255,255,255,${r(0.3, 0.9)})`;
     g.beginPath();
-    for (let x = left; x <= right; x += 6) {
-      g.lineTo(x, 95 + i * 8 + 14 * Math.sin(x * 0.02 + i));
-    }
-    g.stroke();
+    g.arc(r(left, right), r(top, 170), r(0.3, 1), 0, Math.PI * 2);
+    g.fill();
   }
-  g.filter = "none";
+
+  // 오로라는 따로 그려 두고 animate에서 일렁이게 함
+  aurora = paintAurora(left, top, size, rnd);
 
   // 멀리 눈 덮인 언덕
   const farY = (x) => 238 + 8 * Math.sin(x * 0.02 + 1) + 4 * Math.sin(x * 0.07);
@@ -306,7 +361,8 @@ export const santa = {
   label: "핀란드 · 산타마을",
   title: "Santa Claus Village",
   paint: paintSanta,
-  glare: 0.8,
+  animate: animateSanta,
+  glare: 0.6,
   base: {
     body: ["#8b96a3", "#dde4ec", "#f7f9fb", "#c4ced9", "#7f8b98"],
     collar: "#aab4c0",
