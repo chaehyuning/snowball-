@@ -57,6 +57,88 @@ function paintIstanbul(g, globe, groundAt) {
   g.fillStyle = sea;
   g.fillRect(left, 240, size, 18);
 
+  // 건너편 기슭 마을: 언덕을 따라 붙은 작은 집들과 하나둘 켜진 불빛
+  for (let x = left; x < right; x += r(4, 8)) {
+    const y = 236 + 4 * Math.sin(x * 0.04);
+    const h = r(2, 5);
+    g.fillStyle = "rgba(60,100,112,0.9)";
+    g.fillRect(x, y - h + 1, r(3, 6), h + 3);
+    if (rnd() < 0.5) {
+      g.fillStyle = "rgba(255,226,160,0.85)";
+      g.fillRect(x + 1, y - h + 2, 1, 1);
+    }
+  }
+
+  // 갈라타 탑: 왼쪽 건너편, 둥근 돌탑에 뾰족한 원뿔 지붕
+  const gx = 106;
+  const gy = 240;
+  g.fillStyle = "#5a8c92";
+  g.fillRect(gx - 3, gy - 20, 6, 22);
+  g.fillStyle = "#4a7880";
+  g.fillRect(gx - 3.8, gy - 13, 7.6, 1.2);
+  g.fillStyle = "rgba(255,226,160,0.8)";
+  g.fillRect(gx - 2.2, gy - 18, 4.4, 1.4);
+  g.fillStyle = "#3f6a74";
+  g.beginPath();
+  g.moveTo(gx - 3.6, gy - 20);
+  g.lineTo(gx, gy - 30);
+  g.lineTo(gx + 3.6, gy - 20);
+  g.closePath();
+  g.fill();
+
+  // 보스포루스 대교: 오른쪽 멀리, 두 주탑 사이로 늘어진 케이블과 불빛 점
+  const b0 = 270;
+  const b1 = 346;
+  const deckY = 238;
+  g.strokeStyle = "rgba(80,120,130,0.9)";
+  g.lineWidth = 1;
+  for (const px of [b0 + 10, b1 - 10]) {
+    g.beginPath();
+    g.moveTo(px, deckY + 2);
+    g.lineTo(px, deckY - 14);
+    g.stroke();
+  }
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.moveTo(b0, deckY - 2);
+  g.lineTo(b0 + 10, deckY - 14);
+  g.quadraticCurveTo((b0 + b1) / 2, deckY + 4, b1 - 10, deckY - 14);
+  g.lineTo(b1, deckY - 2);
+  g.stroke();
+  g.fillRect(b0, deckY, b1 - b0, 1);
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  for (let t = 0; t <= 1; t += 0.06) {
+    const x = b0 + 10 + t * (b1 - b0 - 20);
+    const y = (1 - t) * (1 - t) * (deckY - 14) + 2 * (1 - t) * t * (deckY + 4) + t * t * (deckY - 14);
+    g.fillStyle = "rgba(200,170,255,0.9)";
+    g.fillRect(x - 0.5, y - 0.5, 1, 1);
+  }
+  g.restore();
+
+  // 해협 위 물비늘과 흰 페리 한 척
+  for (let i = 0; i < 40; i++) {
+    g.fillStyle = `rgba(230,255,250,${r(0.15, 0.4)})`;
+    g.fillRect(r(left, right), r(242, 257), r(2, 6), 0.6);
+  }
+  const fx = 124;
+  const fy = 250;
+  g.fillStyle = "rgba(255,255,255,0.5)";
+  g.fillRect(fx - 14, fy + 2.4, 10, 0.6);
+  g.fillStyle = "#f4f2ec";
+  g.beginPath();
+  g.moveTo(fx - 6, fy);
+  g.lineTo(fx + 8, fy);
+  g.lineTo(fx + 6, fy + 2.4);
+  g.lineTo(fx - 5, fy + 2.4);
+  g.closePath();
+  g.fill();
+  g.fillRect(fx - 3, fy - 2, 7, 2);
+  g.fillStyle = "#2a3a48";
+  g.fillRect(fx - 4, fy + 1.4, 11, 0.8);
+  g.fillStyle = "#e05a3a";
+  g.fillRect(fx + 1, fy - 3.6, 1.6, 1.8);
+
   // 갈매기
   g.strokeStyle = "rgba(255,255,255,0.8)";
   g.lineWidth = 1;
@@ -135,8 +217,8 @@ function paintIstanbul(g, globe, groundAt) {
 
   // 앞쪽 큰 플라타너스와 오스만식 가로등 (가까워서 크고 진하게)
   const plane = { trunk: "#4a3a2a", shade: "#2a5236", colors: ["#3f7a4a", "#4f8f56", "#5fa060", "#356a40"] };
-  paintTree(g, rnd, 22, 352, 50, -1.3, 8, 5, plane);
-  paintTree(g, rnd, 378, 354, 50, -1.85, 8, 5, plane);
+  paintTree(g, rnd, 14, 352, 46, -1.42, 8, 5, plane);
+  paintTree(g, rnd, 386, 354, 46, -1.72, 8, 5, plane);
   lamp(g, 86, 330, 78);
   lamp(g, 314, 330, 78);
 

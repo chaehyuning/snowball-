@@ -46,16 +46,46 @@ function paintParis(g, globe, groundAt) {
     g.fill();
   }
 
-  // 멀리 흐릿한 시가지 (멀수록 하늘빛에 묻힘)
+  // 멀리 오스만 양식 건물: 크림색 벽, 푸른 회색 망사르 지붕과 지붕창, 굴뚝, 불 켜진 창 (멀수록 하늘빛에 묻힘)
   for (let x = left; x < right; ) {
-    const w = r(8, 16);
-    const h = r(5, 14);
-    g.fillStyle = "rgba(150,110,160,0.55)";
-    g.fillRect(x, 262 - h, w - 1, h + 4);
-    for (let wx = x + 2; wx < x + w - 2; wx += 3) {
-      if (rnd() < 0.3) {
-        g.fillStyle = "rgba(255,210,150,0.6)";
-        g.fillRect(wx, 262 - h + 3, 1, 1.4);
+    const w = r(14, 24);
+    const wallH = r(9, 14);
+    const roofH = r(4, 6);
+    const base = 263;
+    const wallTop = base - wallH;
+    // 벽
+    g.fillStyle = "rgba(196,160,170,0.75)";
+    g.fillRect(x, wallTop, w - 1, wallH + 4);
+    // 층을 나누는 발코니 줄
+    g.fillStyle = "rgba(110,80,110,0.5)";
+    for (let fy = wallTop + 3.5; fy < base; fy += 3.5) g.fillRect(x, fy, w - 1, 0.5);
+    // 망사르 지붕: 아래가 넓고 위가 좁은 사다리꼴
+    g.fillStyle = "rgba(108,104,150,0.85)";
+    g.beginPath();
+    g.moveTo(x - 0.5, wallTop);
+    g.lineTo(x + 1.5, wallTop - roofH);
+    g.lineTo(x + w - 2.5, wallTop - roofH);
+    g.lineTo(x + w - 0.5, wallTop);
+    g.closePath();
+    g.fill();
+    // 지붕창
+    for (let dx = x + 3; dx < x + w - 4; dx += 4.5) {
+      g.fillStyle = rnd() < 0.5 ? "rgba(255,214,150,0.8)" : "rgba(70,60,100,0.8)";
+      g.fillRect(dx, wallTop - roofH + 1.5, 1.6, 2);
+    }
+    // 굴뚝
+    if (rnd() < 0.7) {
+      g.fillStyle = "rgba(120,96,120,0.85)";
+      const cx = x + r(3, w - 6);
+      g.fillRect(cx, wallTop - roofH - 2.5, 2.4, 2.6);
+    }
+    // 창
+    for (let fy = wallTop + 1; fy < base - 1; fy += 3.5) {
+      for (let wx = x + 1.6; wx < x + w - 2.5; wx += 2.6) {
+        if (rnd() < 0.35) {
+          g.fillStyle = "rgba(255,212,150,0.85)";
+          g.fillRect(wx, fy, 1, 1.6);
+        }
       }
     }
     x += w;
@@ -107,15 +137,55 @@ function paintParis(g, globe, groundAt) {
     g.fillRect(x - 1, 267, 2, 6);
   }
 
-  // 유람선(바토 무슈): 불 켜진 창
-  g.fillStyle = "#e9e2d6";
-  g.fillRect(238, 273, 46, 4);
-  g.fillStyle = "#2a2a3a";
-  g.fillRect(236, 277, 50, 3);
-  for (let x = 240; x < 282; x += 4) {
-    g.fillStyle = "#ffd88a";
-    g.fillRect(x, 274, 2, 2);
+  // 이에나 다리: 탑 바로 앞에서 센강을 건너는 다섯 아치 돌다리, 난간 가로등
+  g.fillStyle = "#5a4c6c";
+  g.fillRect(150, 262, 100, 4);
+  for (let k = 0; k < 5; k++) {
+    const x0 = 150 + k * 20;
+    g.fillStyle = "#5a4c6c";
+    g.beginPath();
+    g.moveTo(x0, 266);
+    g.lineTo(x0 + 20, 266);
+    g.lineTo(x0 + 20, 270);
+    g.quadraticCurveTo(x0 + 10, 266.5, x0, 270);
+    g.closePath();
+    g.fill();
+    g.fillRect(x0 - 1.2, 266, 2.4, 6);
+    // 물에 비친 아치 그림자
+    g.fillStyle = "rgba(20,15,40,0.35)";
+    g.fillRect(x0 + 2, 272, 16, 1);
   }
+  g.fillStyle = "#ffe2a0";
+  for (let x = 152; x < 250; x += 10) g.fillRect(x, 260.5, 1, 1.5);
+
+  // 유람선(바토 무슈): 낮고 긴 선체, 유리 선실 안 불빛, 물에 번진 빛
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  const boatGlow = g.createLinearGradient(0, 279, 0, 286);
+  boatGlow.addColorStop(0, "rgba(255,210,140,0.35)");
+  boatGlow.addColorStop(1, "rgba(255,210,140,0)");
+  g.fillStyle = boatGlow;
+  g.fillRect(234, 279, 56, 7);
+  g.restore();
+  g.fillStyle = "#2a2a3a";
+  g.beginPath();
+  g.moveTo(232, 276);
+  g.lineTo(290, 276);
+  g.lineTo(286, 280);
+  g.lineTo(236, 280);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "#e9e2d6";
+  g.fillRect(236, 275.2, 52, 1);
+  const cabin = g.createLinearGradient(0, 271, 0, 275);
+  cabin.addColorStop(0, "#fff0c8");
+  cabin.addColorStop(1, "#ffc46a");
+  g.fillStyle = cabin;
+  g.beginPath();
+  g.roundRect(240, 271, 42, 4.4, [2, 2, 0, 0]);
+  g.fill();
+  g.fillStyle = "rgba(60,50,80,0.6)";
+  for (let x = 243; x < 282; x += 3.4) g.fillRect(x, 271, 0.5, 4.4);
 
   // 트로카데로 정원: 저녁빛에 잠긴 잔디와 돌길
   const plaza = g.createLinearGradient(0, 283, 0, 340);

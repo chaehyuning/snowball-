@@ -80,6 +80,9 @@ function paintNamsan(g, globe, groundAt) {
   g.fillStyle = "#1d1f4b";
   fillSilhouette(g, farY, left, right, 400);
 
+  // 남산 양옆으로 보이는 서울 시내: 아파트·빌딩 숲과 오른쪽 멀리 롯데월드타워
+  paintSkyline(g, r, rnd, left, right);
+
   // 남산: 숲 덮인 둥근 언덕
   const hillY = (x) => 238 + 0.0032 * (x - 200) ** 2 + 3 * Math.sin(x * 0.08);
   const hill = g.createLinearGradient(0, 235, 0, 320);
@@ -110,6 +113,65 @@ function paintNamsan(g, globe, groundAt) {
     g.fillRect(x - 3, y - 3, 6, 6);
   }
   g.globalCompositeOperation = "source-over";
+
+  // 능선을 따라 둥근 나무 꼭대기가 겹겹이: 매끈한 곡선 대신 숲의 울퉁불퉁한 윤곽
+  for (let x = left; x < right; x += r(3, 6)) {
+    const y = hillY(x) + r(0, 3);
+    const rr = r(3, 6.5);
+    g.fillStyle = ["#1b2e44", "#213a52", "#172638"][Math.floor(rnd() * 3)];
+    g.beginPath();
+    g.arc(x, y, rr, Math.PI, 0);
+    g.fill();
+    // 달빛이 닿는 왼쪽 위 테두리
+    g.strokeStyle = "rgba(170,190,255,0.18)";
+    g.lineWidth = 0.7;
+    g.beginPath();
+    g.arc(x, y, rr, Math.PI * 1.05, Math.PI * 1.5);
+    g.stroke();
+  }
+
+  // 산을 감아 오르는 산책로: 가로등이 점선처럼 이어짐
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  for (let t = 0; t <= 1; t += 0.05) {
+    const x = 128 + t * 150 + Math.sin(t * 9) * 10;
+    const y = hillY(x) + 30 - t * 22 + Math.cos(t * 9) * 4;
+    const lampG = g.createRadialGradient(x, y, 0, x, y, 2.2);
+    lampG.addColorStop(0, "rgba(255,226,160,0.75)");
+    lampG.addColorStop(1, "rgba(255,226,160,0)");
+    g.fillStyle = lampG;
+    g.fillRect(x - 3, y - 3, 6, 6);
+  }
+  g.restore();
+
+  // 남산 케이블카: 아래 정류장에서 타워 쪽으로 이어진 줄과 불 켜진 곤돌라
+  const cableA = [96, 296];
+  const cableB = [176, hillY(176) + 4];
+  g.strokeStyle = "rgba(200,210,235,0.55)";
+  g.lineWidth = 0.6;
+  for (const off of [0, 2.2]) {
+    g.beginPath();
+    g.moveTo(cableA[0], cableA[1] + off);
+    g.quadraticCurveTo((cableA[0] + cableB[0]) / 2, (cableA[1] + cableB[1]) / 2 + 6 + off, cableB[0], cableB[1] + off);
+    g.stroke();
+  }
+  const gondola = (t) => {
+    const x = cableA[0] + (cableB[0] - cableA[0]) * t;
+    const y = cableA[1] + (cableB[1] - cableA[1]) * t + Math.sin(t * Math.PI) * 6 * 0.5;
+    g.strokeStyle = "rgba(200,210,235,0.7)";
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x, y + 3);
+    g.stroke();
+    g.fillStyle = "#c94b4b";
+    g.beginPath();
+    g.roundRect(x - 4, y + 3, 8, 6, 1.5);
+    g.fill();
+    g.fillStyle = "#ffe2a0";
+    g.fillRect(x - 3, y + 4.2, 6, 2.2);
+  };
+  gondola(0.3);
+  gondola(0.72);
 
   paintTower(g, 200, hillY(200) + 2);
 
@@ -180,6 +242,25 @@ function paintTower(g, x, baseY) {
   g.closePath();
   g.fill();
 
+  // 기둥을 두른 조명 띠와 이음매
+  for (let k = 1; k < 6; k++) {
+    const yy = shaftBottom - (shaftBottom - shaftTop) * (k / 6);
+    g.fillStyle = "rgba(90,110,160,0.35)";
+    g.fillRect(x - 4.6 + k * 0.25, yy, 9.2 - k * 0.5, 0.6);
+  }
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  for (const k of [0.25, 0.55]) {
+    const yy = shaftBottom - (shaftBottom - shaftTop) * k;
+    const led = g.createLinearGradient(x - 6, 0, x + 6, 0);
+    led.addColorStop(0, "rgba(140,170,255,0)");
+    led.addColorStop(0.5, "rgba(170,200,255,0.9)");
+    led.addColorStop(1, "rgba(140,170,255,0)");
+    g.fillStyle = led;
+    g.fillRect(x - 6, yy - 0.8, 12, 1.6);
+  }
+  g.restore();
+
   // 전망대: 아래부터 [폭, 높이, 불 켜진 창 여부]
   let y = shaftTop;
   const decks = [
@@ -192,14 +273,26 @@ function paintTower(g, x, baseY) {
   ];
   for (const [w, h, lit] of decks) {
     y -= h;
+    // 원반 아래쪽 그늘: 둥근 바닥면이 살짝 보임
+    g.fillStyle = "rgba(40,50,90,0.55)";
+    g.beginPath();
+    g.ellipse(x, y + h, w / 2, 1.6, 0, 0, Math.PI);
+    g.fill();
     if (lit) {
       const band = g.createLinearGradient(0, y, 0, y + h);
       band.addColorStop(0, "#ffe9b8");
       band.addColorStop(1, "#ffc56a");
       g.fillStyle = band;
       g.fillRect(x - w / 2, y, w, h);
-      g.fillStyle = "rgba(40,30,60,0.35)";
-      for (let wx = x - w / 2 + 2; wx < x + w / 2; wx += 3) g.fillRect(wx, y, 0.6, h);
+      // 창틀: 가운데는 넓고 가장자리로 갈수록 촘촘 (둥근 원통이라)
+      g.fillStyle = "rgba(60,40,70,0.45)";
+      for (let k = -6; k <= 6; k++) {
+        const a = (k / 6) * (Math.PI / 2);
+        g.fillRect(x + Math.sin(a) * (w / 2 - 0.5) - 0.3, y, 0.6, h);
+      }
+      // 창 안 사람 그림자 대신 위쪽 밝은 띠
+      g.fillStyle = "rgba(255,255,240,0.5)";
+      g.fillRect(x - w / 2, y, w, 0.8);
     } else {
       const ring = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
       ring.addColorStop(0, "#9aa8c6");
@@ -207,6 +300,11 @@ function paintTower(g, x, baseY) {
       ring.addColorStop(1, "#a3b0cc");
       g.fillStyle = ring;
       g.fillRect(x - w / 2, y, w, h);
+      // 둥근 테 윗면
+      g.fillStyle = "rgba(255,255,255,0.55)";
+      g.beginPath();
+      g.ellipse(x, y, w / 2, 1.2, 0, Math.PI, 0);
+      g.fill();
     }
   }
 
@@ -251,6 +349,67 @@ function paintCity(g, r, rnd, left, right) {
     g.globalAlpha = 1;
     x += w;
   }
+}
+
+// 남산 양옆 서울 시내: 앞줄 아파트(가로 창 줄), 뒷줄 빌딩, 오른쪽 멀리 롯데월드타워(끝이 가늘어지는 탑, 꼭대기 불빛)
+function paintSkyline(g, r, rnd, left, right) {
+  const base = 300;
+  for (const [layer, color, hmin, hmax] of [
+    [0, "#1a1f48", 18, 46],
+    [1, "#12173a", 10, 30],
+  ]) {
+    for (let x = left; x < right; ) {
+      const w = r(9, 18);
+      const center = Math.abs(x + w / 2 - 200);
+      if (center < 70 && layer === 1) {
+        x += w;
+        continue;
+      }
+      const h = r(hmin, hmax) * (0.6 + Math.min(1, center / 150) * 0.6);
+      const top = base - h - (layer ? 0 : 6);
+      g.fillStyle = color;
+      g.fillRect(x, top, w - 1.5, h + 40);
+      // 옥상 붉은 항공 장애등
+      if (rnd() < 0.25) {
+        g.fillStyle = "#ff6a6a";
+        g.fillRect(x + w / 2 - 1, top - 1.2, 1.4, 1.2);
+      }
+      for (let wy = top + 3; wy < base; wy += 3.4) {
+        if (rnd() < 0.55) continue;
+        g.fillStyle = WINDOW_COLORS[Math.floor(rnd() * WINDOW_COLORS.length)];
+        g.globalAlpha = layer ? 0.75 : 0.45;
+        g.fillRect(x + 1.5, wy, w - 4.5, 1);
+      }
+      g.globalAlpha = 1;
+      x += w;
+    }
+  }
+  // 롯데월드타워: 오른쪽 멀리, 위로 갈수록 가늘어지는 매끈한 탑
+  const lx = 330;
+  const lb = 296;
+  const lt = 196;
+  const lotte = g.createLinearGradient(lx - 7, 0, lx + 7, 0);
+  lotte.addColorStop(0, "#28305e");
+  lotte.addColorStop(0.5, "#4a5590");
+  lotte.addColorStop(1, "#202752");
+  g.fillStyle = lotte;
+  g.beginPath();
+  g.moveTo(lx - 8, lb);
+  g.quadraticCurveTo(lx - 6, lt + 30, lx - 1, lt);
+  g.lineTo(lx + 1, lt);
+  g.quadraticCurveTo(lx + 6, lt + 30, lx + 8, lb);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(255,230,170,0.35)";
+  for (let y = lt + 8; y < lb; y += 5) g.fillRect(lx - 5 + (lb - y) * 0.0, y, 10 - (lb - y) * 0.06, 0.6);
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  const tip = g.createRadialGradient(lx, lt + 6, 0, lx, lt + 6, 8);
+  tip.addColorStop(0, "rgba(255,240,200,0.55)");
+  tip.addColorStop(1, "rgba(255,240,200,0)");
+  g.fillStyle = tip;
+  g.fillRect(lx - 12, lt - 6, 24, 24);
+  g.restore();
 }
 
 // 팔각정: 붉은 기둥, 단청 띠, 끝이 들린 기와지붕, 처마 밑 초롱
