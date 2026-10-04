@@ -286,7 +286,7 @@ export function showLetter(letter, id, onDone) {
     seal.style.transform = "";
     seal.classList.add("peeled");
     navigator.vibrate?.([14, 30, 8]);
-    setTimeout(open, 380);
+    setTimeout(open, 180);
   };
   seal.addEventListener("pointerdown", (e) => {
     if (peeled || !delivered) return;
@@ -323,7 +323,7 @@ export function showLetter(letter, id, onDone) {
     navigator.vibrate?.(10);
     btn.textContent = "tap the envelope to open it";
     $(".envelope").addEventListener("animationend", () => el.classList.add("landed"), { once: true });
-    setTimeout(() => ($(".letter-hint").hidden = false), 900);
+    setTimeout(() => ($(".letter-hint").hidden = false), 2400);
   };
   btn.addEventListener("click", () => (delivered ? peel() : deliver()));
   // 봉투 다른 곳을 눌러도 도장부터 떼어짐
@@ -338,7 +338,7 @@ export function showLetter(letter, id, onDone) {
       $(".letter-sheet").hidden = false;
       $(".letter-actions").hidden = false;
       el.classList.add("unfolded");
-    }, 1700);
+    }, 480);
   };
   const finish = () => {
     el.remove();

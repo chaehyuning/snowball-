@@ -1407,19 +1407,21 @@ body.picker-open .meta {
 }
 
 /* 아직 투입구 안: 보이지 않음 → 버튼을 누르면 미끄러져 나옴 → 다 나오면(landed) 애니메이션을 떼어 열기 동작이 자유로움 */
+/* 틈 위쪽(투입구 안)에 있는 부분은 잘라 내서, 봉투 아랫부분부터 틈 밖으로 서서히 밀려 나옴.
+   위로 밀린 거리와 잘라 낸 높이를 같은 비율로 줄여 가며 맞춤 */
 .letter-view:not(.delivered) .envelope {
-  clip-path: inset(0 0 100% 0);
-  transform: translateY(-60%);
+  clip-path: inset(100% 0 0 0);
+  transform: translateY(-100%);
 }
 
 .letter-view.delivered:not(.landed) .envelope {
-  animation: env-slide 1s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+  animation: env-slide 2.6s cubic-bezier(0.33, 0.1, 0.25, 1) forwards;
 }
 
 @keyframes env-slide {
   from {
-    clip-path: inset(0 0 100% 0);
-    transform: translateY(-60%);
+    clip-path: inset(100% 0 0 0);
+    transform: translateY(-100%);
   }
   to {
     clip-path: inset(0 0 0 0);
@@ -1486,7 +1488,7 @@ body.picker-open .meta {
   border-radius: 3px;
   background: repeating-linear-gradient(#fffaf0 0 15px, #eadfca 15px 16px);
   opacity: 0;
-  transition: transform 0.7s 0.35s ease, opacity 0.2s 0.3s;
+  transition: transform 0.45s 0.15s ease, opacity 0.15s 0.1s;
 }
 
 /* 앞주머니: 양옆 날개(가운데로 갈수록 어두운 그늘)와 아래 날개가 겹쳐 접힌 결이 보임 */
@@ -1530,7 +1532,7 @@ body.picker-open .meta {
   background: linear-gradient(180deg, var(--env-light), color-mix(in srgb, var(--env) 90%, #000));
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   transform-origin: top;
-  transition: transform 0.55s ease, z-index 0s 0.28s;
+  transition: transform 0.35s ease, z-index 0s 0.18s;
 }
 
 .envelope-addr {
@@ -1653,7 +1655,7 @@ body.picker-open .meta {
 }
 
 .wax-seal.peeled {
-  animation: seal-off 0.5s ease-in forwards;
+  animation: seal-off 0.3s ease-in forwards;
   pointer-events: none;
 }
 
