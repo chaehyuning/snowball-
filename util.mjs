@@ -69,3 +69,64 @@ export function paintTree(g, rnd, x, y, len, angle, width, depth, look) {
   }
   g.globalAlpha = 1;
 }
+
+// 분수 물줄기 하나: 뿜는 곳은 굵고 진하며 끝으로 갈수록 가늘고 투명해지는 곡선,
+// 겉에 옅은 물안개, 끝에 흩어지는 물방울, 떨어지는 자리에 하얀 물보라 고리
+export function waterJet(g, rnd, x0, y0, cx, cy, x1, y1, w0, splashY = y1) {
+  const pt = (t) => {
+    const u = 1 - t;
+    return [u * u * x0 + 2 * u * t * cx + t * t * x1, u * u * y0 + 2 * u * t * cy + t * t * y1];
+  };
+  g.save();
+  g.lineCap = "round";
+  const N = 14;
+  // 겉 물안개
+  for (let i = 0; i < N; i++) {
+    const t0 = i / N;
+    const t1 = (i + 1) / N;
+    const [ax, ay] = pt(t0);
+    const [bx, by] = pt(t1);
+    g.strokeStyle = `rgba(220,235,255,${0.12 * (1 - t0 * 0.6)})`;
+    g.lineWidth = w0 * 2.6 * (1 - t0 * 0.5);
+    g.beginPath();
+    g.moveTo(ax, ay);
+    g.lineTo(bx, by);
+    g.stroke();
+  }
+  // 물줄기 몸통과 가운데 밝은 심
+  for (let i = 0; i < N; i++) {
+    const t0 = i / N;
+    const t1 = (i + 1) / N;
+    const [ax, ay] = pt(t0);
+    const [bx, by] = pt(t1);
+    g.strokeStyle = `rgba(235,245,255,${0.85 - t0 * 0.55})`;
+    g.lineWidth = Math.max(0.35, w0 * (1 - t0 * 0.75));
+    g.beginPath();
+    g.moveTo(ax, ay);
+    g.lineTo(bx, by);
+    g.stroke();
+    g.strokeStyle = `rgba(255,255,255,${0.9 - t0 * 0.7})`;
+    g.lineWidth = Math.max(0.2, w0 * 0.35 * (1 - t0));
+    g.stroke();
+  }
+  // 끝에서 흩어지는 물방울
+  for (let i = 0; i < 9; i++) {
+    const t = 0.78 + rnd() * 0.3;
+    const [px, py] = pt(Math.min(1, t));
+    g.fillStyle = `rgba(255,255,255,${0.35 + rnd() * 0.5})`;
+    g.beginPath();
+    g.arc(px + (rnd() - 0.5) * w0 * 4, py + (rnd() - 0.3) * w0 * 4, 0.3 + rnd() * w0 * 0.35, 0, Math.PI * 2);
+    g.fill();
+  }
+  // 떨어지는 자리의 물보라
+  g.strokeStyle = "rgba(255,255,255,0.55)";
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.ellipse(x1, splashY, w0 * 2.2, w0 * 0.6, 0, 0, Math.PI * 2);
+  g.stroke();
+  g.fillStyle = "rgba(255,255,255,0.35)";
+  g.beginPath();
+  g.ellipse(x1, splashY - w0 * 0.4, w0 * 1.2, w0 * 0.9, 0, Math.PI, 0);
+  g.fill();
+  g.restore();
+}

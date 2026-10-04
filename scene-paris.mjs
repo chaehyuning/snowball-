@@ -1,6 +1,6 @@
 // 프랑스: 푸른 저녁의 파리, 불 켜진 에펠탑과 장미 덤불, 흩날리는 장미 꽃잎
 
-import { seeded, fillSilhouette } from "./util.mjs";
+import { seeded, fillSilhouette, waterJet } from "./util.mjs";
 
 const ROSE = ["#b3123a", "#d81b4a", "#8e0f2e", "#e0405f", "#c2185b"];
 const IRON = ["#f2c66a", "#d9a441", "#9a6a24"]; // 조명을 받은 철골
@@ -204,45 +204,72 @@ function paintParis(g, globe, groundAt) {
     g.fill();
   }
 
-  // 트로카데로 분수: 원근이 잡힌 긴 연못과 탑 쪽으로 뿜는 물대포
-  const pool = g.createLinearGradient(0, 284, 0, 308);
-  pool.addColorStop(0, "#5a5a96");
-  pool.addColorStop(1, "#2c2c5a");
-  g.fillStyle = "#cbbca8";
+  // 트로카데로 분수: 원근이 잡힌 긴 연못. 돌 테두리는 윗면(밝음)과 안쪽 벽(그늘) 두 면,
+  // 물 위로 탑 불빛이 비치고 잔물결, 양옆에서 가운데로 뿜는 물대포와 가운데 줄지은 물기둥
+  g.fillStyle = "#d8cab4";
   g.beginPath();
-  g.moveTo(150, 284);
-  g.lineTo(250, 284);
-  g.lineTo(290, 310);
-  g.lineTo(110, 310);
+  g.moveTo(148, 283);
+  g.lineTo(252, 283);
+  g.lineTo(293, 311);
+  g.lineTo(107, 311);
   g.closePath();
   g.fill();
+  g.fillStyle = "#a89a88";
+  g.beginPath();
+  g.moveTo(153, 285.5);
+  g.lineTo(247, 285.5);
+  g.lineTo(285, 309);
+  g.lineTo(115, 309);
+  g.closePath();
+  g.fill();
+  const pool = g.createLinearGradient(0, 287, 0, 309);
+  pool.addColorStop(0, "#6a64a8");
+  pool.addColorStop(0.5, "#40407a");
+  pool.addColorStop(1, "#2a2a58");
   g.fillStyle = pool;
   g.beginPath();
-  g.moveTo(154, 286);
-  g.lineTo(246, 286);
-  g.lineTo(283, 308);
-  g.lineTo(117, 308);
+  g.moveTo(155, 287.5);
+  g.lineTo(245, 287.5);
+  g.lineTo(282, 309);
+  g.lineTo(118, 309);
   g.closePath();
   g.fill();
-  g.strokeStyle = "rgba(235,240,255,0.7)";
-  g.lineCap = "round";
+  // 물에 비친 금빛 탑과 장밋빛 하늘
+  g.save();
+  g.globalCompositeOperation = "lighter";
+  const towerRefl = g.createLinearGradient(0, 288, 0, 308);
+  towerRefl.addColorStop(0, "rgba(255,200,120,0.35)");
+  towerRefl.addColorStop(1, "rgba(255,200,120,0.05)");
+  g.fillStyle = towerRefl;
+  g.beginPath();
+  g.moveTo(194, 288);
+  g.lineTo(206, 288);
+  g.lineTo(222, 308);
+  g.lineTo(178, 308);
+  g.closePath();
+  g.fill();
+  for (let i = 0; i < 40; i++) {
+    const y = r(289, 307);
+    const k = (y - 287) / 22;
+    g.fillStyle = `rgba(255,230,190,${r(0.15, 0.45)})`;
+    g.fillRect(200 + r(-30, 30) * (0.6 + k), y, r(2, 6) * (0.6 + k), 0.6);
+  }
+  g.restore();
+  // 양옆 물대포: 바깥 줄에서 연못 가운데로 높게 휘어 떨어짐
   for (let i = 0; i < 6; i++) {
     for (const side of [-1, 1]) {
-      const bx = 200 + side * (40 + i * 12);
-      const by = 306 - i * 3;
-      g.lineWidth = 1.6 - i * 0.15;
-      g.beginPath();
-      g.moveTo(bx, by);
-      g.quadraticCurveTo(bx - side * (20 + i * 4), by - 22 + i * 2, bx - side * (34 + i * 7), by - 6);
-      g.stroke();
+      const k = i / 5;
+      const bx = 200 + side * (44 + i * 11);
+      const by = 307 - i * 3.6;
+      const ex = bx - side * (32 + i * 6);
+      const ey = by - 3;
+      waterJet(g, rnd, bx, by, (bx + ex) / 2, by - 26 + i * 2.5, ex, ey, 1.7 - k * 0.7);
     }
   }
-  g.lineWidth = 1.2;
+  // 가운데 줄지은 물기둥: 곧게 솟아 끝이 퍼짐
   for (let x = 160; x <= 240; x += 10) {
-    g.beginPath();
-    g.moveTo(x, 290);
-    g.lineTo(x, 280 - Math.abs(200 - x) * 0.1);
-    g.stroke();
+    const h = 16 - Math.abs(200 - x) * 0.08;
+    waterJet(g, rnd, x, 291, x, 291 - h * 1.2, x + (x < 200 ? -1.5 : 1.5), 291 - h, 1.1, 291);
   }
 
   // 앞쪽 가로등 두 개 (가까워서 크고 진하게)
