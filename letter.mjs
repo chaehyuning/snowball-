@@ -251,8 +251,8 @@ export function showLetter(letter, id, onDone) {
       <span class="envelope-flap"></span>
       <button type="button" class="wax-seal" aria-label="Peel the wax seal to open">${waxSealSVG()}</button>
     </div>
-    <button type="button" class="letter-open-btn">click here</button>
-    <p class="letter-hint">(or peel the wax seal)</p>
+    <button type="button" class="letter-open-btn">click here to claim your mail</button>
+    <p class="letter-hint" hidden>(or peel the wax seal)</p>
     <div class="letter-sheet" hidden>
       <p class="sheet-date"></p>
       <p class="paper-to"></p>
@@ -289,7 +289,7 @@ export function showLetter(letter, id, onDone) {
     setTimeout(open, 380);
   };
   seal.addEventListener("pointerdown", (e) => {
-    if (peeled) return;
+    if (peeled || !delivered) return;
     start = { x: e.clientX, y: e.clientY };
     seal.setPointerCapture(e.pointerId);
     seal.classList.add("lifting");
@@ -303,7 +303,7 @@ export function showLetter(letter, id, onDone) {
     if (d > 70) peel();
   });
   const release = () => {
-    if (!start || peeled) return;
+    if (!start || peeled || !delivered) return;
     start = null;
     peel(); // 짧게 누르기만 해도 떼어짐
   };
@@ -313,9 +313,21 @@ export function showLetter(letter, id, onDone) {
     seal.classList.remove("lifting");
     seal.style.transform = "";
   });
-  $(".letter-open-btn").addEventListener("click", peel);
+  // 처음엔 투입구만 보이고, 버튼을 누르면 봉투가 투입구에서 떨어져 나옴. 그 뒤 버튼은 "열기"가 됨
+  const btn = $(".letter-open-btn");
+  let delivered = false;
+  const deliver = () => {
+    if (delivered) return;
+    delivered = true;
+    el.classList.add("delivered");
+    navigator.vibrate?.(10);
+    btn.textContent = "tap the envelope to open it";
+    $(".envelope").addEventListener("animationend", () => el.classList.add("landed"), { once: true });
+    setTimeout(() => ($(".letter-hint").hidden = false), 900);
+  };
+  btn.addEventListener("click", () => (delivered ? peel() : deliver()));
   // 봉투 다른 곳을 눌러도 도장부터 떼어짐
-  $(".envelope").addEventListener("click", (e) => e.target !== seal && !seal.contains(e.target) && peel());
+  $(".envelope").addEventListener("click", (e) => delivered && e.target !== seal && !seal.contains(e.target) && peel());
 
   const open = () => {
     el.classList.add("opened");
@@ -326,7 +338,7 @@ export function showLetter(letter, id, onDone) {
       $(".letter-sheet").hidden = false;
       $(".letter-actions").hidden = false;
       el.classList.add("unfolded");
-    }, 900);
+    }, 1700);
   };
   const finish = () => {
     el.remove();

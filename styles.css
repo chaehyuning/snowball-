@@ -1394,7 +1394,7 @@ body.picker-open .meta {
 /* 우편함 투입구: 은빛 틀과 어두운 틈. 봉투가 이 틈에서 미끄러져 나옴 */
 .mail-slot {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   width: min(380px, 94vw);
   height: 46px;
   margin-top: 10px;
@@ -1406,6 +1406,16 @@ body.picker-open .meta {
     0 10px 18px -8px rgba(0, 0, 0, 0.7);
 }
 
+/* 아직 투입구 안: 보이지 않음 → 버튼을 누르면 미끄러져 나옴 → 다 나오면(landed) 애니메이션을 떼어 열기 동작이 자유로움 */
+.letter-view:not(.delivered) .envelope {
+  clip-path: inset(0 0 100% 0);
+  transform: translateY(-60%);
+}
+
+.letter-view.delivered:not(.landed) .envelope {
+  animation: env-slide 1s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+}
+
 @keyframes env-slide {
   from {
     clip-path: inset(0 0 100% 0);
@@ -1415,6 +1425,20 @@ body.picker-open .meta {
     clip-path: inset(0 0 0 0);
     transform: none;
   }
+}
+
+/* 열면 봉투가 투입구에서 조금 내려와, 뚜껑이 열리고 편지가 올라오는 모습이 보임 */
+.letter-view.opened .envelope {
+  transform: translateY(56px);
+  transition: transform 0.4s ease;
+}
+
+/* 열면 제목과 투입구는 사라지고, 열린 뚜껑과 올라오는 편지만 보임 */
+.letter-view.opened .mail-slot,
+.letter-view.opened .letter-arrive,
+.letter-view.opened .letter-sub {
+  opacity: 0;
+  transition: opacity 0.35s;
 }
 
 .mail-slot span {
@@ -1433,8 +1457,9 @@ body.picker-open .meta {
   position: relative;
   width: min(330px, 86vw);
   aspect-ratio: 3 / 2;
-  margin-top: -16px;
-  animation: env-slide 1s 0.25s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  /* 봉투 윗변이 투입구 틈 뒤에서 시작해, 틈에서 빠져나오는 것처럼 보임 (투입구 틀이 봉투 앞) */
+  z-index: 2;
+  margin-top: -23px;
   perspective: 900px;
   transition: transform 0.5s ease, opacity 0.5s ease;
 }
@@ -1656,7 +1681,7 @@ body.picker-open .meta {
 
 .letter-view.opened .letter-paper {
   opacity: 1;
-  transform: translateY(-62%);
+  transform: translateY(-100%);
 }
 
 .letter-view.unfolded .envelope,
