@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#26232e" />
+      <stop offset="1" stop-color="#0b0b0e" />
+    </radialGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2d3a7a" />
+      <stop offset="0.6" stop-color="#7a5aa8" />
+      <stop offset="1" stop-color="#f2a6b8" />
+    </linearGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5c4a40" />
+      <stop offset="1" stop-color="#2a201b" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9a7428" />
+      <stop offset="0.5" stop-color="#ffe29a" />
+      <stop offset="1" stop-color="#9a7428" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffd9e6" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#ffd9e6" stop-opacity="0" />
+    </radialGradient>
+    <clipPath id="ball"><circle cx="256" cy="226" r="132" /></clipPath>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)" />
+  <circle cx="256" cy="236" r="190" fill="url(#glow)" />
+  <!-- 받침 -->
+  <path d="M168 336 H344 L366 404 Q256 422 146 404 Z" fill="url(#base)" />
+  <path d="M160 346 Q256 362 352 346" stroke="url(#gold)" stroke-width="6" fill="none" stroke-linecap="round" />
+  <path d="M150 396 Q256 414 362 396" stroke="url(#gold)" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.8" />
+  <!-- 유리구 속 -->
+  <g clip-path="url(#ball)">
+    <rect x="100" y="80" width="312" height="300" fill="url(#sky)" />
+    <circle cx="318" cy="150" r="16" fill="#fff4d6" opacity="0.9" />
+    <path d="M110 300 Q190 268 256 286 T402 280 V380 H110 Z" fill="#ffffff" />
+    <path d="M110 300 Q190 268 256 286 T402 280" stroke="#e6e4f2" stroke-width="3" fill="none" />
+    <g fill="#ffffff">
+      <circle cx="170" cy="150" r="5" /><circle cx="214" cy="118" r="4" /><circle cx="292" cy="206" r="5" />
+      <circle cx="198" cy="214" r="3.5" /><circle cx="340" cy="236" r="4" /><circle cx="240" cy="176" r="3" />
+      <circle cx="150" cy="232" r="4" /><circle cx="270" cy="128" r="3" /><circle cx="320" cy="104" r="3.5" />
+    </g>
+  </g>
+  <!-- 유리 테두리와 반사 -->
+  <circle cx="256" cy="226" r="132" fill="none" stroke="#e9eef8" stroke-opacity="0.75" stroke-width="5" />
+  <path d="M170 150 A110 110 0 0 1 236 108" stroke="#ffffff" stroke-opacity="0.7" stroke-width="9" fill="none" stroke-linecap="round" />
+</svg>

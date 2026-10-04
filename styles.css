@@ -1318,3 +1318,256 @@ body.picker-open .meta {
     display: inline;
   }
 }
+
+/* ── 편지 ─────────────────────────────────────────────── */
+.postcard-field textarea {
+  padding: 10px 12px;
+  border: 1px solid #d8ccb8;
+  border-radius: 10px;
+  background: #fff;
+  color: #2a2130;
+  font: inherit;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.postcard-field em {
+  font-style: normal;
+  font-weight: 400;
+  color: #7a6e7c;
+}
+
+.letter-count {
+  justify-self: end;
+  font-weight: 400;
+  color: #7a6e7c;
+}
+
+.letter-done {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #2f7a4f;
+  word-break: break-all;
+}
+
+/* 받은 편지: 화면 가운데 봉투 → 누르면 뚜껑이 열리고 종이가 올라온 뒤 편지지가 펼쳐짐 */
+.letter-view {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(ellipse at 50% 40%, #24202b, #0b0b0e 75%);
+  color: var(--ink);
+}
+
+.letter-arrive {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  text-align: center;
+  color: var(--ink-dim);
+}
+
+.envelope {
+  position: relative;
+  width: min(320px, 82vw);
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  border: 0;
+  background: none;
+  perspective: 900px;
+  cursor: pointer;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.envelope > span {
+  position: absolute;
+}
+
+.envelope-back {
+  inset: 0;
+  border-radius: 8px;
+  background: #e2d5bc;
+  box-shadow: 0 24px 50px -18px rgba(0, 0, 0, 0.8);
+}
+
+/* 닫혀 있을 때 종이는 앞주머니 아래에 숨어 있다가, 열면 위로 올라옴 */
+.letter-paper {
+  left: 7%;
+  right: 7%;
+  top: 38%;
+  bottom: 6%;
+  z-index: 2;
+  border-radius: 4px;
+  background: repeating-linear-gradient(#fffaf0 0 15px, #eadfca 15px 16px);
+  opacity: 0;
+  transition: transform 0.7s 0.35s ease, opacity 0.2s 0.3s;
+}
+
+.envelope-front {
+  inset: 0;
+  z-index: 3;
+  border-radius: 8px;
+  background: #f1e7d4;
+  clip-path: polygon(0 34%, 50% 68%, 100% 34%, 100% 100%, 0 100%);
+}
+
+.envelope-addr {
+  position: absolute;
+  left: 9%;
+  bottom: 12%;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: #6b5640;
+}
+
+.envelope-flap {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 64%;
+  z-index: 4;
+  background: #e9dcc3;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform-origin: top;
+  transition: transform 0.55s ease, z-index 0s 0.28s;
+}
+
+.envelope-seal {
+  left: 50%;
+  top: 60%;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--seal) 70%, #fff), var(--seal) 60%, color-mix(in srgb, var(--seal) 70%, #000));
+  color: #fff;
+  font-size: 20px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  transition: opacity 0.25s ease;
+}
+
+.letter-view.opened .envelope-flap {
+  transform: rotateX(180deg);
+  z-index: 1;
+}
+
+.letter-view.opened .envelope-seal {
+  opacity: 0;
+}
+
+.letter-view.opened .letter-paper {
+  opacity: 1;
+  transform: translateY(-62%);
+}
+
+.letter-view.unfolded .envelope {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(40px) scale(0.9);
+  pointer-events: none;
+}
+
+.letter-hint {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.letter-sheet {
+  width: min(360px, 100%);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 26px 24px 22px;
+  border-radius: 6px;
+  background: repeating-linear-gradient(#fffaf0 0 27px, #eee4d0 27px 28px);
+  background-position: 0 14px;
+  color: #3a2f28;
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.85);
+  animation: sheet-rise 0.6s ease-out;
+}
+
+@keyframes sheet-rise {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.96);
+  }
+}
+
+.paper-to {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 28px;
+}
+
+.paper-message {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 28px;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.paper-from {
+  margin-top: 8px;
+  text-align: right;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 28px;
+}
+
+.letter-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.letter-actions[hidden],
+.letter-sheet[hidden],
+.letter-hint[hidden] {
+  display: none;
+}
+
+.letter-actions button {
+  padding: 11px 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--glass);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.letter-actions .letter-go {
+  border-color: transparent;
+  background: var(--ink);
+  color: #111;
+  font-weight: 700;
+}
+
+body.letter-open .meta {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .envelope,
+  .envelope-flap,
+  .letter-paper,
+  .letter-sheet {
+    transition: none;
+    animation: none;
+  }
+}

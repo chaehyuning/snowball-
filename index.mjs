@@ -14,6 +14,7 @@ import { openPicker } from "./picker.mjs";
 import * as sfx from "./sound.mjs";
 import { showSceneInfo, fillTicker, setupMetaToggle } from "./editorial.mjs";
 import { setupKeepsakes } from "./keepsake.mjs";
+import { readLetter, setupLetters, showLetter } from "./letter.mjs";
 import { startTutorial, tutorialDone, openHelp } from "./tutorial.mjs";
 
 const SCENES = [fuji, namsan, quebec, sydney, santa, forbidden, egypt, paris, istanbul, barcelona, uyuni, hongkong];
@@ -291,7 +292,7 @@ export async function capturePostcard(text) {
   // "만드는 중" 글이 먼저 화면에 보이도록 한 프레임 쉬고 시작
   await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const original = scene.base;
-  if (text) scene.base = { ...original, plate: text, plateFont: "600 14px Pretendard, 'Apple SD Gothic Neo', sans-serif" };
+  if (text) scene.base = { ...original, plate: text, plateFont: PLATE_FONT };
   const hiLayers = {};
   for (const _ of buildSteps(scene, hiLayers, POSTCARD_SCALE));
   scene.base = original;
@@ -353,13 +354,19 @@ const layerCache = new Map();
 const CACHE_SIZE = 4;
 // 한 나라의 고정 그림 층을 만드는 단계들: 먼저 네 층을 그리고, 색 보정은 띠(STRIP 줄)로 나눠 한 단계씩
 const STRIP = 400;
+// 받은 편지에 명판 문구가 있으면 그 나라 받침 명판에 새김
+let platePin = null;
+const PLATE_FONT = "600 14px Pretendard, 'Apple SD Gothic Neo', sans-serif";
 function* buildSteps(target, out, scale = LAYER_DPR) {
   const prev = scene;
+  const prevBase = target.base;
+  if (platePin && platePin.id === target.id) target.base = { ...prevBase, plate: platePin.text, plateFont: PLATE_FONT };
   scene = target; // 받침 색·명판이 지금 장면 값을 읽으므로 잠시 바꿔 둠
   out.baseBack = paintLayer(paintBaseBack, true, scale);
   out.scene = paintLayer((g) => target.paint(g, globe, groundAt), true, scale);
   out.glass = paintLayer(paintGlass, false, scale);
   out.baseFront = paintLayer(paintBaseFront, true, scale);
+  target.base = prevBase;
   scene = prev;
   yield;
   for (const key of ["baseBack", "scene", "baseFront"]) {
@@ -955,8 +962,12 @@ fillTicker(SCENES.map((s) => s.id));
 setupMetaToggle();
 setupKeepsakes({ capture: capturePostcard });
 const startId = idFromUrl();
+const letter = readLetter();
+if (letter?.plate && startId) platePin = { id: startId, text: letter.plate };
 loadScene(startId || "korea");
-if (startId) showInUrl(startId);
+// 편지 링크는 새로고침해도 다시 열리게 주소를 그대로 둠
+if (startId && !letter) showInUrl(startId);
+setupLetters({ currentId: () => scene.id, slugOf: (id) => SLUGS[id] || id });
 
 // 소리 켜기/끄기
 const soundButton = document.querySelector(".sound-toggle");
@@ -986,8 +997,14 @@ musicButton.addEventListener("click", () => {
 showMusic();
 
 // 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
-if (!startId) openPicker(SCENES, scene.id, switchScene, maybeTutorial);
+if (letter && startId) showLetter(letter, scene.id, maybeTutorial);
+else if (!startId) openPicker(SCENES, scene.id, switchScene, maybeTutorial);
 else maybeTutorial();
+
+// 홈 화면에 추가해 앱처럼 쓰고, 한 번 연 뒤에는 오프라인에서도 열리게
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+}
 
 // 스노우볼이 안 보일 때는 그리지 않음: 설명 시트나 지구본 창이 덮었을 때, 화면 밖으로 스크롤됐을 때.
 // 그 사이 시트가 오르내리거나 페이지를 스크롤하는 움직임이 끊기지 않음
@@ -996,7 +1013,10 @@ if ("IntersectionObserver" in window) {
   new IntersectionObserver(([entry]) => (globeOnScreen = entry.isIntersecting)).observe(canvas);
 }
 const covered = () =>
-  !globeOnScreen || document.body.classList.contains("sheet-open") || document.body.classList.contains("picker-open");
+  !globeOnScreen ||
+  document.body.classList.contains("sheet-open") ||
+  document.body.classList.contains("picker-open") ||
+  document.body.classList.contains("letter-open");
 
 // 한 장면 그리기: 받침 그림자 → 받침 뒤 → 장면 → 입자 → 유리 → 받침 앞
 function draw(t) {
