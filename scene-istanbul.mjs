@@ -752,7 +752,7 @@ function drawButterfly(ctx, p, t) {
 
 export const istanbul = {
   id: "turkey",
-  label: "터키 · 블루 모스크",
+  label: "튀르키예 · 블루 모스크",
   title: "Blue Mosque",
   paint: paintIstanbul,
   animate: animateIstanbul,

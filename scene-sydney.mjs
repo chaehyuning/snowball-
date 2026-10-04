@@ -749,7 +749,7 @@ function animateSydney(ctx, t, globe) {
 
 export const sydney = {
   id: "australia",
-  label: "호주 · 오페라하우스",
+  label: "호주 · 시드니 오페라하우스",
   title: "Sydney Opera House",
   paint: paintSydney,
   animate: animateSydney,

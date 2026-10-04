@@ -418,6 +418,108 @@ function sphinx(g) {
   g.fillStyle = "rgba(80,35,12,0.3)";
   g.fillRect(176, 296, 60, 3);
 
+  // 몸의 근육과 다리 윤곽: 접힌 뒷다리 허벅지, 갈비뼈, 어깨뼈, 앞다리 팔꿈치 (빛은 왼쪽 위에서)
+  g.save();
+  g.lineCap = "round";
+  const contour = (pts, w = 1.2, a = 0.45) => {
+    g.strokeStyle = `rgba(80,34,10,${a})`;
+    g.lineWidth = w;
+    g.beginPath();
+    g.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 4) g.quadraticCurveTo(pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
+    g.stroke();
+  };
+  const glint = (pts, w = 0.9) => {
+    g.strokeStyle = "rgba(255,222,176,0.45)";
+    g.lineWidth = w;
+    g.beginPath();
+    g.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 4) g.quadraticCurveTo(pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
+    g.stroke();
+  };
+  // 뒷다리 허벅지: 엉덩이에서 둥글게 내려와 앞으로 접힘
+  contour([64, 272, 98, 262, 108, 290, 109, 296, 112, 299]);
+  glint([66, 270, 92, 262, 102, 278]);
+  // 뒷발: 허벅지 아래 앞으로 놓인 발
+  g.fillStyle = "#b0683a";
+  g.beginPath();
+  g.ellipse(118, 297, 11, 3, 0, 0, Math.PI * 2);
+  g.fill();
+  // 갈비뼈: 옆구리에 옅게 휜 줄 세 개
+  for (const x of [124, 133, 142]) contour([x, 266, x - 3, 275, x + 1, 284], 0.8, 0.25);
+  // 어깨뼈와 앞다리 팔꿈치
+  contour([152, 262, 166, 266, 164, 280, 160, 290, 166, 296]);
+  glint([154, 261, 164, 263, 165, 272]);
+  // 꼬리: 엉덩이에서 오른쪽 허리를 따라 감겨 올라옴
+  g.strokeStyle = "#8a4c28";
+  g.lineWidth = 1.8;
+  g.beginPath();
+  g.moveTo(56, 292);
+  g.quadraticCurveTo(70, 299, 90, 298);
+  g.quadraticCurveTo(100, 297, 102, 292);
+  g.stroke();
+  g.strokeStyle = "rgba(255,210,160,0.4)";
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.moveTo(58, 291.4);
+  g.quadraticCurveTo(70, 297.6, 90, 296.8);
+  g.stroke();
+  // 아래쪽 복원 벽돌: 근대에 덧댄 밝은 네모 돌이 줄지어 보임
+  g.fillStyle = "rgba(255,226,186,0.18)";
+  g.strokeStyle = "rgba(90,40,14,0.22)";
+  g.lineWidth = 0.4;
+  for (let row = 0; row < 2; row++) {
+    for (let x = 60 + row * 3; x < 170; x += 6) {
+      g.fillRect(x, 293 + row * 3, 5.4, 2.6);
+      g.strokeRect(x, 293 + row * 3, 5.4, 2.6);
+    }
+  }
+  g.restore();
+
+  // 앞발 두 개: 길게 뻗은 발과 둥근 발가락 (뒤쪽 발은 그늘, 앞쪽 발은 밝게)
+  const paw = (x0, x1, y, h, light, dark) => {
+    const grad = g.createLinearGradient(0, y - h, 0, y);
+    grad.addColorStop(0, light);
+    grad.addColorStop(1, dark);
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(x0, y - h);
+    g.lineTo(x1 - 6, y - h);
+    // 발끝: 발가락 네 개가 둥글게 솟음
+    for (let k = 0; k < 4; k++) {
+      const yy = y - h + (k * h) / 4;
+      g.quadraticCurveTo(x1 + 1.5, yy + h / 8, x1 - 1, yy + h / 4);
+    }
+    g.lineTo(x0, y);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = "rgba(80,34,10,0.4)";
+    g.lineWidth = 0.5;
+    for (let k = 1; k < 4; k++) {
+      g.beginPath();
+      g.moveTo(x1 - 6, y - h + (k * h) / 4);
+      g.lineTo(x1 - 1, y - h + (k * h) / 4);
+      g.stroke();
+    }
+    g.fillStyle = "rgba(255,222,176,0.35)";
+    g.fillRect(x0, y - h, x1 - x0 - 8, 0.8);
+  };
+  paw(178, 231, 290, 5, "#b06c3e", "#7e4220");
+  paw(176, 242, 299, 7, "#e2a46c", "#a4602f");
+  // 두 앞발 사이 꿈의 비석: 붉은 화강암 판에 둥근 윗머리
+  g.fillStyle = "#8e4a3a";
+  g.beginPath();
+  g.moveTo(198, 291);
+  g.lineTo(198, 284);
+  g.quadraticCurveTo(203, 279.5, 208, 284);
+  g.lineTo(208, 291);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(255,210,180,0.35)";
+  g.fillRect(199.5, 285, 7, 0.5);
+  g.fillRect(199.5, 287, 7, 0.5);
+  g.fillRect(199.5, 289, 7, 0.5);
+
   // 머리: 오른쪽 앞을 바라보는 3/4 각도. 두건(네메스)은 머리를 둥글게 감싸고
   // 양옆 자락이 어깨 쪽으로 넓게 퍼져 내려옴. 얼굴은 두건 안쪽에 쏙 들어가 있음
   const headPath = () => {
@@ -807,7 +909,7 @@ function animateEgypt(ctx, t, globe) {
 
 export const egypt = {
   id: "egypt",
-  label: "이집트 · 피라미드",
+  label: "이집트 · 기자 피라미드",
   title: "Pyramids of Giza",
   paint: paintEgypt,
   animate: animateEgypt,

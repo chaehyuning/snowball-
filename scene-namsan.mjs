@@ -559,7 +559,7 @@ function drawSparkle(ctx, p, t) {
 
 export const namsan = {
   id: "korea",
-  label: "한국 · 남산타워",
+  label: "한국 · N서울타워",
   title: "N서울타워",
   paint: paintNamsan,
   animate: animateNamsan,

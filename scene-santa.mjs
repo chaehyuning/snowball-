@@ -1125,7 +1125,7 @@ function drawFlake(ctx, p) {
 
 export const santa = {
   id: "finland",
-  label: "핀란드 · 산타마을",
+  label: "핀란드 · 산타클로스 마을",
   title: "Santa Claus Village",
   paint: paintSanta,
   animate: animateSanta,
