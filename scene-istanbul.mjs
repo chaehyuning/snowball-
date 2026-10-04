@@ -1,6 +1,6 @@
 // 터키: 해 질 녘 이스탄불 블루 모스크(술탄 아흐메트 모스크), 초승달, 튤립, 날아다니는 나비
 
-import { seeded, fillSilhouette, paintTree, waterJet } from "./util.mjs";
+import { seeded, fillSilhouette, paintTree, waterJet, animateJets } from "./util.mjs";
 
 const WING = ["#2ec4c9", "#1f8fd6", "#7fe3d6", "#0fa3a3", "#bff3ff"];
 const STONE = "#e8dcc4";
@@ -8,7 +8,9 @@ const LEAD = ["#9fb4c8", "#6f87a0", "#4d6680"]; // 납판 돔: 밝은 쪽 → �
 
 let mahya = []; // 첨탑 사이에 건 등불 줄 (animate에서 깜빡임)
 
+let jets = [];
 function paintIstanbul(g, globe, groundAt) {
+  jets = [];
   const rnd = seeded(1616);
   const r = (a, b) => a + rnd() * (b - a);
   const left = globe.x - globe.r;
@@ -228,7 +230,7 @@ function paintIstanbul(g, globe, groundAt) {
     const by = 292 + Math.sin(a) * 7.4;
     const ex = 200 + Math.cos(a) * 18;
     const ey = 292 + Math.sin(a) * 2.8;
-    waterJet(g, rnd, bx, by, 200 + Math.cos(a) * 34, by - 15, ex, ey, front ? 1.3 : 0.8);
+    waterJet(g, rnd, bx, by, 200 + Math.cos(a) * 34, by - 15, ex, ey, front ? 1.3 : 0.8, undefined, jets);
   }
   // 가운데 2단 수반
   g.fillStyle = "#cdbf9f";
@@ -264,8 +266,8 @@ function paintIstanbul(g, globe, groundAt) {
   g.closePath();
   g.fill();
   // 가운데 물기둥: 위로 솟았다 둥글게 퍼져 떨어짐
-  waterJet(g, rnd, 200, 271, 200, 246, 200, 254, 2.2, 272);
-  for (const side of [-1, 1]) waterJet(g, rnd, 200, 254, 200 + side * 8, 248, 200 + side * 12, 271, 1, 272);
+  waterJet(g, rnd, 200, 271, 200, 246, 200, 254, 2.2, 272, jets);
+  for (const side of [-1, 1]) waterJet(g, rnd, 200, 254, 200 + side * 8, 248, 200 + side * 12, 271, 1, 272, jets);
 
   // 튤립 화단 (원근이 잡힌 타원 꽃밭)
   tulips(g, rnd, 112, 314, 30);
@@ -603,6 +605,7 @@ function tulips(g, rnd, x, baseY, w) {
 }
 
 function animateIstanbul(ctx, t) {
+  animateJets(ctx, t, jets);
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   for (const l of mahya) {

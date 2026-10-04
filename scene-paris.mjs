@@ -1,6 +1,6 @@
 // 프랑스: 푸른 저녁의 파리, 불 켜진 에펠탑과 장미 덤불, 흩날리는 장미 꽃잎
 
-import { seeded, fillSilhouette, waterJet } from "./util.mjs";
+import { seeded, fillSilhouette, waterJet, animateJets } from "./util.mjs";
 
 const ROSE = ["#b3123a", "#d81b4a", "#8e0f2e", "#e0405f", "#c2185b"];
 const IRON = ["#f2c66a", "#d9a441", "#9a6a24"]; // 조명을 받은 철골
@@ -8,6 +8,7 @@ const IRON = ["#f2c66a", "#d9a441", "#9a6a24"]; // 조명을 받은 철골
 // 에펠탑 윤곽: 바닥에서 위로 갈수록 오목하게 좁아짐
 // 트로카데로에서 센강 건너 바라본 모습이라 탑은 강 너머에 서 있음
 const TOWER = { cx: 200, base: 262, top: 74, half: 46 };
+let jets = [];
 function towerHalf(y) {
   const t = (TOWER.base - y) / (TOWER.base - TOWER.top);
   return TOWER.half * Math.pow(1 - t, 2.2) + 2;
@@ -19,6 +20,7 @@ let sparkles = [];
 // 트로카데로 광장에서 본 구도. 앞에서부터 깊이 순서로:
 // 장미 덤불·가로등 → 트로카데로 분수 → 센강과 다리, 유람선 → 샹드마르스 나무 → 에펠탑 → 흐린 시가지
 function paintParis(g, globe, groundAt) {
+  jets = [];
   const rnd = seeded(1889);
   const r = (a, b) => a + rnd() * (b - a);
   const left = globe.x - globe.r;
@@ -263,13 +265,13 @@ function paintParis(g, globe, groundAt) {
       const by = 307 - i * 3.6;
       const ex = bx - side * (32 + i * 6);
       const ey = by - 3;
-      waterJet(g, rnd, bx, by, (bx + ex) / 2, by - 26 + i * 2.5, ex, ey, 1.7 - k * 0.7);
+      waterJet(g, rnd, bx, by, (bx + ex) / 2, by - 26 + i * 2.5, ex, ey, 1.7 - k * 0.7, undefined, jets);
     }
   }
   // 가운데 줄지은 물기둥: 곧게 솟아 끝이 퍼짐
   for (let x = 160; x <= 240; x += 10) {
     const h = 16 - Math.abs(200 - x) * 0.08;
-    waterJet(g, rnd, x, 291, x, 291 - h * 1.2, x + (x < 200 ? -1.5 : 1.5), 291 - h, 1.1, 291);
+    waterJet(g, rnd, x, 291, x, 291 - h * 1.2, x + (x < 200 ? -1.5 : 1.5), 291 - h, 1.1, 291, jets);
   }
 
   // 앞쪽 가로등 두 개 (가까워서 크고 진하게)
@@ -527,6 +529,7 @@ function roseBush(g, rnd, x, y, w) {
 
 // 매 시 정각처럼 탑 전체에 흰 조명이 반짝이고, 꼭대기 서치라이트가 돎
 function animateParis(ctx, t) {
+  animateJets(ctx, t, jets);
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   for (const s of sparkles) {

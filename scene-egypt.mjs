@@ -418,114 +418,201 @@ function sphinx(g) {
   g.fillStyle = "rgba(80,35,12,0.3)";
   g.fillRect(176, 296, 60, 3);
 
-  // 두건(네메스): 뒤에서 앞으로 둥글게, 양옆 자락은 어깨까지
-  const nemes = g.createLinearGradient(156, 0, 192, 0);
-  nemes.addColorStop(0, "#d6955c");
-  nemes.addColorStop(1, "#b77442");
+  // 머리: 오른쪽 앞을 바라보는 3/4 각도. 두건(네메스)은 머리를 둥글게 감싸고
+  // 양옆 자락이 어깨 쪽으로 넓게 퍼져 내려옴. 얼굴은 두건 안쪽에 쏙 들어가 있음
+  const headPath = () => {
+    g.beginPath();
+    g.moveTo(153, 262); // 뒤쪽 자락 아래
+    g.quadraticCurveTo(152, 240, 157, 226);
+    g.quadraticCurveTo(162, 210, 177, 208); // 정수리
+    g.quadraticCurveTo(191, 209, 194, 222); // 앞이마 위 두건 테
+    g.lineTo(195, 232);
+    g.lineTo(199, 262); // 앞쪽 자락이 어깨로 퍼짐
+    g.closePath();
+  };
+  const nemes = g.createLinearGradient(152, 0, 199, 0);
+  nemes.addColorStop(0, "#c98650");
+  nemes.addColorStop(0.55, "#dda06a");
+  nemes.addColorStop(1, "#b9773f");
   g.fillStyle = nemes;
-  g.beginPath();
-  g.moveTo(156, 258);
-  g.lineTo(158, 228);
-  g.quadraticCurveTo(162, 212, 176, 211);
-  g.quadraticCurveTo(188, 212, 190, 222);
-  g.lineTo(191, 238);
-  g.lineTo(186, 254);
-  g.lineTo(180, 262);
-  g.lineTo(170, 262);
-  g.closePath();
+  headPath();
   g.fill();
-  // 두건 줄무늬: 머리 곡면을 따라 휘는 넓은 띠. 오랜 풍화로 흐려지고 군데군데 지워짐
   g.save();
-  g.beginPath();
-  g.moveTo(156, 258);
-  g.lineTo(158, 228);
-  g.quadraticCurveTo(162, 212, 176, 211);
-  g.quadraticCurveTo(188, 212, 190, 222);
-  g.lineTo(191, 238);
-  g.lineTo(186, 254);
-  g.lineTo(180, 262);
-  g.lineTo(170, 262);
-  g.closePath();
+  headPath();
   g.clip();
-  for (let k = 0; k < 10; k++) {
-    const y = 214 + k * 4.6;
-    // 띠 하나를 몇 조각으로 나눠, 조각마다 진하기를 달리하고 일부는 건너뜀
-    for (let seg = 0; seg < 4; seg++) {
-      if (rnd() < 0.2) continue;
-      const x0 = 156 + seg * 6.5;
-      const x1 = x0 + 6.5;
-      const bend = (x) => y + 2 - Math.sin(((x - 156) / 26) * Math.PI) * 2.6;
-      g.fillStyle = `rgba(110,52,22,${0.12 + rnd() * 0.16})`;
+  // 두건 줄무늬: 머리 곡면을 따라 휘고, 자락으로 내려가며 퍼짐. 풍화로 군데군데 흐려짐
+  for (let k = 0; k < 13; k++) {
+    const y = 212 + k * 4;
+    for (let seg = 0; seg < 6; seg++) {
+      if (rnd() < 0.18) continue;
+      const x0 = 150 + seg * 8;
+      const x1 = x0 + 8;
+      const bend = (x) => y + 1.5 - Math.sin(((x - 150) / 50) * Math.PI) * 3 + Math.max(0, y - 236) * 0.08 * ((x - 175) / 25);
+      g.fillStyle = `rgba(105,48,18,${0.14 + rnd() * 0.18})`;
       g.beginPath();
       g.moveTo(x0, bend(x0));
       g.lineTo(x1, bend(x1));
-      g.lineTo(x1, bend(x1) + 2);
-      g.lineTo(x0, bend(x0) + 2);
+      g.lineTo(x1, bend(x1) + 1.8);
+      g.lineTo(x0, bend(x0) + 1.8);
       g.closePath();
       g.fill();
     }
   }
-  // 두건 왼쪽 위로 받은 빛, 오른쪽 아래 그늘
-  const nemesLight = g.createLinearGradient(156, 212, 190, 260);
-  nemesLight.addColorStop(0, "rgba(255,220,170,0.3)");
-  nemesLight.addColorStop(0.5, "rgba(255,220,170,0)");
-  nemesLight.addColorStop(1, "rgba(60,25,8,0.25)");
+  // 빛: 왼쪽 위 정수리가 밝고, 자락 안쪽과 아래는 그늘
+  const nemesLight = g.createRadialGradient(166, 216, 2, 172, 236, 34);
+  nemesLight.addColorStop(0, "rgba(255,226,180,0.4)");
+  nemesLight.addColorStop(0.6, "rgba(255,226,180,0)");
+  nemesLight.addColorStop(1, "rgba(60,25,8,0.3)");
   g.fillStyle = nemesLight;
-  g.fillRect(150, 208, 45, 56);
-  mottle(g, rnd, 156, 192, 212, 262, 14, ["#6a3014", "#ffd8a8"]);
+  g.fillRect(148, 204, 54, 62);
+  mottle(g, rnd, 152, 199, 208, 262, 16, ["#6a3014", "#ffd8a8"]);
   g.restore();
-
-  // 얼굴: 해가 왼쪽 뒤에 있어 조금 그늘짐. 붉은 안료 흔적
-  g.fillStyle = "#c27c4c";
+  // 두건 윤곽: 뒤 피라미드와 겹쳐도 머리 모양이 또렷하게, 해 반대쪽(오른쪽) 가장자리는 진한 그늘
+  g.strokeStyle = "rgba(90,40,14,0.55)";
+  g.lineWidth = 0.9;
+  headPath();
+  g.stroke();
+  g.strokeStyle = "rgba(70,28,8,0.45)";
+  g.lineWidth = 2.2;
   g.beginPath();
-  g.moveTo(180, 223);
-  g.lineTo(191, 224);
-  g.lineTo(193, 238);
-  g.lineTo(191, 246);
-  g.lineTo(185, 252);
-  g.lineTo(179, 248);
+  g.moveTo(194.5, 228);
+  g.lineTo(198.6, 261);
+  g.stroke();
+  // 두건 이마 테 (얼굴을 감싸는 도드라진 띠)
+  g.strokeStyle = "#e8b37c";
+  g.lineWidth = 1.6;
+  g.beginPath();
+  g.moveTo(180, 221);
+  g.quadraticCurveTo(187, 217.5, 194, 221);
+  g.stroke();
+
+  // 귀: 두건 자락 앞, 얼굴 왼쪽에 큼직하게
+  g.fillStyle = "#c78250";
+  g.beginPath();
+  g.ellipse(180.5, 235, 2.4, 4.6, -0.15, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = "rgba(90,40,14,0.55)";
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.ellipse(180.8, 235, 1.2, 3, -0.15, -1.2, 1.4);
+  g.stroke();
+
+  // 얼굴: 광대에서 턱으로 좁아지는 넓적한 얼굴. 오른쪽(앞) 옆선에 이마 → 코 → 입술 → 턱 윤곽
+  const facePath = () => {
+    g.beginPath();
+    g.moveTo(183, 222.5);
+    g.lineTo(193.5, 222.5); // 이마
+    g.quadraticCurveTo(195, 228, 194.6, 232); // 미간
+    g.lineTo(196.6, 237.5); // 깨진 코 끝
+    g.lineTo(195, 239.5);
+    g.quadraticCurveTo(196, 242, 195.4, 244); // 입술
+    g.quadraticCurveTo(194.5, 249, 191, 251.5); // 턱
+    g.quadraticCurveTo(186, 252.5, 183.5, 248); // 턱선
+    g.quadraticCurveTo(182.4, 236, 183, 222.5);
+    g.closePath();
+  };
+  const face = g.createLinearGradient(183, 0, 197, 0);
+  face.addColorStop(0, "#b56f40");
+  face.addColorStop(0.5, "#d18f5c");
+  face.addColorStop(1, "#c07a48");
+  g.fillStyle = face;
+  facePath();
+  g.fill();
+  g.save();
+  facePath();
+  g.clip();
+  // 붉은 안료 흔적과 풍화 얼룩
+  mottle(g, rnd, 182, 197, 222, 252, 10, ["#8a3a1a", "#f0c08c"]);
+  // 볼 아래·턱 그늘
+  const jaw = g.createLinearGradient(0, 240, 0, 253);
+  jaw.addColorStop(0, "rgba(70,28,8,0)");
+  jaw.addColorStop(1, "rgba(70,28,8,0.35)");
+  g.fillStyle = jaw;
+  g.fillRect(182, 240, 16, 14);
+  g.restore();
+  // 눈두덩 그늘과 이마 뼈
+  g.fillStyle = "rgba(70,28,8,0.45)";
+  g.beginPath();
+  g.ellipse(189.6, 229.6, 3.6, 1.9, -0.08, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = "rgba(255,220,170,0.55)";
+  g.lineWidth = 0.7;
+  g.beginPath();
+  g.moveTo(185.5, 227);
+  g.quadraticCurveTo(189.5, 225.6, 193.6, 226.8);
+  g.stroke();
+  // 아몬드 눈: 위 눈꺼풀 선이 길게 빠짐
+  g.fillStyle = "#3e1a08";
+  g.beginPath();
+  g.moveTo(186.8, 229.8);
+  g.quadraticCurveTo(189.6, 228.2, 192.6, 229.6);
+  g.quadraticCurveTo(189.8, 231, 186.8, 229.8);
   g.closePath();
   g.fill();
+  g.strokeStyle = "#4a200a";
+  g.lineWidth = 0.5;
+  g.beginPath();
+  g.moveTo(186, 229.4);
+  g.lineTo(184.6, 229.9);
+  g.stroke();
+  // 코: 콧등 빛과 깨진 자리의 거친 면
+  g.strokeStyle = "rgba(255,226,180,0.6)";
+  g.lineWidth = 0.7;
+  g.beginPath();
+  g.moveTo(194.4, 231.5);
+  g.lineTo(195.8, 236.6);
+  g.stroke();
+  g.fillStyle = "#dca070";
+  g.beginPath();
+  g.moveTo(194.6, 236);
+  g.lineTo(196.6, 237.5);
+  g.lineTo(195.2, 239.4);
+  g.lineTo(193.4, 238.6);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(70,28,8,0.45)";
+  g.beginPath();
+  g.ellipse(193.2, 239.6, 1.4, 0.7, 0, 0, Math.PI * 2);
+  g.fill();
+  // 입술: 도톰한 위·아래 입술과 입꼬리
+  g.fillStyle = "#a95e34";
+  g.beginPath();
+  g.moveTo(190.5, 242.2);
+  g.quadraticCurveTo(193.4, 241.2, 195.4, 242.4);
+  g.quadraticCurveTo(193.4, 243.2, 190.5, 242.8);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "#b86a3c";
+  g.beginPath();
+  g.moveTo(190.8, 243);
+  g.quadraticCurveTo(193.4, 245.4, 195.2, 243.2);
+  g.closePath();
+  g.fill();
+  g.strokeStyle = "#5a2810";
+  g.lineWidth = 0.55;
+  g.beginPath();
+  g.moveTo(190, 242.6);
+  g.quadraticCurveTo(193, 243.4, 195.3, 242.8);
+  g.stroke();
   // 이마의 코브라 장식이 떨어져 나간 자리
   g.fillStyle = "#6a3012";
   g.beginPath();
-  g.ellipse(188, 224.5, 1.3, 1, 0, 0, Math.PI * 2);
+  g.ellipse(191.2, 223.6, 1.2, 0.9, 0, 0, Math.PI * 2);
   g.fill();
-  // 눈썹과 눈
-  g.strokeStyle = "#5a2810";
-  g.lineWidth = 0.9;
+  // 두건과 얼굴 경계의 깊은 그늘
+  g.strokeStyle = "rgba(60,24,6,0.5)";
+  g.lineWidth = 1.2;
   g.beginPath();
-  g.moveTo(182, 229);
-  g.lineTo(189, 228.5);
+  g.moveTo(183, 223);
+  g.quadraticCurveTo(182.2, 236, 183.6, 248.5);
   g.stroke();
-  g.fillStyle = "#4a200a";
+  // 턱 아래 목 그늘
+  g.fillStyle = "rgba(60,24,6,0.35)";
   g.beginPath();
-  g.ellipse(186, 231.5, 2.2, 1, -0.1, 0, Math.PI * 2);
-  g.fill();
-  // 떨어져 나간 코: 거칠게 깨진 평평한 자리
-  g.fillStyle = "#dca070";
-  g.beginPath();
-  g.moveTo(190, 234);
-  g.lineTo(193.5, 236);
-  g.lineTo(193, 240);
-  g.lineTo(190.5, 241);
-  g.lineTo(189.5, 237);
-  g.closePath();
-  g.fill();
-  // 입
-  g.strokeStyle = "#5a2810";
-  g.lineWidth = 0.8;
-  g.beginPath();
-  g.moveTo(186, 244.5);
-  g.quadraticCurveTo(189, 245.5, 191.5, 244.5);
-  g.stroke();
-  // 두건과 얼굴 경계 그늘
-  g.fillStyle = "rgba(70,30,10,0.35)";
-  g.beginPath();
-  g.moveTo(179, 222);
-  g.lineTo(181, 223);
-  g.lineTo(180, 250);
-  g.lineTo(177, 252);
+  g.moveTo(184, 249);
+  g.quadraticCurveTo(189, 254, 195, 251);
+  g.lineTo(195, 256);
+  g.lineTo(184, 256);
   g.closePath();
   g.fill();
 }
