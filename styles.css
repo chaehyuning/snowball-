@@ -1394,7 +1394,7 @@ body.picker-open .meta {
 /* 우편함 투입구: 은빛 틀과 어두운 틈. 봉투가 이 틈에서 미끄러져 나옴 */
 .mail-slot {
   position: relative;
-  z-index: 3;
+  z-index: 1;
   width: min(380px, 94vw);
   height: 46px;
   margin-top: 10px;
@@ -1445,8 +1445,8 @@ body.picker-open .meta {
 
 .mail-slot span {
   position: absolute;
-  left: 9%;
-  right: 9%;
+  left: 4%;
+  right: 4%;
   top: 50%;
   height: 7px;
   border-radius: 4px;
@@ -1459,9 +1459,9 @@ body.picker-open .meta {
   position: relative;
   width: min(330px, 86vw);
   aspect-ratio: 3 / 2;
-  /* 봉투 윗변이 투입구 틈 뒤에서 시작해, 틈에서 빠져나오는 것처럼 보임 (투입구 틀이 봉투 앞) */
+  /* 봉투 윗변을 까만 틈의 아랫선에 맞춤: 틀의 아랫부분은 봉투 뒤로 가려지고, 봉투는 틈에서 바로 나옴 */
   z-index: 2;
-  margin-top: -23px;
+  margin-top: -31px; /* 부모의 gap 12px까지 빼서 틈 아랫선에 맞춤 */
   perspective: 900px;
   transition: transform 0.5s ease, opacity 0.5s ease;
 }
