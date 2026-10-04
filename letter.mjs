@@ -108,11 +108,12 @@ function openWriter(prefill = {}) {
       }
       const id = opts.currentId();
       const url = `${location.origin}${location.pathname}?landmark=${opts.slugOf(id)}&letter=${encode(data)}`;
-      const text = `${data.f || "Someone"} sent you a snowball letter from ${cityName(id)} ✉️`;
+      // 메신저는 제목·문장·주소를 이어 붙여 보여 주므로 문장은 짧게 한 줄만 (자세한 건 미리보기 카드가 보여 줌)
+      const text = `✉️ A snowball letter from ${data.f || "a friend"}`;
       const done = writer.querySelector(".letter-done");
       if (navigator.share) {
         try {
-          await navigator.share({ title: "You've got a snowball letter", text, url });
+          await navigator.share({ text, url });
           done.textContent = "Your letter is on its way ✈";
           done.hidden = false;
           return;
