@@ -230,8 +230,9 @@ export function showLetter(letter, id, onDone) {
   el.setAttribute("aria-label", "A snowball letter for you");
   el.style.setProperty("--seal", color);
   el.innerHTML = `
-    <p class="letter-arrive">A Letter For You!</p>
+    <p class="letter-arrive">YOU GOT A MAIL!</p>
     <p class="letter-sub"></p>
+    <div class="mail-slot" aria-hidden="true"><span></span></div>
     <div class="envelope">
       <span class="envelope-back"></span>
       <span class="letter-paper"></span>
@@ -250,7 +251,8 @@ export function showLetter(letter, id, onDone) {
       <span class="envelope-flap"></span>
       <button type="button" class="wax-seal" aria-label="Peel the wax seal to open">${waxSealSVG()}</button>
     </div>
-    <p class="letter-hint">(peel the wax seal to open)</p>
+    <button type="button" class="letter-open-btn">click here</button>
+    <p class="letter-hint">(or peel the wax seal)</p>
     <div class="letter-sheet" hidden>
       <p class="sheet-date"></p>
       <p class="paper-to"></p>
@@ -311,12 +313,14 @@ export function showLetter(letter, id, onDone) {
     seal.classList.remove("lifting");
     seal.style.transform = "";
   });
+  $(".letter-open-btn").addEventListener("click", peel);
   // 봉투 다른 곳을 눌러도 도장부터 떼어짐
   $(".envelope").addEventListener("click", (e) => e.target !== seal && !seal.contains(e.target) && peel());
 
   const open = () => {
     el.classList.add("opened");
     $(".letter-hint").hidden = true;
+    $(".letter-open-btn").hidden = true;
     // 봉투 뚜껑이 열리고 종이가 올라온 뒤 편지지를 펼침
     setTimeout(() => {
       $(".letter-sheet").hidden = false;
