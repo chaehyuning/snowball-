@@ -136,6 +136,86 @@ function openWriter(prefill = {}) {
   writer.querySelector(prefill.to ? '[name="message"]' : '[name="to"]').focus();
 }
 
+
+// 밀랍 도장 SVG: 녹아 퍼진 울퉁불퉁한 가장자리(각도마다 반지름을 조금씩 달리한 매끈한 곡선),
+// 눌려 들어간 안쪽 원과 그 둘레의 볼록한 테, 양각으로 찍힌 눈꽃(그늘 획 + 빛 획 + 바탕 획), 윤기
+function waxSealSVG() {
+  const C = 50;
+  const N = 18;
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const wobble = Math.sin(i * 2.7) * 2.4 + Math.sin(i * 5.3 + 1) * 1.6 + (i % 3 === 0 ? 2.2 : 0);
+    const r = 43 + wobble;
+    pts.push([C + Math.cos(a) * r, C + Math.sin(a) * r]);
+  }
+  // 점들을 지나는 매끈한 닫힌 곡선 (캣멀-롬 → 베지어)
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < N; i++) {
+    const p0 = pts[(i - 1 + N) % N];
+    const p1 = pts[i];
+    const p2 = pts[(i + 1) % N];
+    const p3 = pts[(i + 2) % N];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += `C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  // 눈꽃 문양: 여섯 갈래와 곁가지
+  let flake = "";
+  for (let k = 0; k < 6; k++) {
+    const a = (k * Math.PI) / 3 - Math.PI / 2;
+    const x = (r) => (C + Math.cos(a) * r).toFixed(1);
+    const y = (r) => (C + Math.sin(a) * r).toFixed(1);
+    flake += `M${C} ${C}L${x(19)} ${y(19)}`;
+    for (const side of [-1, 1]) {
+      const b = a + side * 0.75;
+      const bx = C + Math.cos(a) * 11;
+      const by = C + Math.sin(a) * 11;
+      flake += `M${bx.toFixed(1)} ${by.toFixed(1)}L${(bx + Math.cos(b) * 6).toFixed(1)} ${(by + Math.sin(b) * 6).toFixed(1)}`;
+    }
+  }
+  return `
+  <svg viewBox="0 0 100 100" aria-hidden="true">
+    <defs>
+      <radialGradient id="wax-body" cx="42%" cy="38%" r="65%">
+        <stop offset="0" stop-color="#e9cf86" />
+        <stop offset="0.45" stop-color="#c9a24e" />
+        <stop offset="0.85" stop-color="#9c7530" />
+        <stop offset="1" stop-color="#6e5020" />
+      </radialGradient>
+      <radialGradient id="wax-well" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="#c39a48" />
+        <stop offset="1" stop-color="#a98235" />
+      </radialGradient>
+      <linearGradient id="wax-rim" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#fff0c2" stop-opacity="0.9" />
+        <stop offset="0.5" stop-color="#d4ae5c" stop-opacity="0.2" />
+        <stop offset="1" stop-color="#5e4114" stop-opacity="0.8" />
+      </linearGradient>
+      <linearGradient id="wax-well-edge" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#5e4114" stop-opacity="0.75" />
+        <stop offset="1" stop-color="#fff0c2" stop-opacity="0.8" />
+      </linearGradient>
+      <radialGradient id="wax-shine" cx="34%" cy="28%" r="30%">
+        <stop offset="0" stop-color="#fffbe8" stop-opacity="0.75" />
+        <stop offset="1" stop-color="#fffbe8" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+    <path d="${d}" fill="url(#wax-body)" />
+    <path d="${d}" fill="none" stroke="#6e5020" stroke-opacity="0.5" stroke-width="1" />
+    <circle cx="${C}" cy="${C}" r="31" fill="none" stroke="url(#wax-rim)" stroke-width="5" />
+    <circle cx="${C}" cy="${C}" r="27.5" fill="url(#wax-well)" />
+    <circle cx="${C}" cy="${C}" r="27.5" fill="none" stroke="url(#wax-well-edge)" stroke-width="1.6" />
+    <circle cx="${C}" cy="${C}" r="23.5" fill="none" stroke="#7a5a22" stroke-opacity="0.35" stroke-width="0.8" stroke-dasharray="1.5 2" />
+    <g fill="none" stroke-linecap="round" stroke-width="2.6">
+      <path d="${flake}" stroke="#5e4114" stroke-opacity="0.55" transform="translate(0.7 0.9)" />
+      <path d="${flake}" stroke="#fff3cc" stroke-opacity="0.85" transform="translate(-0.6 -0.7)" />
+      <path d="${flake}" stroke="#c9a24e" />
+    </g>
+    <path d="${d}" fill="url(#wax-shine)" />
+  </svg>`;
+}
+
 // ── 받은 편지: 봉투 → 편지 → 스노우볼 ─────────────────────────
 
 export function showLetter(letter, id, onDone) {
@@ -168,7 +248,7 @@ export function showLetter(letter, id, onDone) {
       </span>
       <span class="envelope-flap-shadow"></span>
       <span class="envelope-flap"></span>
-      <button type="button" class="wax-seal" aria-label="Peel the wax seal to open"><span>❄</span></button>
+      <button type="button" class="wax-seal" aria-label="Peel the wax seal to open">${waxSealSVG()}</button>
     </div>
     <p class="letter-hint">(peel the wax seal to open)</p>
     <div class="letter-sheet" hidden>
