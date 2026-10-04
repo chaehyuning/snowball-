@@ -17,6 +17,7 @@ const PLACES = {
   barcelona: "사그라다 파밀리아",
   uyuni: "우유니 소금사막",
   ximending: "시먼딩 거리",
+  hongkong: "시먼딩 거리", // 예전 링크
 };
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
