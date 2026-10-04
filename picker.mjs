@@ -143,10 +143,28 @@ function closePicker() {
   state.onClose?.();
 }
 
+// 고르면: 지구본이 그 나라를 향해 줌인되며 창 전체가 서서히 걷히고, 그 뒤에서 스노우볼이 이미 바뀌어 있음
+let leaving = false;
 function choose(id) {
+  if (leaving) return;
   const onSelect = state.onSelect;
-  closePicker();
+  setFocus(id);
+  navigator.vibrate?.(12);
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    closePicker();
+    onSelect(id);
+    return;
+  }
+  leaving = true;
+  ui.root.classList.add("leaving");
+  // 스노우볼이 다시 그려지도록 가림 표시를 먼저 풂
+  document.body.classList.remove("picker-open");
   onSelect(id);
+  setTimeout(() => {
+    ui.root.classList.remove("leaving");
+    leaving = false;
+    closePicker();
+  }, 560);
 }
 
 function setFocus(id) {
@@ -247,10 +265,15 @@ function tick() {
     state.lat += (state.target.lat - state.lat) * 0.1;
     return;
   }
-  // 손을 떼면 관성으로 돌다가, 느려지면 가운데에 가장 가까운 나라에 맞춰짐
+  // 손을 떼면 관성으로 돌다가, 충분히 느려지면 가운데에 가장 가까운 나라로 자석처럼 '착' 붙음
   state.lon += state.vel;
-  state.vel *= 0.93;
-  if (Math.abs(state.vel) < 0.15) setFocus(nearestToCenter());
+  state.vel *= 0.9;
+  if (Math.abs(state.vel) < 0.6) {
+    const id = nearestToCenter();
+    if (id !== state.focus) navigator.vibrate?.(8);
+    state.vel = 0;
+    setFocus(id);
+  }
 }
 
 function draw() {

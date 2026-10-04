@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/", "has": [{ "type": "query", "key": "letter" }], "destination": "/api/letter" }
+  ],
+  "functions": {
+    "api/letter.js": { "includeFiles": "index.html" }
+  }
+}

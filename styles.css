@@ -863,6 +863,27 @@ body {
   display: none;
 }
 
+/* 나라를 고르면 지구본이 커지며(줌인) 창 전체가 투명해짐 */
+.picker {
+  transition: opacity 0.55s ease, backdrop-filter 0.55s ease;
+}
+
+.picker-globe {
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.45s ease;
+}
+
+.picker.leaving {
+  opacity: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+}
+
+.picker.leaving .picker-globe {
+  transform: scale(2.4);
+  opacity: 0;
+}
+
 @keyframes picker-in {
   from {
     opacity: 0;
@@ -1031,7 +1052,7 @@ body.picker-open .meta {
   }
 
   #globe {
-    width: min(calc(100vw - 32px), calc((100vh - 320px) / 1.5), 400px);
+    width: min(calc(100vw - 32px), calc((100vh - 270px) / 1.5), 400px);
   }
 
   /* 지구본 버튼 아래 나라 6열 2줄 */
@@ -1845,4 +1866,136 @@ body.tour-open .meta {
     transition: none;
     animation: none;
   }
+}
+
+/* 폰: 나라 목록은 가로 한 줄 스와이프 롤러. 스노우볼이 화면을 더 넓게 차지함 */
+@media (max-width: 640px) {
+  .scene-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    width: calc(100vw - 16px);
+    max-width: none;
+    gap: 8px;
+    padding: 4px 16px 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+  }
+
+  .scene-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scene-grid button {
+    flex: 0 0 auto;
+    scroll-snap-align: center;
+  }
+}
+
+/* 멍때리기 모드: 빈 곳을 톡 치면 글자·버튼이 스르륵 사라지고 스노우볼만 남음. 다시 치면 돌아옴 */
+.masthead,
+.tools,
+.scenes,
+.meta,
+.scene-name,
+.ghost,
+.deco,
+.ticker,
+.colophon {
+  transition: opacity 0.6s ease;
+}
+
+body.zen .masthead,
+body.zen .tools,
+body.zen .scenes,
+body.zen .meta,
+body.zen .scene-name,
+body.zen .ghost,
+body.zen .deco,
+body.zen .ticker,
+body.zen .colophon {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.zen #globe {
+  transform: scale(1.12);
+}
+
+#globe {
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.zen-hint {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  transform: translateX(-50%);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faint);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+body.zen .zen-hint {
+  animation: zen-hint 3.2s ease forwards;
+}
+
+@keyframes zen-hint {
+  15%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 받은 편지 뒤 스노우볼 화면 아래쪽에 떠 있는 답장 버튼 (폰은 소개 띠 바로 위) */
+.reply-float {
+  position: fixed;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  z-index: 26;
+  transform: translateX(-50%);
+  padding: 9px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #a3243a, #6e1424);
+  color: #fff6ec;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px -10px rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+  transition: opacity 0.6s ease;
+  animation: reply-in 0.5s ease-out;
+}
+
+@keyframes reply-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+}
+
+@media (max-width: 640px) {
+  .reply-float {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+body.zen .reply-float,
+body.picker-open .reply-float {
+  opacity: 0;
+  pointer-events: none;
 }

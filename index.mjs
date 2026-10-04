@@ -317,22 +317,33 @@ export async function capturePostcard(text) {
 export const currentSceneId = () => scene.id;
 
 // 폰을 손으로 흔들면: 바닥의 입자가 거세게 떠오르고 유리구가 출렁임
-export function motionShake(power) {
+// 폰을 손으로 흔든 순간: 바닥의 입자가 폰이 움직인 반대 방향(dirX, dirY)으로 튀어 오르고,
+// 떠 있던 입자도 그쪽으로 쏠림. 입자마다 각도를 조금씩 흩뜨려 사방으로 난분분하게
+export function motionShake(power, dirX = 0, dirY = 0) {
   const k = Math.min(1, power);
+  const len = Math.hypot(dirX, dirY) || 1;
+  const ux = dirX / len;
+  const uy = dirY / len;
+  const hasDir = dirX !== 0 || dirY !== 0;
   for (const p of particles) {
-    if (p.settled && Math.random() < 0.25 + 0.5 * k) {
+    const spread = rand(-0.9, 0.9);
+    const cx = hasDir ? ux * Math.cos(spread) - uy * Math.sin(spread) : rand(-1, 1);
+    const cy = hasDir ? ux * Math.sin(spread) + uy * Math.cos(spread) : -1;
+    const kick = rand(3, 8) * (0.6 + k) * (1.2 - p.inertia * 0.5);
+    if (p.settled && Math.random() < 0.3 + 0.5 * k) {
       p.settled = false;
-      p.vy = -rand(3, 8) * (0.6 + k);
-      p.vx = rand(-4, 4) * (0.6 + k);
+      p.vx = cx * kick + rand(-1.5, 1.5);
+      // 바닥에 있던 입자는 아래로는 못 가니 늘 위로 들림
+      p.vy = -Math.abs(cy * kick) - rand(1, 3) * (0.6 + k);
     } else if (!p.settled) {
-      p.vx += rand(-3, 3) * k;
-      p.vy += rand(-3, 1) * k;
+      p.vx += cx * kick * 0.6;
+      p.vy += cy * kick * 0.6;
     }
   }
   stir = Math.min(5, stir + 2 * k);
-  startAutoShake(0.5 + 0.5 * k);
+  startAutoShake(0.4 + 0.4 * k);
   sfx.shake(k, scene.id);
-  buzz(Math.round(12 + 10 * k));
+  buzz(Math.round(10 + 12 * k));
 }
 
 function settle(p) {
@@ -490,10 +501,10 @@ function showInUrl(id) {
   history.replaceState(null, "", `${location.pathname}?landmark=${SLUGS[id] || id}`);
 }
 
-function switchScene(id) {
+function switchScene(id, { fade = true } = {}) {
   if (id === scene.id) return;
   sfx.whoosh();
-  if (!reduceMotion.matches) {
+  if (fade && !reduceMotion.matches) {
     fadeFrom = document.createElement("canvas");
     fadeFrom.width = canvas.width;
     fadeFrom.height = canvas.height;
@@ -504,6 +515,25 @@ function switchScene(id) {
   loadScene(id);
   window.dispatchEvent(new Event("snowball:scene"));
 }
+
+// 멍때리기 모드: 버튼·글자·스노우볼이 아닌 빈 곳을 톡 치면 UI를 모두 숨기고, 다시 치면 보여 줌
+const UI_PARTS = "button, a, input, textarea, canvas, label, .meta, .tools, .scenes, .picker, .help, .letter-view, .keep-modal, .tour-bubble, .tour-spot, .sheet-backdrop, .reply-float";
+document.addEventListener("click", (e) => {
+  if (document.body.classList.contains("zen")) {
+    // 스노우볼을 톡톡 치며 노는 건 그대로 두고, 그 밖을 치면 돌아옴
+    const onBall = e.target === canvas && onSnowball(e.clientX, e.clientY);
+    if (!onBall && !e.target.closest(".picker, .help, .letter-view, .keep-modal")) document.body.classList.remove("zen");
+    return;
+  }
+  const emptyCanvas = e.target === canvas && !onSnowball(e.clientX, e.clientY);
+  if (!emptyCanvas && e.target.closest(UI_PARTS)) return;
+  if (document.body.classList.contains("sheet-open") || document.body.classList.contains("picker-open")) return;
+  document.body.classList.add("zen");
+});
+window.addEventListener("keydown", (e) => e.key === "Escape" && document.body.classList.remove("zen"));
+
+// 지구본에서 고를 때는 지구본이 줌인되며 걷히는 동안 그 뒤에서 바로 바뀜 (스노우볼끼리 겹쳐 보이는 디졸브는 생략)
+const pickFromGlobe = (id) => switchScene(id, { fade: false });
 
 // 1이면 다음 나라, -1이면 이전 나라. 끝에서는 처음으로 돌아감
 function stepScene(dir) {
@@ -516,7 +546,7 @@ for (const button of document.querySelectorAll("[data-scene]")) {
 }
 
 // 지구본 선택창
-document.querySelector(".globe-open").addEventListener("click", () => openPicker(SCENES, scene.id, switchScene));
+document.querySelector(".globe-open").addEventListener("click", () => openPicker(SCENES, scene.id, pickFromGlobe));
 
 // 처음 방문이면 튜토리얼 (지구본 선택창이 떠 있으면 닫힌 뒤에)
 function maybeTutorial() {
@@ -527,15 +557,38 @@ document.querySelector(".help-toggle").addEventListener("click", openHelp);
 
 // 폰 가속도 센서: 손으로 흔들면 입자가 소용돌이침. iOS는 첫 탭에서 권한을 물음
 let lastMotion = 0;
+// 폰의 가속도(중력 뺀 값)를 화면 방향으로 옮겨 둠. 유리구 속 물과 입자는 관성 때문에
+// 폰이 움직인 반대쪽으로 쏠림 → 좌우로 흔들면 좌우로, 위아래로 흔들면 위아래로 출렁임
+const phoneAccel = { x: 0, y: 0 };
+let gravity = null;
 function onMotion(e) {
-  const a = e.acceleration || e.accelerationIncludingGravity;
-  if (!a) return;
-  const g = e.acceleration ? 0 : 9.8;
-  const mag = Math.abs(Math.hypot(a.x || 0, a.y || 0, a.z || 0) - g);
+  let ax;
+  let ay;
+  let az;
+  if (e.acceleration && e.acceleration.x != null) {
+    ({ x: ax, y: ay, z: az } = e.acceleration);
+  } else if (e.accelerationIncludingGravity && e.accelerationIncludingGravity.x != null) {
+    // 중력이 섞인 값만 오면, 천천히 따라가는 평균(중력)을 빼서 움직임만 남김
+    const a = e.accelerationIncludingGravity;
+    gravity = gravity ? { x: gravity.x * 0.9 + a.x * 0.1, y: gravity.y * 0.9 + a.y * 0.1, z: gravity.z * 0.9 + a.z * 0.1 } : { ...a };
+    ax = a.x - gravity.x;
+    ay = a.y - gravity.y;
+    az = a.z - gravity.z;
+  } else return;
+  // 기기 좌표(x 오른쪽, y 위쪽) → 화면 좌표. 가로 화면이면 돌려서 맞춤
+  const angle = ((screen.orientation?.angle ?? window.orientation ?? 0) * Math.PI) / 180;
+  const sx = ax * Math.cos(angle) + ay * Math.sin(angle);
+  const sy = -(-ax * Math.sin(angle) + ay * Math.cos(angle));
+  // 아주 작은 떨림은 무시하고, 값이 튀지 않게 살짝 부드럽게
+  const dead = (v) => (Math.abs(v) < 1.2 ? 0 : v - Math.sign(v) * 1.2);
+  phoneAccel.x = phoneAccel.x * 0.4 + dead(sx) * 0.6;
+  phoneAccel.y = phoneAccel.y * 0.4 + dead(sy) * 0.6;
+
+  const mag = Math.hypot(ax || 0, ay || 0, az || 0);
   const now = performance.now();
-  if (mag > 12 && now - lastMotion > 220) {
+  if (mag > 6 && now - lastMotion > 160) {
     lastMotion = now;
-    motionShake((mag - 12) / 15 + 0.3);
+    motionShake(Math.min(1.4, (mag - 6) / 12 + 0.3), -sx, -sy);
   }
 }
 function enableMotion() {
@@ -577,7 +630,17 @@ window.addEventListener("keydown", (e) => {
 });
 
 // 위아래로 끌면 흔들기, 좌우로 밀면 나라 바꾸기
+// 캔버스 안에서도 유리구·받침이 아닌 투명한 빈 자리인지 (빈 자리를 톡 치면 멍때리기 모드)
+function onSnowball(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const x = ((clientX - rect.left) * W) / rect.width;
+  const y = ((clientY - rect.top) * H) / rect.height - PAD;
+  if (Math.hypot(x - globe.x, y - globe.y) < globe.r + 8) return true;
+  return y > globe.y && y < base.bottom + 6 && Math.abs(x - globe.x) < 160;
+}
+
 canvas.addEventListener("pointerdown", (e) => {
+  if (!onSnowball(e.clientX, e.clientY)) return;
   dragging = true;
   pressing = true;
   pressStart = performance.now();
@@ -631,6 +694,8 @@ canvas.addEventListener("pointercancel", () => {
 
 function update(t, accel) {
   stir *= 0.985;
+  phoneAccel.x *= 0.85;
+  phoneAccel.y *= 0.85;
   const now = performance.now();
 
   // 손으로 끌어 흔들 때만: 흔든 만큼 바닥의 입자를 띄움 (누르기 팡과 섞이지 않게)
@@ -691,6 +756,13 @@ function update(t, accel) {
     const jolt = shaking ? 1.6 : 0.5;
     p.vy -= accel * p.inertia * jolt;
     if (shaking && Math.abs(accel) > 1) p.vx += rand(-1, 1) * Math.abs(accel) * 0.15;
+
+    // 폰을 직접 흔드는 동안: 떠 있는 입자가 폰 움직임 반대쪽으로 계속 쏠림 (물속 관성). 무거울수록 덜 밀림
+    if (phoneAccel.x || phoneAccel.y) {
+      const push = 0.16 * (1.3 - p.inertia * 0.6);
+      p.vx -= phoneAccel.x * push;
+      p.vy -= phoneAccel.y * push;
+    }
 
     p.x += p.vx;
     p.y += p.vy;
@@ -944,9 +1016,19 @@ function paintBaseFront(g) {
   }
 
   // 이름판. 글자 길이에 맞춰 폭을 정함
+  // 긴 문구는 받침 윗면 폭(80%)을 넘지 않게 글자를 줄이고, 그래도 넘치면 가로로 살짝 눌러 담음
   const plateY = top + 50;
-  g.font = look.plateFont;
-  const plateW = g.measureText(look.plate).width + 24;
+  const maxW = topRx * 2 * 0.8;
+  let size = parseFloat(look.plateFont.match(/(\d+(?:\.\d+)?)px/)?.[1] || 14);
+  const fontAt = (px) => look.plateFont.replace(/\d+(?:\.\d+)?px/, `${px}px`);
+  g.font = fontAt(size);
+  while (g.measureText(look.plate).width + 24 > maxW && size > 9) {
+    size -= 0.5;
+    g.font = fontAt(size);
+  }
+  const textW = g.measureText(look.plate).width;
+  const squeeze = Math.min(1, (maxW - 24) / textW);
+  const plateW = Math.min(maxW, textW + 24);
   g.fillStyle = gold;
   g.beginPath();
   g.roundRect(cx - plateW / 2, plateY - 13, plateW, 26, 4);
@@ -954,7 +1036,11 @@ function paintBaseFront(g) {
   g.fillStyle = look.plateInk;
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.fillText(look.plate, cx, plateY + 1);
+  g.save();
+  g.translate(cx, plateY + 1);
+  g.scale(squeeze, 1);
+  g.fillText(look.plate, 0, 0);
+  g.restore();
 }
 
 // 주소에 나라가 없으면 한국부터. 있으면 주소를 ?landmark= 꼴로 맞춰 둠
@@ -999,7 +1085,7 @@ showMusic();
 // 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
 // 편지를 받은 사람은 처음 온 사람이라 보고, 편지를 다 읽으면 조작법 안내를 늘 보여 줌
 if (letter && startId) showLetter(letter, scene.id, () => setTimeout(startTutorial, 400));
-else if (!startId) openPicker(SCENES, scene.id, switchScene, maybeTutorial);
+else if (!startId) openPicker(SCENES, scene.id, pickFromGlobe, maybeTutorial);
 else maybeTutorial();
 
 // 홈 화면에 추가해 앱처럼 쓰고, 한 번 연 뒤에는 오프라인에서도 열리게
