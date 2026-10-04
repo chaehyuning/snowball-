@@ -8,7 +8,6 @@ let capture = null;
 
 let postcard = null;
 let lastBlob = null;
-let shake = null;
 
 // 엽서는 인스타 스토리 크기(1080×1920). 스토리는 위 약 250px(프로필)과 아래 약 340px(답장 칸·링크 스티커)이
 // 가려지므로, 읽어야 할 것은 모두 그 사이(SAFE_TOP ~ SAFE_BOTTOM)에 둠
@@ -17,40 +16,7 @@ const CH = 1920;
 const SAFE_TOP = 250;
 const SAFE_BOTTOM = 1580;
 
-// 소인: 둥근 도장(도시·날짜)과 물결 줄
-function drawPostmark(g, x, y, info) {
-  g.save();
-  g.translate(x, y);
-  g.rotate(-0.18);
-  g.strokeStyle = "rgba(236,235,232,0.6)";
-  g.fillStyle = "rgba(236,235,232,0.7)";
-  g.lineWidth = 3;
-  g.beginPath();
-  g.arc(0, 0, 66, 0, Math.PI * 2);
-  g.stroke();
-  g.lineWidth = 1.5;
-  g.beginPath();
-  g.arc(0, 0, 54, 0, Math.PI * 2);
-  g.stroke();
-  g.textAlign = "center";
-  g.font = "700 20px Pretendard, sans-serif";
-  g.fillText((info.city || "").toUpperCase().slice(0, 12), 0, -6);
-  g.font = "600 16px Pretendard, sans-serif";
-  g.fillText(new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase(), 0, 20);
-  g.lineWidth = 3;
-  for (const dy of [-26, 0, 26]) {
-    g.beginPath();
-    for (let k = 0; k <= 40; k++) {
-      const px = -200 + k * 3.2;
-      const py = dy + Math.sin(k * 0.55) * 5;
-      k ? g.lineTo(px, py) : g.moveTo(px, py);
-    }
-    g.stroke();
-  }
-  g.restore();
-}
-
-// 엽서 한 장(또는 영상 한 프레임)을 그림
+// 엽서 한 장을 그림
 function drawCard(g, snap, info, { from }) {
   const W = CW;
   const H = CH;
@@ -91,8 +57,6 @@ function drawCard(g, snap, info, { from }) {
   const sy = 320;
   g.drawImage(snap, (W - sw) / 2, sy, sw, sh);
 
-  // 소인: 스노우볼 오른쪽 위
-  drawPostmark(g, 850, 560, info);
 
   // 아래 글
   const by = sy + sh + 56;
@@ -136,51 +100,7 @@ async function composePostcard(text, from) {
   return new Promise((resolve) => c.toBlob(resolve, "image/png"));
 }
 
-// 영상 엽서: 크게 흔들어 입자가 쏟아졌다 가라앉는 4.5초를 그대로 녹화
-const VIDEO_MS = 4500;
-function pickVideoType() {
-  const types = ["video/mp4;codecs=avc1.42E01E", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"];
-  return types.find((t) => window.MediaRecorder?.isTypeSupported?.(t)) || "";
-}
-async function recordPostcard(text, from, onProgress) {
-  const type = pickVideoType();
-  if (!type || !HTMLCanvasElement.prototype.captureStream) throw new Error("no-video");
-  const cap = await capture(text.trim(), 2);
-  const info = sceneInfo(cap.id);
-  const c = document.createElement("canvas");
-  c.width = CW;
-  c.height = CH;
-  const g = c.getContext("2d");
-  drawCard(g, cap.snap, info, { from: from.trim() });
-  const stream = c.captureStream(30);
-  const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 8_000_000 });
-  const chunks = [];
-  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-  const done = new Promise((resolve) => (rec.onstop = resolve));
-  rec.start(250);
-  const start = performance.now();
-  let shaken = false;
-  await new Promise((resolve) => {
-    const tick = () => {
-      const t = performance.now() - start;
-      if (!shaken && t > 350) {
-        shaken = true;
-        shake?.();
-      }
-      cap.frame();
-      drawCard(g, cap.snap, info, { from: from.trim() });
-      onProgress?.(Math.min(1, t / VIDEO_MS));
-      if (t < VIDEO_MS) requestAnimationFrame(tick);
-      else resolve();
-    };
-    requestAnimationFrame(tick);
-  });
-  rec.stop();
-  await done;
-  return new Blob(chunks, { type: type.split(";")[0] });
-}
-
-const extOf = (blob) => (blob.type.includes("mp4") ? "mp4" : blob.type.includes("webm") ? "webm" : "png");
+const extOf = () => "png";
 
 function openPostcard() {
   if (!postcard) {
@@ -194,7 +114,7 @@ function openPostcard() {
       <div class="help-card postcard-card">
         <p class="postcard-kicker">POSTCARD</p>
         <p class="help-title">랜선 여행 엽서</p>
-        <p class="postcard-sub">인스타 스토리 크기로 만들어요. 영상 엽서는 스노우볼을 크게 흔든 4초를 담아요.</p>
+        <p class="postcard-sub">인스타 스토리 크기로 만들어요. 명판 문구와 서명을 적어 보세요.</p>
         <label class="postcard-field">
           <span>명판 문구</span>
           <input name="plate" type="text" maxlength="20" placeholder="예: 지은의 첫 겨울" />
@@ -203,10 +123,6 @@ function openPostcard() {
           <span>서명</span>
           <input name="from" type="text" maxlength="16" placeholder="예: 채현" />
         </label>
-        <div class="postcard-kind" role="radiogroup" aria-label="엽서 종류">
-          <button type="button" data-kind="video" aria-pressed="true">🎞 영상 엽서</button>
-          <button type="button" data-kind="photo" aria-pressed="false">🖼 사진 엽서</button>
-        </div>
         <div class="postcard-preview"></div>
         <div class="help-actions">
           <button type="button" class="help-replay postcard-make">미리 보기</button>
@@ -221,18 +137,6 @@ function openPostcard() {
     const save = postcard.querySelector(".postcard-save");
     const share = postcard.querySelector(".postcard-share");
     const makeBtn = postcard.querySelector(".postcard-make");
-    let kind = pickVideoType() ? "video" : "photo";
-    const kinds = postcard.querySelectorAll(".postcard-kind button");
-    const showKind = () => kinds.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.kind === kind)));
-    if (!pickVideoType()) postcard.querySelector('[data-kind="video"]').hidden = true;
-    kinds.forEach((b) =>
-      b.addEventListener("click", () => {
-        kind = b.dataset.kind;
-        showKind();
-        resetPostcard();
-      }),
-    );
-    showKind();
     let busy = false;
     const make = async () => {
       if (busy) return;
@@ -240,36 +144,14 @@ function openPostcard() {
       save.disabled = true;
       makeBtn.disabled = true;
       try {
-        if (kind === "video") {
-          // 녹화하는 동안 창을 반투명하게 걷어 스노우볼이 흔들리는 걸 함께 봄
-          postcard.classList.add("recording");
-          preview.textContent = "영상 엽서를 만드는 중… 0%";
-          try {
-            lastBlob = await recordPostcard(plate.value, from.value, (k) => (preview.textContent = `영상 엽서를 만드는 중… ${Math.round(k * 100)}%`));
-          } catch {
-            kind = "photo";
-            showKind();
-            lastBlob = await composePostcard(plate.value, from.value);
-          } finally {
-            postcard.classList.remove("recording");
-          }
-        } else {
-          preview.textContent = "엽서를 만드는 중…";
-          lastBlob = await composePostcard(plate.value, from.value);
-        }
+        preview.textContent = "엽서를 만드는 중…";
+        lastBlob = await composePostcard(plate.value, from.value);
         const url = URL.createObjectURL(lastBlob);
         preview.innerHTML = "";
-        if (lastBlob.type.startsWith("video")) {
-          const v = document.createElement("video");
-          Object.assign(v, { src: url, autoplay: true, loop: true, muted: true, playsInline: true });
-          v.setAttribute("playsinline", "");
-          preview.append(v);
-        } else {
-          const img = document.createElement("img");
-          img.src = url;
-          img.alt = "만든 엽서 미리 보기";
-          preview.append(img);
-        }
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "만든 엽서 미리 보기";
+        preview.append(img);
         save.disabled = false;
       } finally {
         busy = false;
@@ -341,7 +223,6 @@ function resetPostcard() {
 
 export function setupKeepsakes(opts) {
   capture = opts.capture;
-  shake = opts.shake;
   document.querySelector(".postcard-toggle")?.addEventListener("click", openPostcard);
   window.addEventListener("snowball:scene", resetPostcard);
 }

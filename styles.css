@@ -1314,45 +1314,6 @@ body.picker-open .meta {
   color: #7a6e7c;
 }
 
-.postcard-kind {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.postcard-kind button {
-  flex: 1;
-  padding: 9px 10px;
-  border: 1px solid #d8ccb8;
-  border-radius: 10px;
-  background: #fff;
-  color: #5a4e5c;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.postcard-kind button[aria-pressed="true"] {
-  border-color: #2a2130;
-  background: #2a2130;
-  color: #fdf7ea;
-  font-weight: 700;
-}
-
-.postcard-kind button[hidden] {
-  display: none;
-}
-
-/* 영상 엽서를 녹화하는 동안: 창 바탕을 걷어 뒤에서 흔들리는 스노우볼이 보이게 */
-.keep-modal.recording {
-  background: transparent;
-}
-
-.keep-modal.recording .help-card {
-  opacity: 0.85;
-}
-
-.postcard-preview video,
 .postcard-preview img {
   width: min(200px, 60%);
   border-radius: 8px;

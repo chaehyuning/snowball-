@@ -1051,7 +1051,7 @@ function paintBaseFront(g) {
 // 주소에 나라가 없으면 한국부터. 있으면 주소를 ?landmark= 꼴로 맞춰 둠
 fillTicker(SCENES.map((s) => s.id));
 setupMetaToggle();
-setupKeepsakes({ capture: capturePostcard, shake: letItSnow });
+setupKeepsakes({ capture: capturePostcard });
 const startId = idFromUrl();
 const letter = readLetter();
 if (letter?.plate && startId) platePin = { id: startId, text: letter.plate };
