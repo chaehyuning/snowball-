@@ -5,8 +5,14 @@
 import { sceneInfo } from "./editorial.mjs";
 import { PLACES } from "./picker.mjs";
 
-// 편지 문장에 쓰는 한국어 랜드마크 이름 (예: 에펠탑)
-const placeName = (id) => PLACES[id]?.landmark || sceneInfo(id).city || "";
+// 편지에 쓰는 도시 이름 (예: Paris)과 우표 그림(나라 버튼의 아이콘)
+const cityName = (id) => sceneInfo(id).city || PLACES[id]?.landmark || "";
+const stampIcon = (id) => document.querySelector(`[data-scene="${id}"] svg`)?.outerHTML || "";
+// 소인 날짜: 04 OCT 2026
+const postDate = (iso) => {
+  const d = iso ? new Date(`${iso}T12:00:00`) : new Date();
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
+};
 
 const MAX_MESSAGE = 200;
 
@@ -24,7 +30,13 @@ function decode(code) {
     const data = JSON.parse(new TextDecoder().decode(bytes));
     if (!data || typeof data !== "object") return null;
     const clip = (v, n) => (typeof v === "string" ? v.slice(0, n) : "");
-    return { to: clip(data.t, 20), from: clip(data.f, 20), message: clip(data.m, MAX_MESSAGE), plate: clip(data.p, 20) };
+    return {
+      to: clip(data.t, 20),
+      from: clip(data.f, 20),
+      message: clip(data.m, MAX_MESSAGE),
+      plate: clip(data.p, 20),
+      date: /^\d{4}-\d{2}-\d{2}$/.test(data.d) ? data.d : "",
+    };
   } catch {
     return null;
   }
@@ -52,20 +64,21 @@ function openWriter(prefill = {}) {
     writer.hidden = true;
     writer.setAttribute("role", "dialog");
     writer.setAttribute("aria-modal", "true");
-    writer.setAttribute("aria-label", "스노우볼 편지 쓰기");
+    writer.setAttribute("aria-label", "Send a snowball letter");
     writer.innerHTML = `
       <div class="help-card postcard-card letter-card">
-        <p class="postcard-kicker">LETTER</p>
-        <p class="help-title">스노우볼 편지</p>
+        <p class="airmail-strip" aria-hidden="true"></p>
+        <p class="postcard-kicker">A LETTER FOR YOU</p>
+        <p class="help-title">Send a snowball letter</p>
         <p class="postcard-sub letter-where"></p>
-        <label class="postcard-field"><span>받는 사람</span><input name="to" type="text" maxlength="20" placeholder="예: 지은" /></label>
-        <label class="postcard-field"><span>편지</span><textarea name="message" rows="5" maxlength="${MAX_MESSAGE}" placeholder="스노우볼과 함께 보낼 말을 적어 주세요"></textarea><small class="letter-count"></small></label>
-        <label class="postcard-field"><span>보내는 사람</span><input name="from" type="text" maxlength="20" placeholder="예: 민지" /></label>
-        <label class="postcard-field"><span>명판 문구 <em>(비우면 랜드마크 이름)</em></span><input name="plate" type="text" maxlength="20" placeholder="예: 우리의 첫 여행" /></label>
+        <label class="postcard-field"><span>To</span><input name="to" type="text" maxlength="20" placeholder="Jieun" /></label>
+        <label class="postcard-field"><span>Your note</span><textarea name="message" rows="5" maxlength="${MAX_MESSAGE}" placeholder="Write something warm…"></textarea><small class="letter-count"></small></label>
+        <label class="postcard-field"><span>From</span><input name="from" type="text" maxlength="20" placeholder="Minji" /></label>
+        <label class="postcard-field"><span>Nameplate <em>(optional — engraved on the snowball)</em></span><input name="plate" type="text" maxlength="20" placeholder="Our first trip" /></label>
         <p class="letter-done" hidden></p>
         <div class="help-actions">
-          <button type="button" class="help-replay letter-cancel">닫기</button>
-          <button type="button" class="help-close letter-send">편지 보내기</button>
+          <button type="button" class="help-replay letter-cancel">Close</button>
+          <button type="button" class="help-close letter-send">Seal &amp; send ✉</button>
         </div>
       </div>`;
     document.body.append(writer);
@@ -81,19 +94,25 @@ function openWriter(prefill = {}) {
       e.stopPropagation();
     });
     writer.querySelector(".letter-send").addEventListener("click", async () => {
-      const data = { t: field("to").value.trim(), m: field("message").value.trim(), f: field("from").value.trim(), p: field("plate").value.trim() };
+      const data = {
+        t: field("to").value.trim(),
+        m: field("message").value.trim(),
+        f: field("from").value.trim(),
+        p: field("plate").value.trim(),
+        d: new Date().toISOString().slice(0, 10),
+      };
       if (!data.m) {
         field("message").focus();
         return;
       }
       const id = opts.currentId();
       const url = `${location.origin}${location.pathname}?landmark=${opts.slugOf(id)}&letter=${encode(data)}`;
-      const text = `${data.f ? `${data.f}님이 ` : ""}${placeName(id)} 스노우볼 편지를 보냈어요 ✉️`;
+      const text = `${data.f || "Someone"} sent you a snowball letter from ${cityName(id)} ✉️`;
       const done = writer.querySelector(".letter-done");
       if (navigator.share) {
         try {
-          await navigator.share({ title: "스노우볼 편지가 도착했어요", text, url });
-          done.textContent = "편지를 보냈어요.";
+          await navigator.share({ title: "You've got a snowball letter", text, url });
+          done.textContent = "Your letter is on its way ✈";
           done.hidden = false;
           return;
         } catch (e) {
@@ -102,14 +121,14 @@ function openWriter(prefill = {}) {
       }
       try {
         await navigator.clipboard.writeText(`${text}\n${url}`);
-        done.textContent = "편지 링크를 복사했어요. 인스타그램 DM이나 카톡에 붙여 넣어 보내 주세요.";
+        done.textContent = "Letter link copied — paste it into an Instagram DM or KakaoTalk.";
       } catch {
         done.textContent = url;
       }
       done.hidden = false;
     });
   }
-  writer.querySelector(".letter-where").textContent = `지금 고른 ${placeName(opts.currentId())} 스노우볼에 편지를 담아 보내요. 받는 사람이 링크를 열면 봉투부터 열려요.`;
+  writer.querySelector(".letter-where").textContent = `Tuck a note into this ${cityName(opts.currentId())} snowball. They'll peel the wax seal before they read it.`;
   for (const [name, value] of Object.entries(prefill)) writer.querySelector(`[name="${name}"]`).value = value;
   writer.querySelector(".letter-count").textContent = `${writer.querySelector('[name="message"]').value.length} / ${MAX_MESSAGE}`;
   writer.querySelector(".letter-done").hidden = true;
@@ -121,63 +140,118 @@ function openWriter(prefill = {}) {
 
 export function showLetter(letter, id, onDone) {
   const info = sceneInfo(id);
-  const color = info.color || "#e8b45a";
+  const color = info.color || "#c8343a";
+  const city = cityName(id);
+  const date = postDate(letter.date);
   const el = document.createElement("div");
   el.className = "letter-view";
   el.setAttribute("role", "dialog");
   el.setAttribute("aria-modal", "true");
-  el.setAttribute("aria-label", "도착한 스노우볼 편지");
+  el.setAttribute("aria-label", "A snowball letter for you");
   el.style.setProperty("--seal", color);
   el.innerHTML = `
-    <p class="letter-arrive"></p>
-    <button type="button" class="envelope" aria-label="봉투 열기">
+    <p class="letter-arrive">A Letter For You!</p>
+    <p class="letter-sub"></p>
+    <div class="envelope">
       <span class="envelope-back"></span>
       <span class="letter-paper"></span>
-      <span class="envelope-front"><span class="envelope-addr"></span></span>
+      <span class="envelope-front">
+        <span class="envelope-addr"></span>
+        <span class="stamp"><span class="stamp-art"></span><span class="stamp-label">SNOWBALL POST</span></span>
+        <svg class="postmark" viewBox="0 0 120 70" aria-hidden="true">
+          <circle cx="40" cy="35" r="26" fill="none" stroke="currentColor" stroke-width="2" />
+          <circle cx="40" cy="35" r="20" fill="none" stroke="currentColor" stroke-width="1" />
+          <text x="40" y="32" text-anchor="middle" class="pm-city"></text>
+          <text x="40" y="44" text-anchor="middle" class="pm-date"></text>
+          <path d="M70 22q6-4 12 0t12 0t12 0t12 0M70 35q6-4 12 0t12 0t12 0t12 0M70 48q6-4 12 0t12 0t12 0t12 0" fill="none" stroke="currentColor" stroke-width="2" />
+        </svg>
+      </span>
+      <span class="envelope-flap-shadow"></span>
       <span class="envelope-flap"></span>
-      <span class="envelope-seal">❄</span>
-    </button>
+      <button type="button" class="wax-seal" aria-label="Peel the wax seal to open"><span>❄</span></button>
+    </div>
+    <p class="letter-hint">(peel the wax seal to open)</p>
     <div class="letter-sheet" hidden>
+      <p class="sheet-date"></p>
       <p class="paper-to"></p>
       <p class="paper-message"></p>
       <p class="paper-from"></p>
     </div>
-    <p class="letter-hint">봉투를 눌러 열어 보세요</p>
     <div class="letter-actions" hidden>
-      <button type="button" class="letter-go">스노우볼 흔들어 보기</button>
-      <button type="button" class="letter-reply">답장 쓰기</button>
+      <button type="button" class="letter-go">Shake the snowball ❄</button>
+      <button type="button" class="letter-reply">Write back ✉</button>
     </div>`;
-  el.querySelector(".letter-arrive").textContent = `${letter.from ? `${letter.from}님이 보낸 ` : ""}${placeName(id)} 스노우볼 편지`;
-  el.querySelector(".envelope-addr").textContent = letter.to ? `To. ${letter.to}` : "To. you";
-  el.querySelector(".paper-to").textContent = letter.to ? `${letter.to}에게` : "";
-  el.querySelector(".paper-message").textContent = letter.message;
-  el.querySelector(".paper-from").textContent = letter.from ? `— ${letter.from}` : "";
+  const $ = (sel) => el.querySelector(sel);
+  $(".letter-sub").textContent = `from ${letter.from || "a friend"} · a snowball from ${city}`;
+  $(".envelope-addr").textContent = `To. ${letter.to || "you"}`;
+  $(".stamp-art").innerHTML = stampIcon(id);
+  $(".pm-city").textContent = city.toUpperCase().slice(0, 12);
+  $(".pm-date").textContent = date;
+  $(".sheet-date").textContent = `${date} · ${city}`;
+  $(".paper-to").textContent = `Dear ${letter.to || "you"},`;
+  $(".paper-message").textContent = letter.message;
+  $(".paper-from").textContent = letter.from ? `With love, ${letter.from}` : "With love";
   document.body.append(el);
   document.body.classList.add("letter-open");
-  const envelope = el.querySelector(".envelope");
+
+  // 밀랍 도장 떼기: 손가락으로 끌면 도장이 들리며 따라오고, 충분히 끌거나 톡 누르면 떨어져 나가며 봉투가 열림
+  const seal = $(".wax-seal");
+  let start = null;
+  let peeled = false;
+  const peel = () => {
+    if (peeled) return;
+    peeled = true;
+    seal.style.transform = "";
+    seal.classList.add("peeled");
+    navigator.vibrate?.([14, 30, 8]);
+    setTimeout(open, 380);
+  };
+  seal.addEventListener("pointerdown", (e) => {
+    if (peeled) return;
+    start = { x: e.clientX, y: e.clientY };
+    seal.setPointerCapture(e.pointerId);
+    seal.classList.add("lifting");
+  });
+  seal.addEventListener("pointermove", (e) => {
+    if (!start || peeled) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    const d = Math.hypot(dx, dy);
+    seal.style.transform = `translate(calc(-50% + ${dx * 0.6}px), calc(-50% + ${dy * 0.6}px)) rotate(${dx * 0.4}deg) scale(${1 + Math.min(d, 60) / 300})`;
+    if (d > 70) peel();
+  });
+  const release = () => {
+    if (!start || peeled) return;
+    start = null;
+    peel(); // 짧게 누르기만 해도 떼어짐
+  };
+  seal.addEventListener("pointerup", release);
+  seal.addEventListener("pointercancel", () => {
+    start = null;
+    seal.classList.remove("lifting");
+    seal.style.transform = "";
+  });
+  // 봉투 다른 곳을 눌러도 도장부터 떼어짐
+  $(".envelope").addEventListener("click", (e) => e.target !== seal && !seal.contains(e.target) && peel());
+
   const open = () => {
-    if (el.classList.contains("opened")) return;
     el.classList.add("opened");
-    envelope.setAttribute("aria-label", "편지");
-    el.querySelector(".letter-hint").hidden = true;
+    $(".letter-hint").hidden = true;
     // 봉투 뚜껑이 열리고 종이가 올라온 뒤 편지지를 펼침
     setTimeout(() => {
-      el.querySelector(".letter-sheet").hidden = false;
-      el.querySelector(".letter-actions").hidden = false;
+      $(".letter-sheet").hidden = false;
+      $(".letter-actions").hidden = false;
       el.classList.add("unfolded");
     }, 900);
-    navigator.vibrate?.(12);
   };
-  envelope.addEventListener("click", open);
   const finish = () => {
     el.remove();
     document.body.classList.remove("letter-open");
     onDone?.();
   };
-  el.querySelector(".letter-go").addEventListener("click", finish);
-  el.querySelector(".letter-reply").addEventListener("click", () => {
+  $(".letter-go").addEventListener("click", finish);
+  $(".letter-reply").addEventListener("click", () => {
     finish();
     openWriter({ to: letter.from || "" });
   });
-  envelope.focus();
 }

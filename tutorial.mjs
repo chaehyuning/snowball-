@@ -83,6 +83,8 @@ export function startTutorial() {
   index = 0;
   ui.spot.hidden = false;
   ui.bubble.hidden = false;
+  // 안내 중에는 폰 아래 고정 소개 띠를 숨김: 띠가 말풍선 버튼을 덮어 눌리지 않았음
+  document.body.classList.add("tour-open");
   show();
 }
 
@@ -123,6 +125,7 @@ function finish() {
   if (!ui) return;
   ui.spot.hidden = true;
   ui.bubble.hidden = true;
+  document.body.classList.remove("tour-open");
 }
 
 // 대상 둘레를 밝게 비추고, 말풍선을 대상 옆이나 아래 빈 곳에 둠
@@ -151,6 +154,10 @@ function place() {
     // 대상 아래에 자리가 있으면 아래
     x = r.left + r.width / 2 - b.width / 2;
     y = r.bottom + 12;
+  } else if (r.top - 12 - b.height > 8) {
+    // 아래가 모자라면 대상 위
+    x = r.left + r.width / 2 - b.width / 2;
+    y = r.top - 12 - b.height;
   } else {
     // 아니면 화면 아래쪽 가운데 (대상 아래쪽을 조금 가림)
     x = (vw - b.width) / 2;

@@ -1353,8 +1353,12 @@ body.picker-open .meta {
   word-break: break-all;
 }
 
-/* 받은 편지: 화면 가운데 봉투 → 누르면 뚜껑이 열리고 종이가 올라온 뒤 편지지가 펼쳐짐 */
+/* 받은 편지: 밝은 종이 배경 위 진한 단색 봉투(나라 색), 접힌 결과 그늘, 가운데 금빛 밀랍 도장.
+   도장을 떼면 뚜껑이 열리고 종이가 올라온 뒤 줄 쳐진 편지지가 펼쳐짐 */
 .letter-view {
+  --env: color-mix(in srgb, var(--seal) 72%, #3a0610);
+  --env-deep: color-mix(in srgb, var(--seal) 55%, #22040a);
+  --env-light: color-mix(in srgb, var(--seal) 80%, #fff 6%);
   position: fixed;
   inset: 0;
   z-index: 40;
@@ -1362,41 +1366,46 @@ body.picker-open .meta {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 12px;
   padding: 24px 16px calc(24px + env(safe-area-inset-bottom, 0px));
-  background: radial-gradient(ellipse at 50% 40%, #24202b, #0b0b0e 75%);
-  color: var(--ink);
+  background: radial-gradient(ellipse at 50% 35%, #fbf7f3, #ece4de 80%);
+  color: #3a2f28;
 }
 
 .letter-arrive {
   font-family: var(--serif);
+  font-size: 30px;
+  letter-spacing: 0.01em;
+  color: var(--env-deep);
+}
+
+.letter-sub {
+  margin-top: -6px;
+  font-family: var(--serif);
   font-style: italic;
-  font-size: 18px;
-  text-align: center;
-  color: var(--ink-dim);
+  font-size: 14px;
+  color: #8a7468;
 }
 
 .envelope {
   position: relative;
-  width: min(320px, 82vw);
+  width: min(330px, 86vw);
   aspect-ratio: 3 / 2;
-  padding: 0;
-  border: 0;
-  background: none;
+  margin-top: 8px;
   perspective: 900px;
-  cursor: pointer;
   transition: transform 0.5s ease, opacity 0.5s ease;
 }
 
-.envelope > span {
+.envelope > span,
+.envelope > svg {
   position: absolute;
 }
 
 .envelope-back {
   inset: 0;
-  border-radius: 8px;
-  background: #e2d5bc;
-  box-shadow: 0 24px 50px -18px rgba(0, 0, 0, 0.8);
+  border-radius: 4px;
+  background: var(--env-deep);
+  box-shadow: 0 30px 50px -22px rgba(60, 20, 20, 0.55), 0 8px 18px -8px rgba(60, 20, 20, 0.35);
 }
 
 /* 닫혀 있을 때 종이는 앞주머니 아래에 숨어 있다가, 열면 위로 올라옴 */
@@ -1406,57 +1415,213 @@ body.picker-open .meta {
   top: 38%;
   bottom: 6%;
   z-index: 2;
-  border-radius: 4px;
+  border-radius: 3px;
   background: repeating-linear-gradient(#fffaf0 0 15px, #eadfca 15px 16px);
   opacity: 0;
   transition: transform 0.7s 0.35s ease, opacity 0.2s 0.3s;
 }
 
+/* 앞주머니: 양옆 날개(가운데로 갈수록 어두운 그늘)와 아래 날개가 겹쳐 접힌 결이 보임 */
 .envelope-front {
   inset: 0;
   z-index: 3;
-  border-radius: 8px;
-  background: #f1e7d4;
-  clip-path: polygon(0 34%, 50% 68%, 100% 34%, 100% 100%, 0 100%);
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, var(--env) 0%, color-mix(in srgb, var(--env) 85%, #000) 48%, color-mix(in srgb, var(--env) 85%, #000) 52%, var(--env) 100%);
+  clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%);
 }
 
-.envelope-addr {
+.envelope-front::before {
+  content: "";
   position: absolute;
-  left: 9%;
-  bottom: 12%;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 17px;
-  color: #6b5640;
+  inset: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--env) 88%, #000), var(--env-light));
+  clip-path: polygon(0 100%, 50% 50%, 100% 100%);
+}
+
+/* 위 뚜껑과 그 아래로 떨어지는 그늘 */
+.envelope-flap-shadow {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 62%;
+  z-index: 4;
+  background: rgba(30, 5, 10, 0.35);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  filter: blur(3px);
+  transform: translateY(4px);
+  transition: opacity 0.3s;
 }
 
 .envelope-flap {
   left: 0;
   right: 0;
   top: 0;
-  height: 64%;
+  height: 60%;
   z-index: 4;
-  background: #e9dcc3;
+  background: linear-gradient(180deg, var(--env-light), color-mix(in srgb, var(--env) 90%, #000));
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   transform-origin: top;
   transition: transform 0.55s ease, z-index 0s 0.28s;
 }
 
-.envelope-seal {
+.envelope-addr {
+  position: absolute;
+  left: 9%;
+  bottom: 8%;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: rgba(255, 240, 225, 0.85);
+}
+
+/* 우표: 톱니 테두리 + 나라 그림 */
+.stamp {
+  position: absolute;
+  right: 6%;
+  bottom: 8%;
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  width: 52px;
+  padding: 5px 5px 3px;
+  background: radial-gradient(circle, transparent 2.2px, #fffdf6 2.6px) -4px -4px / 8px 8px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+  transform: rotate(4deg);
+}
+
+.stamp-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  background: color-mix(in srgb, var(--seal) 22%, #fff7e6);
+  outline: 1px solid color-mix(in srgb, var(--seal) 50%, #fff);
+}
+
+.stamp-art svg {
+  width: 70%;
+  height: 70%;
+}
+
+.stamp-label {
+  white-space: nowrap;
+  font-size: 4.4px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #6b5640;
+}
+
+/* 소인: 우표 위를 지나가는 동그란 도장과 물결 줄 */
+.postmark {
+  position: absolute;
+  right: 13%;
+  bottom: 13%;
+  z-index: 1;
+  width: 104px;
+  height: 61px;
+  color: rgba(255, 235, 215, 0.45);
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+
+.postmark text {
+  fill: currentColor;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700;
+}
+
+.pm-city {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+.pm-date {
+  font-size: 6.5px;
+}
+
+
+/* 밀랍 도장: 가장자리가 울퉁불퉁한 붉은 밀랍, 가운데 눈꽃이 눌려 찍힘.
+   끌면 들리며 따라오고, 떼면 빙글 돌며 떨어져 나감 */
+.wax-seal {
+  position: absolute;
   left: 50%;
-  top: 60%;
+  top: 58%;
   z-index: 5;
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
+  width: 62px;
+  height: 62px;
+  padding: 0;
+  border: 0;
+  /* 녹아 퍼진 밀랍처럼 가장자리가 고르지 않음 */
+  border-radius: 46% 54% 52% 48% / 53% 45% 55% 47%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--seal) 70%, #fff), var(--seal) 60%, color-mix(in srgb, var(--seal) 70%, #000));
-  color: #fff;
-  font-size: 20px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
-  transition: opacity 0.25s ease;
+  background:
+    radial-gradient(circle at 32% 26%, #fff3c4 0, rgba(255, 243, 196, 0) 34%),
+    radial-gradient(circle at 50% 50%, #d9b35c 0, #c19740 55%, #8a6624 100%);
+  box-shadow:
+    inset 0 -4px 7px rgba(80, 50, 10, 0.45),
+    inset 0 3px 5px rgba(255, 245, 210, 0.55),
+    0 5px 10px rgba(40, 10, 10, 0.45),
+    0 0 0 3px #b48a3a,
+    0 0 0 5px rgba(120, 85, 30, 0.6);
+  cursor: grab;
+  touch-action: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  animation: seal-breathe 2.4s ease-in-out infinite;
+}
+
+.wax-seal:focus {
+  outline: none;
+}
+
+.wax-seal:focus-visible {
+  outline: 2px dashed rgba(255, 255, 255, 0.6);
+  outline-offset: 6px;
+}
+
+.wax-seal span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(110, 75, 20, 0.45);
+  color: #a8802f;
+  font-size: 22px;
+  text-shadow: 0 -1px 0 rgba(90, 60, 10, 0.6), 0 1px 0 rgba(255, 240, 200, 0.7);
+}
+
+.wax-seal.lifting {
+  cursor: grabbing;
+  animation: none;
+  box-shadow:
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35),
+    0 14px 20px rgba(0, 0, 0, 0.5),
+    0 0 0 4px color-mix(in srgb, var(--seal) 80%, #000);
+}
+
+.wax-seal.peeled {
+  animation: seal-off 0.5s ease-in forwards;
+  pointer-events: none;
+}
+
+@keyframes seal-breathe {
+  50% {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+@keyframes seal-off {
+  to {
+    transform: translate(60%, -160%) rotate(160deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+.letter-view.opened .envelope-flap-shadow {
+  opacity: 0;
 }
 
 .letter-view.opened .envelope-flap {
@@ -1464,39 +1629,56 @@ body.picker-open .meta {
   z-index: 1;
 }
 
-.letter-view.opened .envelope-seal {
-  opacity: 0;
-}
-
 .letter-view.opened .letter-paper {
   opacity: 1;
   transform: translateY(-62%);
 }
 
-.letter-view.unfolded .envelope {
-  position: absolute;
-  opacity: 0;
-  transform: translateY(40px) scale(0.9);
-  pointer-events: none;
+.letter-view.unfolded .envelope,
+.letter-view.unfolded .letter-sub,
+.letter-view.unfolded .letter-arrive {
+  display: none;
 }
 
 .letter-hint {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--ink-faint);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: #9a8478;
 }
 
+/* 편지지: 위아래 에어메일 띠, 줄 쳐진 종이, 귀퉁이 날짜 */
 .letter-sheet {
+  position: relative;
   width: min(360px, 100%);
-  max-height: 60vh;
+  max-height: 64vh;
   overflow-y: auto;
-  padding: 26px 24px 22px;
-  border-radius: 6px;
-  background: repeating-linear-gradient(#fffaf0 0 27px, #eee4d0 27px 28px);
-  background-position: 0 14px;
+  padding: 30px 26px 26px;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(#fffaf0 0 27px, #eee4d0 27px 28px);
+  background-position: 0 18px;
   color: #3a2f28;
-  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 30px 50px -22px rgba(60, 20, 20, 0.5), 0 6px 16px -8px rgba(60, 20, 20, 0.3);
   animation: sheet-rise 0.6s ease-out;
+}
+
+.letter-sheet::before,
+.letter-sheet::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: var(--env);
+}
+
+.letter-sheet::before {
+  top: 0;
+}
+
+.letter-sheet::after {
+  bottom: 0;
 }
 
 @keyframes sheet-rise {
@@ -1506,14 +1688,24 @@ body.picker-open .meta {
   }
 }
 
+.sheet-date {
+  text-align: right;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 28px;
+  color: var(--env);
+}
+
 .paper-to {
   font-family: var(--serif);
-  font-size: 19px;
+  font-style: italic;
+  font-size: 20px;
   line-height: 28px;
 }
 
 .paper-message {
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 15px;
   line-height: 28px;
   white-space: pre-wrap;
@@ -1542,10 +1734,10 @@ body.picker-open .meta {
 
 .letter-actions button {
   padding: 11px 18px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(60, 30, 30, 0.2);
   border-radius: 999px;
-  background: var(--glass);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.6);
+  color: #3a2f28;
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -1553,12 +1745,21 @@ body.picker-open .meta {
 
 .letter-actions .letter-go {
   border-color: transparent;
-  background: var(--ink);
-  color: #111;
+  background: var(--env-deep);
+  color: #fff6ec;
   font-weight: 700;
 }
 
-body.letter-open .meta {
+/* 편지 쓰기 창 위쪽 에어메일 띠 */
+.airmail-strip {
+  height: 6px;
+  margin: -18px -18px 12px;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(90deg, #8a1c2c, #c19740, #8a1c2c);
+}
+
+body.letter-open .meta,
+body.tour-open .meta {
   display: none;
 }
 
@@ -1566,7 +1767,8 @@ body.letter-open .meta {
   .envelope,
   .envelope-flap,
   .letter-paper,
-  .letter-sheet {
+  .letter-sheet,
+  .wax-seal {
     transition: none;
     animation: none;
   }
