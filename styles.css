@@ -1356,9 +1356,9 @@ body.picker-open .meta {
 /* 받은 편지: 밝은 종이 배경 위 진한 단색 봉투(나라 색), 접힌 결과 그늘, 가운데 금빛 밀랍 도장.
    도장을 떼면 뚜껑이 열리고 종이가 올라온 뒤 줄 쳐진 편지지가 펼쳐짐 */
 .letter-view {
-  --env: color-mix(in srgb, var(--seal) 72%, #3a0610);
-  --env-deep: color-mix(in srgb, var(--seal) 55%, #22040a);
-  --env-light: color-mix(in srgb, var(--seal) 80%, #fff 6%);
+  --env: color-mix(in srgb, var(--seal) 58%, #3a0610);
+  --env-deep: color-mix(in srgb, var(--seal) 42%, #22040a);
+  --env-light: color-mix(in srgb, var(--seal) 64%, #4a0a14);
   position: fixed;
   inset: 0;
   z-index: 40;
@@ -1377,8 +1377,9 @@ body.picker-open .meta {
 
 .letter-arrive {
   font-family: var(--serif);
-  font-size: 30px;
-  letter-spacing: 0.01em;
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   color: var(--ink);
 }
 
@@ -1390,11 +1391,50 @@ body.picker-open .meta {
   color: var(--ink-dim);
 }
 
+/* 우편함 투입구: 은빛 틀과 어두운 틈. 봉투가 이 틈에서 미끄러져 나옴 */
+.mail-slot {
+  position: relative;
+  z-index: 2;
+  width: min(380px, 94vw);
+  height: 46px;
+  margin-top: 10px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f4f5f7, #c9ccd2 55%, #e6e8ec);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -2px 3px rgba(0, 0, 0, 0.18),
+    0 10px 18px -8px rgba(0, 0, 0, 0.7);
+}
+
+@keyframes env-slide {
+  from {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(-60%);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+
+.mail-slot span {
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  top: 50%;
+  height: 7px;
+  border-radius: 4px;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, #1b1c20, #3a3c42);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
 .envelope {
   position: relative;
   width: min(330px, 86vw);
   aspect-ratio: 3 / 2;
-  margin-top: 8px;
+  margin-top: -16px;
+  animation: env-slide 1s 0.25s cubic-bezier(0.2, 0.8, 0.25, 1) both;
   perspective: 900px;
   transition: transform 0.5s ease, opacity 0.5s ease;
 }
@@ -1620,8 +1660,28 @@ body.picker-open .meta {
 }
 
 .letter-view.unfolded .envelope,
+.letter-view.unfolded .mail-slot,
 .letter-view.unfolded .letter-sub,
 .letter-view.unfolded .letter-arrive {
+  display: none;
+}
+
+.letter-open-btn {
+  margin-top: 6px;
+  padding: 10px 30px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--seal) 85%, #fff 0%), var(--env));
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+}
+
+.letter-open-btn[hidden] {
   display: none;
 }
 
@@ -1730,8 +1790,8 @@ body.picker-open .meta {
 
 .letter-actions .letter-go {
   border-color: transparent;
-  background: var(--env-deep);
-  color: #fff6ec;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--seal) 85%, #fff 0%), var(--env));
+  color: #fff;
   font-weight: 700;
 }
 
@@ -1753,7 +1813,8 @@ body.tour-open .meta {
   .envelope-flap,
   .letter-paper,
   .letter-sheet,
-  .wax-seal {
+  .wax-seal,
+  .envelope {
     transition: none;
     animation: none;
   }
