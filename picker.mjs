@@ -8,8 +8,8 @@ export const PLACES = {
   japan: { lat: 35.36, lon: 138.73, landmark: "후지산", particle: "벚꽃잎", color: "#f6a3ba", stem: 24, dx: 30 },
   korea: { lat: 37.55, lon: 126.99, landmark: "N서울타워", particle: "반짝이는 불빛", color: "#ffd27a", stem: 42, dx: 0 },
   canada: { lat: 46.81, lon: -71.21, landmark: "샤토 프롱트낙", particle: "단풍잎", color: "#e0531f", stem: 22, dx: 0 },
-  australia: { lat: -33.86, lon: 151.21, landmark: "오페라하우스", particle: "물방울", color: "#4fb0e8", stem: 22, dx: 0 },
-  finland: { lat: 66.54, lon: 25.85, landmark: "산타마을", particle: "눈꽃", color: "#e8f2ff", stem: 26, dx: 0 },
+  australia: { lat: -33.86, lon: 151.21, landmark: "시드니 오페라하우스", particle: "물방울", color: "#4fb0e8", stem: 22, dx: 0 },
+  finland: { lat: 66.54, lon: 25.85, landmark: "산타클로스 마을", particle: "눈꽃", color: "#e8f2ff", stem: 26, dx: 0 },
   china: { lat: 39.92, lon: 116.39, landmark: "자금성", particle: "은행잎", color: "#f2c230", stem: 24, dx: -30 },
   egypt: { lat: 29.98, lon: 31.13, landmark: "기자 피라미드", particle: "모래알", color: "#d48a52", stem: -30, dx: -8 },
   france: { lat: 48.86, lon: 2.29, landmark: "에펠탑", particle: "장미 꽃잎", color: "#d81b4a", stem: 22, dx: -24 },
@@ -68,7 +68,6 @@ function buildUI() {
   root.innerHTML = `
     <button type="button" class="picker-close" aria-label="닫기">×</button>
     <p class="picker-title">SELECT YOUR SNOWBALL</p>
-    <p class="picker-sub">지구본을 돌려 나라를 고르세요</p>
     <canvas class="picker-globe"></canvas>
     <div class="picker-card">
       <button type="button" class="picker-step" data-step="-1" aria-label="이전 나라">‹</button>
@@ -76,7 +75,6 @@ function buildUI() {
         <div class="picker-icon" aria-hidden="true"></div>
         <div>
           <p class="picker-name"></p>
-          <p class="picker-detail"></p>
         </div>
       </div>
       <button type="button" class="picker-step" data-step="1" aria-label="다음 나라">›</button>
@@ -93,7 +91,6 @@ function buildUI() {
     canvas: root.querySelector(".picker-globe"),
     icon: root.querySelector(".picker-icon"),
     name: root.querySelector(".picker-name"),
-    detail: root.querySelector(".picker-detail"),
     go: root.querySelector(".picker-go"),
     close: root.querySelector(".picker-close"),
   };
@@ -158,7 +155,6 @@ function setFocus(id) {
   state.target = { lon: place.lon, lat: Math.max(-MAX_TILT, Math.min(MAX_TILT, place.lat * 0.6)) };
   const scene = state.scenes.find((s) => s.id === id);
   ui.name.textContent = scene.label;
-  ui.detail.textContent = place.landmark;
   const svg = document.querySelector(`.scenes [data-scene="${id}"] svg`);
   ui.icon.innerHTML = svg ? svg.outerHTML : "";
   ui.icon.style.setProperty("--accent", place.color);

@@ -369,7 +369,7 @@ export const quebec = {
   // 따뜻한 골든아워 필터: 그늘은 와인빛, 밝은 곳은 금빛
   grade: { saturation: 1.0, shadow: [70, 30, 40], highlight: [255, 214, 150], tint: 0.18 },
   id: "canada",
-  label: "캐나다 · 퀘벡",
+  label: "캐나다 · 샤토 프롱트낙",
   title: "Château Frontenac",
   paint: paintQuebec,
   glare: 0.9,
