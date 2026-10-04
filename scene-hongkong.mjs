@@ -1,5 +1,5 @@
-// 홍콩: 비 갠 밤 몽콕 거리. 양옆으로 빽빽한 고층 건물이 소실점으로 모이고,
-// 길 위로 겹겹이 튀어나온 네온 간판, 젖은 길에 번지는 간판 빛, 빨간 택시, 네온빛 빗방울
+// 대만: 비 갠 밤 타이베이 시먼딩 거리. 양옆으로 빽빽한 고층 건물이 소실점으로 모이고,
+// 길 위로 겹겹이 튀어나온 네온 간판, 젖은 길에 번지는 간판 빛, 노란 택시, 거리를 가로지르는 빨간 등, 네온빛 빗방울
 
 import { seeded, fillSilhouette } from "./util.mjs";
 
@@ -370,7 +370,72 @@ function paintHongKong(g, globe, groundAt) {
     g.restore();
   }
 
-  // 빨간 택시: 은색 지붕에 TAXI 표지, 켜진 전조등이 젖은 길에 비침
+  // 거리를 가로지르는 빨간 등: 양옆 건물 사이 줄에 둥근 등이 줄지어 매달림. 가까울수록 크고 줄이 처짐
+  for (const z of [4.4, 3.1, 2.2, 1.55, 1.12]) {
+    const y0 = -40 + (z - 1) * 18;
+    const sag = 26;
+    const N = 9;
+    const at = (t) => {
+      const X = -WALL_X + t * WALL_X * 2;
+      const Y = y0 + sag * 4 * t * (1 - t);
+      return P(X, Y, z);
+    };
+    g.strokeStyle = "rgba(40,30,40,0.8)";
+    g.lineWidth = Math.max(0.4, 0.8 / z);
+    g.beginPath();
+    for (let k = 0; k <= 20; k++) {
+      const [x, y] = at(k / 20);
+      k ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.stroke();
+    const rr = 7 / z;
+    for (let k = 1; k < N; k++) {
+      const [x, y] = at(k / N);
+      const cy = y + rr * 1.4;
+      // 은은한 빛무리
+      g.save();
+      g.globalCompositeOperation = "lighter";
+      const glow = g.createRadialGradient(x, cy, 0, x, cy, rr * 3.2);
+      glow.addColorStop(0, "rgba(255,90,60,0.4)");
+      glow.addColorStop(1, "rgba(255,60,40,0)");
+      g.fillStyle = glow;
+      g.fillRect(x - rr * 3.2, cy - rr * 3.2, rr * 6.4, rr * 6.4);
+      g.restore();
+      // 줄과 몸통: 위아래가 살짝 눌린 둥근 등, 가운데가 밝게 빛남
+      g.strokeStyle = "rgba(40,30,40,0.8)";
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x, cy - rr);
+      g.stroke();
+      const body = g.createRadialGradient(x - rr * 0.3, cy - rr * 0.2, rr * 0.1, x, cy, rr * 1.1);
+      body.addColorStop(0, "#ffd08a");
+      body.addColorStop(0.45, "#f0442e");
+      body.addColorStop(1, "#8e1418");
+      g.fillStyle = body;
+      g.beginPath();
+      g.ellipse(x, cy, rr * 0.95, rr, 0, 0, Math.PI * 2);
+      g.fill();
+      // 대나무 살 결
+      g.strokeStyle = "rgba(120,20,20,0.5)";
+      g.lineWidth = Math.max(0.3, 0.5 / z);
+      for (const f of [-0.5, 0.5]) {
+        g.beginPath();
+        g.ellipse(x, cy, rr * 0.95 * Math.abs(f), rr, 0, f < 0 ? Math.PI / 2 : -Math.PI / 2, f < 0 ? Math.PI * 1.5 : Math.PI / 2);
+        g.stroke();
+      }
+      // 금빛 위·아래 테와 술
+      g.fillStyle = "#d9a83a";
+      g.fillRect(x - rr * 0.45, cy - rr - rr * 0.2, rr * 0.9, rr * 0.25);
+      g.fillRect(x - rr * 0.45, cy + rr - rr * 0.05, rr * 0.9, rr * 0.25);
+      g.strokeStyle = "#e0b040";
+      g.beginPath();
+      g.moveTo(x, cy + rr * 1.2);
+      g.lineTo(x, cy + rr * 1.9);
+      g.stroke();
+    }
+  }
+
+  // 노란 택시(타이베이 택시는 노랑): 은색 지붕에 TAXI 표지, 켜진 전조등이 젖은 길에 비침
   const tz = 1.9;
   const T = (X, Y) => P(X, Y, tz);
   const [t0x, t0y] = T(18, 300);
@@ -381,7 +446,7 @@ function paintHongKong(g, globe, groundAt) {
   g.beginPath();
   g.ellipse(t0x + tw / 2, t1y + 1, tw * 0.6, 2.5, 0, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = "#c81e2a";
+  g.fillStyle = "#f2c230";
   g.beginPath();
   g.roundRect(t0x, t0y + th * 0.35, tw, th * 0.6, 2);
   g.fill();
@@ -491,16 +556,16 @@ function drawRain(ctx, p) {
 }
 
 export const hongkong = {
-  id: "hongkong",
-  label: "홍콩 · 몽콕 네온 거리",
-  title: "Mong Kok",
+  id: "taiwan",
+  label: "대만 · 시먼딩 거리",
+  title: "Ximending",
   paint: paintHongKong,
   animate: animateHongKong,
   glare: 0.5,
   grade: { saturation: 1.05, tint: 0.05, floor: 6 },
   base: {
     trim: ["#3a2d4d", "#ff7ad1", "#7a5cff", "#2a2238"],
-    plate: "Hong Kong",
+    plate: "Ximending",
     plateFont: "700 15px 'Helvetica Neue', Arial, sans-serif",
     plateInk: "#1a0f24",
   },

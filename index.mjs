@@ -476,7 +476,7 @@ const SLUGS = {
   turkey: "istanbul",
   spain: "barcelona",
   bolivia: "uyuni",
-  hongkong: "hongkong",
+  taiwan: "ximending",
 };
 function idFromUrl(hashFirst = false) {
   const query = new URLSearchParams(location.search).get("landmark") || "";
