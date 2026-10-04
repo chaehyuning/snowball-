@@ -288,30 +288,35 @@ export function letItSnow() {
 // 엽서용 한 장면: 명판에 원하는 글을 새기고, 화면 해상도와 상관없이 3배(1200×1800)로 다시 그려 떠 옴.
 // 보통 화면(1배) PC에서도 글자와 입자가 깨지지 않음
 const POSTCARD_SCALE = 3;
-export async function capturePostcard(text) {
+// scale: 엽서 사진은 3배, 영상은 프레임마다 다시 그려야 해서 2배.
+// 돌려주는 frame()을 부르면 지금 움직이는 입자 그대로 snap에 다시 그림 (영상 엽서용)
+export async function capturePostcard(text, scale = POSTCARD_SCALE) {
   // "만드는 중" 글이 먼저 화면에 보이도록 한 프레임 쉬고 시작
   await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
   const original = scene.base;
   if (text) scene.base = { ...original, plate: text, plateFont: PLATE_FONT };
   const hiLayers = {};
-  for (const _ of buildSteps(scene, hiLayers, POSTCARD_SCALE));
+  for (const _ of buildSteps(scene, hiLayers, scale));
   scene.base = original;
   const snap = document.createElement("canvas");
-  snap.width = W * POSTCARD_SCALE;
-  snap.height = H * POSTCARD_SCALE;
+  snap.width = W * scale;
+  snap.height = H * scale;
   const hctx = snap.getContext("2d");
-  hctx.scale(POSTCARD_SCALE, POSTCARD_SCALE);
-  const keepCtx = ctx;
-  const keepLayers = layers;
-  ctx = hctx;
-  layers = hiLayers;
-  try {
-    draw(performance.now());
-  } finally {
-    ctx = keepCtx;
-    layers = keepLayers;
-  }
-  return { snap, id: scene.id };
+  hctx.scale(scale, scale);
+  const frame = () => {
+    const keepCtx = ctx;
+    const keepLayers = layers;
+    ctx = hctx;
+    layers = hiLayers;
+    try {
+      draw(performance.now());
+    } finally {
+      ctx = keepCtx;
+      layers = keepLayers;
+    }
+  };
+  frame();
+  return { snap, id: scene.id, frame };
 }
 
 export const currentSceneId = () => scene.id;
@@ -1046,7 +1051,7 @@ function paintBaseFront(g) {
 // 주소에 나라가 없으면 한국부터. 있으면 주소를 ?landmark= 꼴로 맞춰 둠
 fillTicker(SCENES.map((s) => s.id));
 setupMetaToggle();
-setupKeepsakes({ capture: capturePostcard });
+setupKeepsakes({ capture: capturePostcard, shake: letItSnow });
 const startId = idFromUrl();
 const letter = readLetter();
 if (letter?.plate && startId) platePin = { id: startId, text: letter.plate };
