@@ -1,6 +1,6 @@
 // 터키: 해 질 녘 이스탄불 블루 모스크(술탄 아흐메트 모스크), 초승달, 튤립, 날아다니는 나비
 
-import { seeded, fillSilhouette, paintTree } from "./util.mjs";
+import { seeded, fillSilhouette, paintTree, waterJet } from "./util.mjs";
 
 const WING = ["#2ec4c9", "#1f8fd6", "#7fe3d6", "#0fa3a3", "#bff3ff"];
 const STONE = "#e8dcc4";
@@ -181,35 +181,91 @@ function paintIstanbul(g, globe, groundAt) {
   g.closePath();
   g.fill();
 
-  // 공원 분수: 원근이 잡힌 둥근 연못, 가운데 물기둥과 둘레 물줄기
-  g.fillStyle = "#cfc3aa";
+  // 공원 분수: 원근이 잡힌 둥근 연못. 돌 테두리 윗면과 바깥 옆면, 터키석 빛 물과 타일 무늬 바닥이 비침,
+  // 가운데 2단 돌 수반에서 솟는 물기둥과 수반 가장자리로 넘쳐흐르는 물, 둘레에서 안쪽으로 뿜는 물줄기
+  g.fillStyle = "#b0a48c";
   g.beginPath();
-  g.ellipse(200, 292, 66, 12, 0, 0, Math.PI * 2);
+  g.ellipse(200, 294, 67, 13, 0, 0, Math.PI);
   g.fill();
-  const water = g.createLinearGradient(0, 282, 0, 302);
-  water.addColorStop(0, "#7fd6cf");
-  water.addColorStop(1, "#2e9aa0");
+  g.fillStyle = "#e2d6bc";
+  g.beginPath();
+  g.ellipse(200, 292, 67, 12.5, 0, 0, Math.PI * 2);
+  g.fill();
+  const water = g.createRadialGradient(200, 290, 4, 200, 292, 60);
+  water.addColorStop(0, "#9fe6dc");
+  water.addColorStop(0.6, "#4fb8b8");
+  water.addColorStop(1, "#2a8f98");
   g.fillStyle = water;
   g.beginPath();
   g.ellipse(200, 292, 60, 9.5, 0, 0, Math.PI * 2);
   g.fill();
-  g.strokeStyle = "rgba(240,255,255,0.75)";
-  g.lineCap = "round";
-  for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2;
-    const bx = 200 + Math.cos(a) * 46;
-    const by = 292 + Math.sin(a) * 7;
-    g.lineWidth = Math.sin(a) > 0 ? 1.4 : 0.9;
+  // 물속 타일 무늬와 잔물결 고리
+  g.save();
+  g.beginPath();
+  g.ellipse(200, 292, 60, 9.5, 0, 0, Math.PI * 2);
+  g.clip();
+  g.strokeStyle = "rgba(20,90,110,0.25)";
+  g.lineWidth = 0.5;
+  for (let x = 140; x < 262; x += 8) {
     g.beginPath();
-    g.moveTo(bx, by);
-    g.quadraticCurveTo(200 + Math.cos(a) * 30, by - 14, 200 + Math.cos(a) * 16, 292 + Math.sin(a) * 2.5);
+    g.moveTo(x, 284);
+    g.lineTo(x + 6, 302);
     g.stroke();
   }
-  g.lineWidth = 2.2;
+  g.strokeStyle = "rgba(230,255,250,0.45)";
+  g.lineWidth = 0.6;
+  for (const rr of [14, 24, 36, 48]) {
+    g.beginPath();
+    g.ellipse(200, 292, rr, rr * 0.16, 0, 0, Math.PI * 2);
+    g.stroke();
+  }
+  g.restore();
+  // 둘레에서 안쪽으로 뿜는 물줄기 (앞쪽은 굵고 진하게)
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const front = Math.sin(a) > 0;
+    const bx = 200 + Math.cos(a) * 48;
+    const by = 292 + Math.sin(a) * 7.4;
+    const ex = 200 + Math.cos(a) * 18;
+    const ey = 292 + Math.sin(a) * 2.8;
+    waterJet(g, rnd, bx, by, 200 + Math.cos(a) * 34, by - 15, ex, ey, front ? 1.3 : 0.8);
+  }
+  // 가운데 2단 수반
+  g.fillStyle = "#cdbf9f";
+  g.fillRect(197, 281, 6, 11);
+  g.fillStyle = "#e6dbc2";
   g.beginPath();
-  g.moveTo(200, 292);
-  g.lineTo(200, 266);
-  g.stroke();
+  g.ellipse(200, 281, 13, 2.8, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#b8aa8c";
+  g.beginPath();
+  g.ellipse(200, 281.6, 13, 2.8, 0, 0, Math.PI);
+  g.fill();
+  g.fillStyle = "#e6dbc2";
+  g.fillRect(198.6, 272, 2.8, 9);
+  g.beginPath();
+  g.ellipse(200, 272, 7, 1.6, 0, 0, Math.PI * 2);
+  g.fill();
+  // 수반 가장자리로 넘쳐 떨어지는 얇은 물 커튼
+  g.fillStyle = "rgba(220,250,250,0.45)";
+  g.beginPath();
+  g.moveTo(187, 281.5);
+  g.quadraticCurveTo(186, 287, 188, 291);
+  g.lineTo(212, 291);
+  g.quadraticCurveTo(214, 287, 213, 281.5);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(220,250,250,0.5)";
+  g.beginPath();
+  g.moveTo(193, 272.4);
+  g.quadraticCurveTo(192, 277, 193.5, 280.5);
+  g.lineTo(206.5, 280.5);
+  g.quadraticCurveTo(208, 277, 207, 272.4);
+  g.closePath();
+  g.fill();
+  // 가운데 물기둥: 위로 솟았다 둥글게 퍼져 떨어짐
+  waterJet(g, rnd, 200, 271, 200, 246, 200, 254, 2.2, 272);
+  for (const side of [-1, 1]) waterJet(g, rnd, 200, 254, 200 + side * 8, 248, 200 + side * 12, 271, 1, 272);
 
   // 튤립 화단 (원근이 잡힌 타원 꽃밭)
   tulips(g, rnd, 112, 314, 30);
