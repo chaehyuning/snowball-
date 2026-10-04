@@ -72,7 +72,8 @@ export function paintTree(g, rnd, x, y, len, angle, width, depth, look) {
 
 // 분수 물줄기 하나: 뿜는 곳은 굵고 진하며 끝으로 갈수록 가늘고 투명해지는 곡선,
 // 겉에 옅은 물안개, 끝에 흩어지는 물방울, 떨어지는 자리에 하얀 물보라 고리
-export function waterJet(g, rnd, x0, y0, cx, cy, x1, y1, w0, splashY = y1) {
+export function waterJet(g, rnd, x0, y0, cx, cy, x1, y1, w0, splashY = y1, jets = null) {
+  jets?.push({ x0, y0, cx, cy, x1, y1, w0, splashY, phase: rnd() });
   const pt = (t) => {
     const u = 1 - t;
     return [u * u * x0 + 2 * u * t * cx + t * t * x1, u * u * y0 + 2 * u * t * cy + t * t * y1];
@@ -129,4 +130,48 @@ export function waterJet(g, rnd, x0, y0, cx, cy, x1, y1, w0, splashY = y1) {
   g.ellipse(x1, splashY - w0 * 0.4, w0 * 1.2, w0 * 0.9, 0, Math.PI, 0);
   g.fill();
   g.restore();
+}
+
+// 물줄기를 따라 흘러가는 빛 방울과 떨어지는 자리에서 퍼지는 물결 고리 (매 프레임)
+export function animateJets(ctx, t, jets) {
+  if (!jets.length) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (const j of jets) {
+    const pt = (s) => {
+      const u = 1 - s;
+      return [u * u * j.x0 + 2 * u * s * j.cx + s * s * j.x1, u * u * j.y0 + 2 * u * s * j.cy + s * s * j.y1];
+    };
+    // 흘러가는 물방울 세 개: 뿜는 곳에서 끝으로
+    for (let k = 0; k < 3; k++) {
+      const s = (t * 0.0011 + j.phase + k / 3) % 1;
+      const [x, y] = pt(s);
+      const rr = Math.max(0.4, j.w0 * (0.7 - s * 0.4));
+      ctx.globalAlpha = 0.85 * (1 - s * 0.6);
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(x, y, rr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 물줄기 전체가 가볍게 일렁이는 밝은 결
+    const s2 = (t * 0.0007 + j.phase) % 1;
+    const [ax, ay] = pt(s2);
+    const [bx, by] = pt(Math.min(1, s2 + 0.15));
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = "#e8f6ff";
+    ctx.lineWidth = j.w0 * 0.9;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+    // 떨어지는 자리의 물결 고리가 퍼지며 사라짐
+    const ring = (t * 0.0012 + j.phase) % 1;
+    ctx.globalAlpha = 0.3 * (1 - ring);
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.ellipse(j.x1, j.splashY, j.w0 * (1.5 + ring * 4), j.w0 * (0.4 + ring * 1.1), 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
