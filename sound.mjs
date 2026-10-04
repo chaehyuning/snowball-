@@ -354,7 +354,7 @@ const VOICES = {
     for (let i = 0; i < 6; i++) bell(rand(3000, 5600), t + 0.1 + rand(0, 0.8), { level: 0.02, decay: 0.3, pan: rand(-0.8, 0.8) });
   },
   // 네온 빗방울: 간판 형광등의 낮은 웅 소리 + 후드득 빗소리 + 트램 "땡땡"
-  hongkong(t, p) {
+  taiwan(t, p) {
     const o = ac.createOscillator();
     o.type = "sawtooth";
     o.frequency.value = 100;
@@ -407,7 +407,7 @@ export function pop(power, sceneId) {
 // 끌어서 흔드는 한 박자마다: 유리구 안 물이 출렁이며 입자가 사르르 쓸리는 소리
 const SHAKE_TONE = {
   japan: 1800, korea: 3200, canada: 2600, australia: 900, finland: 2200,
-  china: 2800, egypt: 4200, france: 2000, turkey: 2400, spain: 3600, bolivia: 3000, hongkong: 1500,
+  china: 2800, egypt: 4200, france: 2000, turkey: 2400, spain: 3600, bolivia: 3000, taiwan: 1500,
 };
 export function shake(level, sceneId) {
   if (!ensure() || muted) return;

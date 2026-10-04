@@ -70,11 +70,11 @@ const INFO = {
     tagline: "The sky beneath your feet",
     text: "안데스 고원 해발 3,656m에 펼쳐진 넓이 10,582㎢의 세계 최대 소금 평원. 전체 높낮이 차이가 1m도 안 될 만큼 평평해서, 12월~4월 우기에 얕은 물이 고이면 하늘을 그대로 비추는 거울이 된다.",
   },
-  hongkong: {
-    word: "Hong Kong", city: "Hong Kong", region: "Mong Kok, Kowloon, Hong Kong", landmark: "Mong Kok neon streets",
-    coord: "22°19′09″N  114°10′10″E", particle: "Neon rain",
-    tagline: "Neon after the rain",
-    text: "주룽반도 몽콕은 좁은 길 위로 간판이 겹겹이 튀어나온 홍콩의 밤거리다. 2010년 말 간판 관리 제도가 생긴 뒤 허가받지 않은 간판이 해마다 수천 개씩 철거돼, 남은 네온은 점점 귀해지고 있다.",
+  taiwan: {
+    word: "Taiwan", city: "Taipei", region: "Wanhua, Taipei, Taiwan", landmark: "Ximending",
+    coord: "25°02′34″N  121°30′27″E", particle: "Neon rain",
+    tagline: "Neon and red lanterns after the rain",
+    text: "타이베이 완화구의 시먼딩은 1999년 대만에서 처음 생긴 보행자 거리로, 지금도 대만에서 가장 크다. 거리 입구의 붉은 벽돌 건물 시먼홍러우(西門紅樓)는 1908년 대만 최초의 공영 시장으로 지어졌다.",
   },
 };
 
@@ -148,13 +148,13 @@ const TRAVEL = {
     "symbol": "소금 결정 — 정육면체로 자라는 소금",
     "story": "해 뜨기 전 차를 타고 하얀 평원 한가운데로 들어서면, 발목까지 고인 물 위로 하늘이 한 장 더 펼쳐집니다. 바람이 멎는 순간 지평선이 사라지고 구름이 발아래로 흘러가요. 물이 빠진 자리에는 소금 껍질이 육각형으로 갈라져 끝없이 이어집니다."
   },
-  "hongkong": {
-    "tz": "Asia/Hong_Kong",
-    "best": "비 갠 밤 9시 이후 · 젖은 길에 간판 빛이 번질 때",
+  "taiwan": {
+    "tz": "Asia/Taipei",
+    "best": "비 갠 주말 밤 · 차가 막히고 거리가 사람으로 찰 때",
     "symbol": "네온 빗방울 — 간판 빛을 머금은 비",
-    "title": "Mong Kok, Hong Kong",
-    "titleNarrow": "Mong Kok",
-    "story": "비가 그친 밤 몽콕 골목에 들어서면, 머리 위로 분홍·하늘·호박빛 간판이 겹겹이 튀어나와 하늘을 가립니다. 젖은 아스팔트에 간판 불빛이 길게 번지고, 빨간 택시가 그 빛을 가르며 지나가요. 건물 끝에서 떨어지는 빗방울마저 네온 색으로 물듭니다."
+    "title": "Ximending, Taipei",
+    "titleNarrow": "Ximending",
+    "story": "비가 그친 밤 시먼딩에 들어서면 머리 위로 분홍·하늘·호박빛 간판이 겹겹이 튀어나오고, 거리를 가로지른 줄마다 빨간 등이 흔들립니다. 젖은 아스팔트에 불빛이 길게 번지고, 노란 택시가 그 빛을 가르며 지나가요. 건물 끝에서 떨어지는 빗방울마저 네온 색으로 물듭니다."
   }
 };
 
