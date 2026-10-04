@@ -25,7 +25,8 @@ let ctx = canvas.getContext("2d"); // 엽서를 고해상도로 뜰 때 잠시 �
 const W = 400;
 const H = 600;
 const PAD = 50; // 위아래로 흔들 공간
-const dpr = window.devicePixelRatio || 1;
+// 화면 캔버스는 2배까지만: 고정 그림 층도 2배라 그 이상은 늘려 그리기만 하고 매 프레임 픽셀만 2.25배 늘어남
+const dpr = Math.min(window.devicePixelRatio || 1, 2);
 canvas.width = W * dpr;
 canvas.height = H * dpr;
 ctx.scale(dpr, dpr);
@@ -374,16 +375,25 @@ const STRIP = 400;
 let platePin = null;
 const PLATE_FONT = "600 14px Pretendard, 'Apple SD Gothic Neo', sans-serif";
 function* buildSteps(target, out, scale = LAYER_DPR) {
-  const prev = scene;
-  const prevBase = target.base;
-  if (platePin && platePin.id === target.id) target.base = { ...prevBase, plate: platePin.text, plateFont: PLATE_FONT };
-  scene = target; // 받침 색·명판이 지금 장면 값을 읽으므로 잠시 바꿔 둠
-  out.baseBack = paintLayer(paintBaseBack, true, scale);
-  out.scene = paintLayer((g) => target.paint(g, globe, groundAt), true, scale);
-  out.glass = paintLayer(paintGlass, false, scale);
-  out.baseFront = paintLayer(paintBaseFront, true, scale);
-  target.base = prevBase;
-  scene = prev;
+  // 받침 색·명판이 지금 장면 값을 읽으므로 그리는 동안만 잠시 바꿔 둠 (층마다 한 단계)
+  const paintAs = (fn, grade) => {
+    const prev = scene;
+    const prevBase = target.base;
+    if (platePin && platePin.id === target.id) target.base = { ...prevBase, plate: platePin.text, plateFont: PLATE_FONT };
+    scene = target;
+    try {
+      return paintLayer(fn, grade, scale);
+    } finally {
+      target.base = prevBase;
+      scene = prev;
+    }
+  };
+  out.baseBack = paintAs(paintBaseBack, true);
+  yield;
+  out.scene = paintAs((g) => target.paint(g, globe, groundAt), true);
+  yield;
+  out.glass = paintAs(paintGlass, false);
+  out.baseFront = paintAs(paintBaseFront, true);
   yield;
   for (const key of ["baseBack", "scene", "baseFront"]) {
     const layer = out[key];
@@ -402,14 +412,20 @@ function buildLayers(target) {
 function layersFor(target) {
   let built = layerCache.get(target.id);
   if (built) layerCache.delete(target.id);
-  else built = buildLayers(target);
+  else if (warming && warming.target === target) {
+    // 미리 만들던 중이면 남은 단계만 마저 처리
+    for (const _ of warming.steps);
+    built = warming.out;
+  } else built = buildLayers(target);
+  warming = null;
   layerCache.set(target.id, built);
   while (layerCache.size > CACHE_SIZE) layerCache.delete(layerCache.keys().next().value);
   return built;
 }
 // 지금 나라를 보는 동안 쉬는 틈에 앞뒤 나라 그림을 미리 만들어 둠 → 화살표·옆 버튼으로 넘길 때 바로 바뀜.
-// 조각마다 쉬는 틈 하나씩 쓰고, 화면을 만지거나 스크롤하는 중·설명 시트가 열린 동안에는 미룸
+// 프레임 사이에 10ms씩 조각내 처리하고, 화면을 만지거나 스크롤하는 중·설명 시트가 열린 동안에는 미룸
 let warmTimer = 0;
+let warming = null;
 let lastInput = 0;
 for (const type of ["pointerdown", "pointermove", "touchmove", "wheel", "scroll", "keydown"]) {
   window.addEventListener(type, () => (lastInput = performance.now()), { passive: true, capture: true });
@@ -419,41 +435,58 @@ const busy = () =>
   performance.now() - lastInput < 1200 ||
   document.body.classList.contains("sheet-open") ||
   document.body.classList.contains("picker-open");
-function warmNeighbours() {
+// soon: 곧 고를 것 같은 나라(지구본에서 가운데 온 나라)를 가장 먼저. 이건 지구본이 열려 있어도 만듦
+function warmNeighbours(soon = null) {
   clearTimeout(warmTimer);
   const i = SCENES.indexOf(scene);
-  const queue = [SCENES[(i + 1) % SCENES.length], SCENES[(i - 1 + SCENES.length) % SCENES.length]].filter(
-    (t) => !layerCache.has(t.id),
+  const queue = [soon, SCENES[(i + 1) % SCENES.length], SCENES[(i - 1 + SCENES.length) % SCENES.length]].filter(
+    (t, k, all) => t && t !== scene && !layerCache.has(t.id) && all.indexOf(t) === k,
   );
   const current = scene.id;
   let target = null;
   let steps = null;
   let out = null;
-  const step = () => {
+  // 만들다 만 나라가 다시 맨 앞이면 이어서 만듦
+  if (warming && warming.target === queue[0]) ({ target, steps, out } = warming);
+  else warming = null;
+  if (target) queue.shift();
+  const step = (deadline) => {
     if (scene.id !== current) return;
-    if (busy()) {
+    if (busy() && !(soon && (target === soon || queue[0] === soon))) {
       warmTimer = setTimeout(step, 400);
       return;
     }
-    if (!steps) {
-      target = queue.shift();
-      if (!target) return;
-      out = {};
-      steps = buildSteps(target, out);
-    }
-    if (steps.next().done) {
-      layerCache.set(target.id, out);
-      // 지금 장면이 가장 최근 것으로 남도록 다시 맨 뒤로
-      const mine = layerCache.get(current);
-      layerCache.delete(current);
-      layerCache.set(current, mine);
-      while (layerCache.size > CACHE_SIZE) layerCache.delete(layerCache.keys().next().value);
-      steps = null;
-    }
-    warmTimer = setTimeout(() => idle(step, { timeout: 1000 }), 16);
+    // 한 번 깨어날 때 프레임을 놓치지 않을 만큼(약 10ms)만 여러 조각을 처리
+    const until = performance.now() + Math.min(10, deadline?.timeRemaining?.() || 10);
+    do {
+      if (!steps) {
+        target = queue.shift();
+        if (!target) return;
+        out = {};
+        steps = buildSteps(target, out);
+        warming = { target, steps, out };
+      }
+      if (steps.next().done) {
+        layerCache.set(target.id, out);
+        // 지금 장면이 가장 최근 것으로 남도록 다시 맨 뒤로
+        const mine = layerCache.get(current);
+        layerCache.delete(current);
+        layerCache.set(current, mine);
+        while (layerCache.size > CACHE_SIZE) layerCache.delete(layerCache.keys().next().value);
+        steps = null;
+        warming = null;
+      }
+    } while (performance.now() < until);
+    // 그림이 매 프레임 돌아서 쉬는 틈이 거의 없음 → 오래 기다리지 않고 프레임 사이에 조금씩
+    warmTimer = setTimeout(() => idle(step, { timeout: 120 }), 16);
   };
-  warmTimer = setTimeout(() => idle(step, { timeout: 1000 }), 1200);
+  warmTimer = setTimeout(() => idle(step, { timeout: 120 }), soon ? 60 : 700);
 }
+// 지구본에서 가운데로 온 나라
+window.addEventListener("snowball:focus", (e) => {
+  const target = SCENES.find((s) => s.id === e.detail);
+  if (target && scene && !layerCache.has(target.id)) warmNeighbours(target);
+});
 
 function loadScene(id) {
   scene = SCENES.find((s) => s.id === id) || SCENES[0];
@@ -499,6 +532,8 @@ function idFromUrl(hashFirst = false) {
   const hash = location.hash.slice(1);
   const want = (hashFirst ? hash || query : query || hash).toLowerCase();
   if (!want) return null;
+  // 예전에 홍콩으로 공유된 링크는 같은 장면인 대만으로
+  if (want === "hongkong" || want === "hong-kong") return "taiwan";
   if (SLUGS[want]) return want;
   return Object.keys(SLUGS).find((id) => SLUGS[id] === want) || null;
 }

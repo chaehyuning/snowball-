@@ -1087,39 +1087,61 @@ function reindeer(g, x, y) {
 }
 
 // 눈꽃 결정: 여섯 갈래 가지. 작은 것은 동그란 눈송이
+// 가지 모양은 크기별로 한 번만 그려 두고(스프라이트) 매 프레임엔 돌려 붙이기만 함
+const FLAKE_RES = 4;
+const flakeSprites = new Map();
+function flakeSprite(s) {
+  const key = Math.round(s * 4) / 4;
+  let sprite = flakeSprites.get(key);
+  if (sprite) return sprite;
+  const half = key + 1;
+  sprite = document.createElement("canvas");
+  sprite.width = sprite.height = Math.ceil(half * 2 * FLAKE_RES);
+  const g = sprite.getContext("2d");
+  g.scale(FLAKE_RES, FLAKE_RES);
+  g.translate(half, half);
+  g.strokeStyle = "#ffffff";
+  g.lineWidth = 0.7;
+  g.lineCap = "round";
+  g.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i * Math.PI) / 3;
+    const cx = Math.cos(a);
+    const cy = Math.sin(a);
+    g.moveTo(0, 0);
+    g.lineTo(cx * key, cy * key);
+    // 가지 끝 쪽 작은 곁가지
+    const bx = cx * key * 0.6;
+    const by = cy * key * 0.6;
+    for (const side of [-1, 1]) {
+      const b = a + side * 0.7;
+      g.moveTo(bx, by);
+      g.lineTo(bx + Math.cos(b) * key * 0.3, by + Math.sin(b) * key * 0.3);
+    }
+  }
+  g.stroke();
+  sprite.half = half;
+  flakeSprites.set(key, sprite);
+  return sprite;
+}
+
 function drawFlake(ctx, p) {
   const s = p.size;
   ctx.globalAlpha = p.settled ? 0.7 : 0.95;
+  if (s < 2.6) {
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, s * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  const sprite = flakeSprite(s);
+  const k = s / (sprite.half - 1);
+  const h = sprite.half * k;
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.rotate(p.angle);
-  ctx.strokeStyle = "#ffffff";
-  ctx.fillStyle = "#ffffff";
-  if (s < 2.6) {
-    ctx.beginPath();
-    ctx.arc(0, 0, s * 0.55, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    ctx.lineWidth = 0.7;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const a = (i * Math.PI) / 3;
-      const cx = Math.cos(a);
-      const cy = Math.sin(a);
-      ctx.moveTo(0, 0);
-      ctx.lineTo(cx * s, cy * s);
-      // 가지 끝 쪽 작은 곁가지
-      const bx = cx * s * 0.6;
-      const by = cy * s * 0.6;
-      for (const side of [-1, 1]) {
-        const b = a + side * 0.7;
-        ctx.moveTo(bx, by);
-        ctx.lineTo(bx + Math.cos(b) * s * 0.3, by + Math.sin(b) * s * 0.3);
-      }
-    }
-    ctx.stroke();
-  }
+  ctx.drawImage(sprite, -h, -h, h * 2, h * 2);
   ctx.restore();
 }
 

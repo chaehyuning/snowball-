@@ -525,34 +525,55 @@ function animateHongKong(ctx, t) {
 
 // 네온 빗방울: 동그란 물방울. 둘레로 간판 빛이 번지고, 속은 맑고, 왼쪽 위에 하얀 반사점.
 // 바닥에 닿으면 살짝 눌린 물방울로 남음
+// 방울 그림은 색·크기별로 한 번만 그려 두고(스프라이트) 매 프레임엔 붙이기만 함
+const DROP_RES = 4;
+const dropSprites = new Map();
+function dropSprite(color, s, settled) {
+  const q = Math.round(s * 8) / 8;
+  const key = color + (settled ? "_" : "") + q;
+  let sprite = dropSprites.get(key);
+  if (sprite) return sprite;
+  const half = q * 2.4;
+  sprite = document.createElement("canvas");
+  sprite.width = sprite.height = Math.ceil(half * 2 * DROP_RES);
+  const g = sprite.getContext("2d");
+  g.scale(DROP_RES, DROP_RES);
+  g.translate(half, half);
+  const glow = g.createRadialGradient(0, 0, 0, 0, 0, half);
+  glow.addColorStop(0, color + "55");
+  glow.addColorStop(1, color + "00");
+  g.fillStyle = glow;
+  g.fillRect(-half, -half, half * 2, half * 2);
+  const body = g.createRadialGradient(-q * 0.3, -q * 0.35, q * 0.1, 0, 0, q);
+  body.addColorStop(0, "rgba(255,255,255,0.9)");
+  body.addColorStop(0.35, color + "cc");
+  body.addColorStop(1, color + "55");
+  g.fillStyle = body;
+  g.beginPath();
+  g.arc(0, 0, q, 0, Math.PI * 2);
+  g.fill();
+  if (!settled) {
+    g.fillStyle = "#ffffff";
+    g.beginPath();
+    g.arc(-q * 0.35, -q * 0.4, q * 0.22, 0, Math.PI * 2);
+    g.fill();
+  }
+  sprite.half = half;
+  dropSprites.set(key, sprite);
+  return sprite;
+}
+
 function drawRain(ctx, p) {
   const s = p.size * 1.25;
+  if (s < 0.05) return;
   // 바닥에 내려앉은 방울은 납작하고 옅게: 땅 위에 점이 줄지어 박힌 듯 보이지 않고 젖은 빛으로만 남음
   const squash = p.settled ? 0.4 : 1;
-  ctx.save();
-  if (p.settled) ctx.globalAlpha = 0.35;
-  ctx.translate(p.x, p.y);
-  ctx.scale(1, squash);
-  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2.4);
-  glow.addColorStop(0, p.color + "55");
-  glow.addColorStop(1, p.color + "00");
-  ctx.fillStyle = glow;
-  ctx.fillRect(-s * 2.4, -s * 2.4, s * 4.8, s * 4.8);
-  const body = ctx.createRadialGradient(-s * 0.3, -s * 0.35, s * 0.1, 0, 0, s);
-  body.addColorStop(0, "rgba(255,255,255,0.9)");
-  body.addColorStop(0.35, p.color + "cc");
-  body.addColorStop(1, p.color + "55");
-  ctx.fillStyle = body;
-  ctx.beginPath();
-  ctx.arc(0, 0, s, 0, Math.PI * 2);
-  ctx.fill();
-  if (!p.settled) {
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(-s * 0.35, -s * 0.4, s * 0.22, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
+  const sprite = dropSprite(p.color, s, p.settled);
+  const h = sprite.half;
+  const prev = ctx.globalAlpha;
+  if (p.settled) ctx.globalAlpha = prev * 0.35;
+  ctx.drawImage(sprite, p.x - h, p.y - h * squash, h * 2, h * 2 * squash);
+  ctx.globalAlpha = prev;
 }
 
 export const hongkong = {

@@ -482,6 +482,21 @@ function animateLanterns(ctx, t, globe, stir) {
   ctx.restore();
 }
 
+// 금박 둘레 빛: 한 번 그려 두고 크기·밝기만 바꿔 붙임 (잎마다 매 프레임 그러데이션을 만들지 않게)
+let haloSprite = null;
+function foilHalo() {
+  if (haloSprite) return haloSprite;
+  haloSprite = document.createElement("canvas");
+  haloSprite.width = haloSprite.height = 32;
+  const g = haloSprite.getContext("2d");
+  const halo = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  halo.addColorStop(0, "rgba(255,226,120,0.55)");
+  halo.addColorStop(1, "rgba(255,200,60,0)");
+  g.fillStyle = halo;
+  g.fillRect(0, 0, 32, 32);
+  return haloSprite;
+}
+
 // 은행잎: 가운데가 살짝 갈라진 부채꼴 잎과 잎자루
 function drawGinkgo(ctx, p, t = 0) {
   const s = p.size;
@@ -522,12 +537,8 @@ function drawGinkgo(ctx, p, t = 0) {
     const gx = p.x + Math.cos(ang) * dist;
     const gy = p.y + Math.sin(ang) * dist;
     const a = (glint - 0.35) / 0.65;
-    const halo = ctx.createRadialGradient(gx, gy, 0, gx, gy, s * 0.6);
-    halo.addColorStop(0, `rgba(255,226,120,${0.55 * a})`);
-    halo.addColorStop(1, "rgba(255,200,60,0)");
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = halo;
-    ctx.fillRect(gx - s * 0.6, gy - s * 0.6, s * 1.2, s * 1.2);
+    ctx.globalAlpha = a;
+    ctx.drawImage(foilHalo(), gx - s * 0.6, gy - s * 0.6, s * 1.2, s * 1.2);
     // 네모난 금박 조각이 회전하며 빛을 받음
     ctx.save();
     ctx.translate(gx, gy);

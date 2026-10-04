@@ -168,6 +168,11 @@ function choose(id) {
 }
 
 function setFocus(id) {
+  if (state.focus !== id || !state.told) {
+    state.told = true;
+    // 스노우볼 쪽이 이 나라 그림을 미리 만들어 둠 → 고를 때 끊김 없이 바뀜
+    window.dispatchEvent(new CustomEvent("snowball:focus", { detail: id }));
+  }
   state.focus = id;
   const place = PLACES[id];
   state.target = { lon: place.lon, lat: Math.max(-MAX_TILT, Math.min(MAX_TILT, place.lat * 0.6)) };
