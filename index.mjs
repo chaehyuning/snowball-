@@ -1083,8 +1083,8 @@ musicButton.addEventListener("click", () => {
 showMusic();
 
 // 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
-// 편지를 받은 사람은 처음 온 사람이라 보고, 편지를 다 읽으면 조작법 안내를 늘 보여 줌
-if (letter && startId) showLetter(letter, scene.id, () => setTimeout(startTutorial, 400));
+// 편지를 받은 사람에게는 조작법 안내를 띄우지 않음. 안내는 링크로 처음 들어와 지구본에서 고른 뒤에만
+if (letter && startId) showLetter(letter, scene.id);
 else if (!startId) openPicker(SCENES, scene.id, pickFromGlobe, maybeTutorial);
 else maybeTutorial();
 

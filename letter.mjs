@@ -362,6 +362,10 @@ function showReplyFloat(from) {
   btn.type = "button";
   btn.className = "reply-float";
   btn.textContent = from ? `✉️ Write back to ${from}` : "✉️ Send a snowball back";
-  btn.addEventListener("click", () => openWriter({ to: from || "" }));
+  // 한 번 누르면 사라짐 (편지 쓰기 창의 보내기 버튼을 가리지 않게)
+  btn.addEventListener("click", () => {
+    btn.remove();
+    openWriter({ to: from || "" });
+  });
   document.body.append(btn);
 }
