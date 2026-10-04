@@ -4,6 +4,7 @@
 
 import { sceneInfo } from "./editorial.mjs";
 import { PLACES } from "./picker.mjs";
+import { sealCrack } from "./sound.mjs";
 
 // 편지에 쓰는 도시 이름 (예: Paris)과 우표 그림(나라 버튼의 아이콘)
 const cityName = (id) => sceneInfo(id).city || PLACES[id]?.landmark || "";
@@ -285,7 +286,8 @@ export function showLetter(letter, id, onDone) {
     peeled = true;
     seal.style.transform = "";
     seal.classList.add("peeled");
-    navigator.vibrate?.([14, 30, 8]);
+    sealCrack();
+    navigator.vibrate?.([18, 24, 10]);
     setTimeout(open, 180);
   };
   seal.addEventListener("pointerdown", (e) => {
@@ -343,6 +345,7 @@ export function showLetter(letter, id, onDone) {
   const finish = () => {
     el.remove();
     document.body.classList.remove("letter-open");
+    showReplyFloat(letter.from);
     onDone?.();
   };
   $(".letter-go").addEventListener("click", finish);
@@ -350,4 +353,15 @@ export function showLetter(letter, id, onDone) {
     finish();
     openWriter({ to: letter.from || "" });
   });
+}
+
+// 편지를 받은 사람의 스노우볼 화면에 계속 떠 있는 답장 버튼 → 자기가 고른 나라로 답장 스노우볼을 보내는 펜팔 루프
+function showReplyFloat(from) {
+  if (document.querySelector(".reply-float")) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "reply-float";
+  btn.textContent = from ? `✉️ Write back to ${from}` : "✉️ Send a snowball back";
+  btn.addEventListener("click", () => openWriter({ to: from || "" }));
+  document.body.append(btn);
 }

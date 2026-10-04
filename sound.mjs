@@ -594,3 +594,23 @@ document.addEventListener("visibilitychange", () => {
     }
   }
 });
+
+// 밀랍 도장 떼는 소리: 단단한 밀랍이 '툭' 부서지는 짧은 딱 소리 + 낮은 울림 + 종이가 바스락
+export function sealCrack() {
+  if (!ensure() || muted) return;
+  const t = ac.currentTime;
+  noise(t, { dur: 0.05, type: "highpass", freq: 2200, level: 0.32, attack: 0.001 });
+  noise(t + 0.012, { dur: 0.09, type: "bandpass", freq: 900, freqEnd: 400, q: 1.4, level: 0.22, attack: 0.002 });
+  const o = ac.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(180, t);
+  o.frequency.exponentialRampToValueAtTime(70, t + 0.12);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.25, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0005, t + 0.16);
+  o.connect(g).connect(out(0));
+  o.start(t);
+  o.stop(t + 0.18);
+  grains(t + 0.06, { count: 10, spread: 0.25, lo: 3000, hi: 6500, dur: [0.006, 0.014], level: 0.06 });
+}
