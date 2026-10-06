@@ -66,6 +66,10 @@ function buildUI() {
   root.setAttribute("aria-modal", "true");
   root.setAttribute("aria-label", "지구본에서 나라 고르기");
   root.innerHTML = `
+    <div class="picker-sky" aria-hidden="true">
+      <span class="cloud c1"></span><span class="cloud c2"></span><span class="cloud c3"></span>
+      <span class="cloud c4"></span><span class="cloud c5"></span><span class="cloud c6"></span>
+    </div>
     <button type="button" class="picker-close" aria-label="닫기">×</button>
     <p class="picker-title">SELECT YOUR SNOWBALL</p>
     <canvas class="picker-globe"></canvas>
@@ -120,6 +124,10 @@ export async function openPicker(scenes, currentId, onSelect, onClose) {
     raf: 0,
   };
   ui.root.hidden = false;
+  // 구름이 걷히며 지구본이 떠오름: 열 때마다 처음부터 다시
+  ui.root.classList.remove("arrive");
+  void ui.root.offsetWidth;
+  ui.root.classList.add("arrive");
   document.body.style.overflow = "hidden";
   document.body.classList.add("picker-open");
   setFocus(focusId);
@@ -156,6 +164,7 @@ function choose(id) {
     return;
   }
   leaving = true;
+  flyPlane(PLACES[id].color);
   ui.root.classList.add("leaving");
   // 스노우볼이 다시 그려지도록 가림 표시를 먼저 풂
   document.body.classList.remove("picker-open");
@@ -165,6 +174,35 @@ function choose(id) {
     leaving = false;
     closePicker();
   }, 560);
+}
+
+// 고른 나라로 떠나는 비행기: 화면 왼쪽 아래에서 오른쪽 위로 비행운을 남기며 가로지름.
+// 지구본 창이 걷히는 동안에도 보이도록 창 밖(body)에 붙였다가 다 날면 지움
+function flyPlane(color) {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const from = { x: -0.12 * w, y: 0.78 * h };
+  const to = { x: 1.12 * w, y: 0.12 * h };
+  const angle = (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
+  const plane = document.createElement("div");
+  plane.className = "fly-plane";
+  plane.setAttribute("aria-hidden", "true");
+  plane.style.setProperty("--trail", color);
+  plane.innerHTML = `<span class="fly-trail"></span><svg viewBox="0 0 24 24"><path d="M21 15.5v-2l-8-5V3.8a1.5 1.5 0 0 0-3 0v4.7l-8 5v2l8-2.5v5l-2 1.5V21l3.5-1 3.5 1v-1.5l-2-1.5v-5Z" fill="currentColor" /></svg>`;
+  document.body.append(plane);
+  const at = (p, s) => `translate(${p.x}px, ${p.y}px) rotate(${angle}deg) scale(${s})`;
+  const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 - 0.04 * h };
+  plane
+    .animate(
+      [
+        { transform: at(from, 0.8), opacity: 0 },
+        { transform: at(from, 0.8), opacity: 1, offset: 0.05 },
+        { transform: at(mid, 1.15), offset: 0.5 },
+        { transform: at(to, 0.7), opacity: 1 },
+      ],
+      { duration: 1400, easing: "cubic-bezier(0.45, 0, 0.35, 1)" },
+    )
+    .finished.finally(() => plane.remove());
 }
 
 function setFocus(id) {
