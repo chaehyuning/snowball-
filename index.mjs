@@ -361,7 +361,7 @@ export function motionShake(power, dirX = 0, dirY = 0) {
   const uy = dirY / len;
   const hasDir = dirX !== 0 || dirY !== 0;
   for (const p of particles) {
-    const spread = rand(-0.9, 0.9);
+    const spread = rand(-1.3, 1.3);
     const cx = hasDir ? ux * Math.cos(spread) - uy * Math.sin(spread) : rand(-1, 1);
     const cy = hasDir ? ux * Math.sin(spread) + uy * Math.cos(spread) : -1;
     const kick = rand(3, 8) * (0.6 + k) * (1.2 - p.inertia * 0.5);
@@ -371,8 +371,9 @@ export function motionShake(power, dirX = 0, dirY = 0) {
       // 바닥에 있던 입자는 아래로는 못 가니 늘 위로 들림
       p.vy = -Math.abs(cy * kick) - rand(1, 3) * (0.6 + k);
     } else if (!p.settled) {
+      // 떠 있던 입자는 쏠리면서도 위아래로 흩어짐 (한 덩어리로 같이 밀리지 않게)
       p.vx += cx * kick * 0.6;
-      p.vy += cy * kick * 0.6;
+      p.vy += cy * kick * 0.6 + rand(-2.5, 1.5);
     }
   }
   stir = Math.min(5, stir + 2 * k);
@@ -826,11 +827,24 @@ function update(t, accel) {
     p.vy -= accel * p.inertia * jolt;
     if (shaking && Math.abs(accel) > 1) p.vx += rand(-1, 1) * Math.abs(accel) * 0.15;
 
-    // 폰을 직접 흔드는 동안: 떠 있는 입자가 폰 움직임 반대쪽으로 계속 쏠림 (물속 관성). 무거울수록 덜 밀림
-    if (phoneAccel.x || phoneAccel.y) {
-      const push = 0.16 * (1.3 - p.inertia * 0.6);
-      p.vx -= phoneAccel.x * push;
-      p.vy -= phoneAccel.y * push;
+    // 폰을 직접 흔드는 동안: 떠 있는 입자가 폰 움직임 반대쪽으로 계속 쏠림 (물속 관성). 무거울수록 덜 밀림.
+    // 모두 같은 힘을 받으면 덩어리째 움직여 뭉치므로, 입자마다 받는 세기(gain)와 방향(jit)을 조금씩 다르게 함
+    const phonePower = Math.hypot(phoneAccel.x, phoneAccel.y);
+    if (phonePower) {
+      p.gain ??= rand(0.55, 1.45);
+      p.jit ??= rand(-0.55, 0.55);
+      const push = 0.16 * (1.3 - p.inertia * 0.6) * p.gain;
+      const c = Math.cos(p.jit);
+      const s = Math.sin(p.jit);
+      p.vx -= (phoneAccel.x * c - phoneAccel.y * s) * push;
+      p.vy -= (phoneAccel.x * s + phoneAccel.y * c) * push;
+    }
+    // 흔든 물속의 소용돌이: 자리마다 다른 방향으로 휘감아 이웃한 입자끼리 갈라지게 하고, 위로도 띄움
+    const turb = Math.min(1.1, phonePower * 0.06 + Math.max(0, stir - 0.6) * 0.12);
+    if (turb > 0.02 && !p.rising) {
+      const a = Math.sin(p.x * 0.045 + t * 0.0031) + Math.cos(p.y * 0.052 - t * 0.0027) + p.swayPhase;
+      p.vx += Math.cos(a * 2.4) * turb;
+      p.vy += Math.sin(a * 2.4) * turb - turb * 0.35;
     }
 
     p.x += p.vx;
@@ -851,8 +865,12 @@ function update(t, accel) {
       const ny = dy / d;
       const out = p.vx * nx + p.vy * ny;
       if (out > 0) {
-        p.vx -= out * nx;
-        p.vy -= out * ny;
+        // 벽을 따라 미끄러지기만 하면 한쪽 벽에 몰려 쌓임 → 살짝 튕겨 나오고 벽을 따라 흩어짐
+        p.vx -= out * nx * 1.45;
+        p.vy -= out * ny * 1.45;
+        const slide = rand(-0.6, 0.6) * out;
+        p.vx += -ny * slide;
+        p.vy += nx * slide;
       }
       p.x = globe.x + nx * max;
       p.y = globe.y + ny * max;
