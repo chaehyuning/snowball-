@@ -220,7 +220,7 @@ function waxSealSVG() {
 
 // ── 받은 편지: 봉투 → 편지 → 스노우볼 ─────────────────────────
 
-export function showLetter(letter, id, onDone) {
+export function showLetter(letter, id, onDone, { snapshot } = {}) {
   const info = sceneInfo(id);
   const color = info.color || "#c8343a";
   const city = cityName(id);
@@ -257,6 +257,11 @@ export function showLetter(letter, id, onDone) {
     <p class="letter-hint" hidden>(or peel the wax seal)</p>
     <div class="letter-sheet" hidden>
       <p class="sheet-date"></p>
+      <figure class="polaroid" hidden>
+        <svg class="polaroid-clip" viewBox="0 0 20 52" aria-hidden="true"><path d="M6 46V10a4 4 0 0 1 8 0v30a6 6 0 0 1-12 0V8a8 8 0 0 1 16 0v34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></svg>
+        <div class="polaroid-photo"></div>
+        <figcaption class="polaroid-caption"></figcaption>
+      </figure>
       <p class="paper-to"></p>
       <p class="paper-message"></p>
       <p class="paper-from"></p>
@@ -272,6 +277,19 @@ export function showLetter(letter, id, onDone) {
   $(".pm-city").textContent = city.toUpperCase().slice(0, 12);
   $(".pm-date").textContent = date;
   $(".sheet-date").textContent = `${date} · ${city}`;
+  // 보낸 사람이 고른 스노우볼의 한 장면을 폴라로이드로 편지지 귀퉁이에 꽂아 둠
+  if (snapshot) {
+    try {
+      const shot = snapshot();
+      shot.setAttribute("role", "img");
+      shot.setAttribute("aria-label", `A snowball from ${city}`);
+      $(".polaroid-photo").append(shot);
+      $(".polaroid-caption").textContent = `${city}, ${new Date(letter.date || Date.now()).getFullYear() || ""}`;
+      $(".polaroid").hidden = false;
+    } catch {
+      // 사진을 못 떠도 편지는 그대로 보여 줌
+    }
+  }
   $(".paper-to").textContent = `Dear ${letter.to || "you"},`;
   $(".paper-message").textContent = letter.message;
   $(".paper-from").textContent = letter.from ? `With love, ${letter.from}` : "With love";

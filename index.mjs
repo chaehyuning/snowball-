@@ -322,6 +322,35 @@ export async function capturePostcard(text, scale = POSTCARD_SCALE) {
 
 export const currentSceneId = () => scene.id;
 
+// 편지에 꽂아 줄 폴라로이드 사진: 지금 스노우볼의 유리구 부분만 정사각형으로 떠 옴 (이미 만든 그림 층을 그대로 씀)
+function sceneSnapshot(size = 320) {
+  const shot = document.createElement("canvas");
+  shot.width = shot.height = size;
+  const g = shot.getContext("2d");
+  const bg = g.createRadialGradient(size / 2, size * 0.45, 0, size / 2, size / 2, size * 0.75);
+  bg.addColorStop(0, "#34343c");
+  bg.addColorStop(1, "#141418");
+  g.fillStyle = bg;
+  g.fillRect(0, 0, size, size);
+  // draw()가 먼저 화면을 지우므로 따로 그린 뒤 배경 위에 얹음
+  const ball = document.createElement("canvas");
+  ball.width = ball.height = size;
+  const bg2 = ball.getContext("2d");
+  const side = (globe.r + 14) * 2;
+  const k = size / side;
+  bg2.scale(k, k);
+  bg2.translate(-(globe.x - side / 2), -(PAD + globe.y - side / 2));
+  const keepCtx = ctx;
+  ctx = bg2;
+  try {
+    draw(performance.now());
+  } finally {
+    ctx = keepCtx;
+  }
+  g.drawImage(ball, 0, 0);
+  return shot;
+}
+
 // 폰을 손으로 흔들면: 바닥의 입자가 거세게 떠오르고 유리구가 출렁임
 // 폰을 손으로 흔든 순간: 바닥의 입자가 폰이 움직인 반대 방향(dirX, dirY)으로 튀어 오르고,
 // 떠 있던 입자도 그쪽으로 쏠림. 입자마다 각도를 조금씩 흩뜨려 사방으로 난분분하게
@@ -1124,7 +1153,7 @@ showMusic();
 
 // 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
 // 편지를 받은 사람에게는 조작법 안내를 띄우지 않음. 안내는 링크로 처음 들어와 지구본에서 고른 뒤에만
-if (letter && startId) showLetter(letter, scene.id);
+if (letter && startId) showLetter(letter, scene.id, undefined, { snapshot: sceneSnapshot });
 else if (!startId) openPicker(SCENES, scene.id, pickFromGlobe, maybeTutorial);
 else maybeTutorial();
 
