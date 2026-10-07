@@ -1895,6 +1895,66 @@ body.picker-open .meta {
   line-height: 28px;
 }
 
+/* 편지지 오른쪽 위에 클립으로 꽂힌 폴라로이드: 보낸 사람이 고른 스노우볼 한 장면. 글은 사진 옆으로 흐름 */
+.polaroid {
+  position: relative;
+  float: right;
+  width: 108px;
+  margin: 16px -6px 10px 14px;
+  padding: 7px 7px 0;
+  background: #fdfcf8;
+  box-shadow: 0 6px 14px -4px rgba(60, 40, 20, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  transform: rotate(4deg);
+  transform-origin: 50% 0;
+  animation: polaroid-in 0.7s 0.25s cubic-bezier(0.3, 1.4, 0.5, 1) backwards;
+}
+
+.polaroid[hidden] {
+  display: none;
+}
+
+.polaroid-photo canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.polaroid-caption {
+  padding: 3px 0 6px;
+  text-align: center;
+  font-family: "Pinyon Script", var(--serif);
+  font-size: 15px;
+  line-height: 20px;
+  color: #4a3d33;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.polaroid-clip {
+  position: absolute;
+  top: -16px;
+  left: 18px;
+  width: 12px;
+  height: 32px;
+  color: #a7abb3;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes polaroid-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) rotate(-6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .polaroid {
+    animation: none;
+  }
+}
+
 .letter-actions {
   display: flex;
   gap: 10px;
