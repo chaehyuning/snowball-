@@ -102,8 +102,6 @@ const TRAVEL = {
     "tz": "Australia/Sydney",
     "best": "해 질 녘 · 서큘러 키에서 지붕이 분홍빛으로 물들 때",
     "symbol": "물방울 — 항구를 가르는 물보라",
-    "title": "Sydney Opera House",
-    "titleNarrow": "Sydney – Opera House",
     "story": "1957년, 덴마크 건축가 예른 웃손의 스케치가 국제 공모에서 뽑혔습니다. 조가비 같기도, 바람을 품은 돛 같기도 한 지붕은 너무 어려워 열두 번 넘게 설계를 고친 끝에, 1962년 모든 곡면을 지름 75m짜리 구 하나에서 잘라내는 방법으로 풀었어요. 그 위를 105만 장이 넘는 흰 타일이 덮습니다. 바로 뒤 강철 아치의 하버 브리지와 나란히 서면, 곧은 다리와 둥근 돛이 항구를 함께 완성해요."
   },
   "finland": {
@@ -152,8 +150,6 @@ const TRAVEL = {
     "tz": "Asia/Taipei",
     "best": "비 갠 주말 밤 · 차가 막히고 거리가 사람으로 찰 때",
     "symbol": "네온 빗방울 — 간판 빛을 머금은 비",
-    "title": "Ximending, Taipei",
-    "titleNarrow": "Ximending",
     "story": "비가 그친 밤 시먼딩에 들어서면 머리 위로 분홍·하늘·호박빛 간판이 겹겹이 튀어나오고, 거리를 가로지른 줄마다 빨간 등이 흔들립니다. 젖은 아스팔트에 불빛이 길게 번지고, 노란 택시가 그 빛을 가르며 지나가요. 건물 끝에서 떨어지는 빗방울마저 네온 색으로 물듭니다."
   }
 };
@@ -189,21 +185,9 @@ export function showSceneInfo(id, index, total) {
   set(".meta-index", pad(index + 1));
   set(".meta-total", `/ ${pad(total)}`);
   const travel = TRAVEL[id] || {};
-  // 폰에서는 줄인 제목(titleNarrow)을, 넓은 화면에서는 원래 제목을 보여 줌
-  const setTitle = (sel, wide) => {
-    const el = document.querySelector(sel);
-    if (!el) return;
-    el.textContent = "";
-    const w = document.createElement("span");
-    w.className = "t-wide";
-    w.textContent = wide;
-    const n = document.createElement("span");
-    n.className = "t-narrow";
-    n.textContent = travel.titleNarrow || wide;
-    el.append(w, n);
-  };
-  setTitle(".meta-city", travel.title || info.city);
-  setTitle(".sheet-title", travel.title || info.landmark);
+  // 띠 제목은 언제나 도시 이름, 랜드마크 이름은 자세히 보기를 열어야 나옴
+  set(".meta-city", info.city);
+  set(".sheet-title", info.landmark);
   set(".meta-tagline", info.tagline);
   set(".meta-text", travel.story || info.text);
   set(".meta-landmark", info.landmark);

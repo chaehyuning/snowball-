@@ -653,7 +653,7 @@ body {
     padding: 10px 10px 10px 16px;
     border: 1px solid var(--line);
     border-radius: 18px;
-    background: rgba(23, 23, 27, 0.94);
+    background: #17171b; /* 비치면 뒤의 지구본 버튼 글씨가 겹쳐 보여서 불투명 */
     box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.8);
   }
 
@@ -1433,21 +1433,6 @@ body.picker-open .meta {
   opacity: 0.4;
 }
 
-
-/* 제목이 긴 곳은 폰에서만 줄인 이름을 씀 */
-.t-narrow {
-  display: none;
-}
-
-@media (max-width: 640px) {
-  .t-wide {
-    display: none;
-  }
-
-  .t-narrow {
-    display: inline;
-  }
-}
 
 /* ── 편지 ─────────────────────────────────────────────── */
 .postcard-field textarea {
