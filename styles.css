@@ -53,6 +53,8 @@
   --sans: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --script: "Pinyon Script", "Snell Roundhand", cursive;
   --serif: "Playfair Display", "Didot", "Bodoni 72", Georgia, serif;
+  /* 이야기·편지처럼 읽는 한국어 글: 영어 기울임 세리프와 결을 맞춘 부드러운 바탕체 */
+  --story: "Gowun Batang", "Nanum Myeongjo", "AppleMyungjo", serif;
   color-scheme: dark;
   transition: --accent 1.2s ease;
 }
@@ -334,7 +336,8 @@ body {
 
 .meta-text {
   margin-top: 10px;
-  font-size: 12px;
+  font-family: var(--story);
+  font-size: 12.5px;
   line-height: 1.75;
   letter-spacing: 0;
   color: var(--ink-dim);
@@ -1880,7 +1883,8 @@ body.picker-open .meta {
 
 .paper-message {
   margin-top: 4px;
-  font-size: 15px;
+  font-family: var(--story);
+  font-size: 15.5px;
   line-height: 28px;
   white-space: pre-wrap;
   word-break: keep-all;
@@ -2139,4 +2143,10 @@ body.zen .reply-float,
 body.picker-open .reply-float {
   opacity: 0;
   pointer-events: none;
+}
+
+/* 편지 쓰는 칸도 받는 편지와 같은 글씨로 */
+.letter-card textarea {
+  font-family: var(--story);
+  font-size: 15px;
 }
