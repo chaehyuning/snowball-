@@ -175,3 +175,26 @@ export function animateJets(ctx, t, jets) {
   }
   ctx.restore();
 }
+
+// 흐림(filter)을 도형마다 걸면 그릴 때마다 흐림 계산을 따로 해서 매우 느림.
+// box(x, y, w, h) 안의 도형을 흐림 없이 따로 그린 뒤, 그 한 장에만 흐림을 한 번 걸어 옮김
+export function softly(g, filter, [x, y, w, h], draw) {
+  const m = g.getTransform();
+  const k = Math.hypot(m.a, m.b) || 1;
+  const pad = 16;
+  const bx = x - pad;
+  const by = y - pad;
+  const bw = w + pad * 2;
+  const bh = h + pad * 2;
+  const c = document.createElement("canvas");
+  c.width = Math.ceil(bw * k);
+  c.height = Math.ceil(bh * k);
+  const t = c.getContext("2d");
+  t.scale(c.width / bw, c.height / bh);
+  t.translate(-bx, -by);
+  draw(t);
+  g.save();
+  g.filter = filter;
+  g.drawImage(c, bx, by, bw, bh);
+  g.restore();
+}
