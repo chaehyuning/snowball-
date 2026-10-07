@@ -1,7 +1,7 @@
 // 핀란드: 로바니에미 산타마을. 산타 집무실 본관과 중앙우체국, 북극선과 이정표, 유리 이글루,
 // 크리스마스트리, 순록 썰매, 오로라, 흩날리는 눈꽃
 
-import { seeded, fillSilhouette } from "./util.mjs";
+import { seeded, fillSilhouette, softly } from "./util.mjs";
 
 const WINDOW = "#ffcf7a";
 
@@ -14,11 +14,15 @@ function paintAurora(left, top, size, rnd) {
   const c = document.createElement("canvas");
   c.width = size * scale;
   c.height = AURORA_H * scale;
-  const g = c.getContext("2d");
+  // 빛줄기 680여 개를 하나씩 흐리게 하면 처음 그릴 때 1초 가까이 멈춤 →
+  // 흐림 없이 다 겹쳐 그린 뒤 한 장을 한 번만 흐리게 옮김 (빛을 더해 그리므로 결과는 같음)
+  const raw = document.createElement("canvas");
+  raw.width = c.width;
+  raw.height = c.height;
+  const g = raw.getContext("2d");
   g.scale(scale, scale);
   g.translate(-left, -top);
   g.globalCompositeOperation = "lighter";
-  g.filter = "blur(2px)";
 
   const ribbons = [
     { base: 92, amp: 16, freq: 0.018, phase: 0.4, len: 60, color: [80, 255, 170] },
@@ -44,6 +48,9 @@ function paintAurora(left, top, size, rnd) {
       g.stroke();
     }
   }
+  const out = c.getContext("2d");
+  out.filter = "blur(2px)"; // 원래도 2배 캔버스에 2px(화소 단위)로 걸었음
+  out.drawImage(raw, 0, 0);
   return c;
 }
 
@@ -134,39 +141,37 @@ function paintSanta(g, globe, groundAt) {
   fillSilhouette(g, fieldY, left, right, 400);
   // 눈 언덕의 부드러운 굴곡: 밝은 등성이와 푸른 골
   const rd = seeded(66);
-  g.save();
-  g.filter = "blur(6px)";
-  for (let i = 0; i < 14; i++) {
-    const dx = left + rd() * size;
-    const dy = 280 + rd() * 45;
-    g.fillStyle = i % 2 ? "rgba(255,255,255,0.7)" : "rgba(150,172,210,0.28)";
-    g.beginPath();
-    g.ellipse(dx, dy, 22 + rd() * 30, 3 + rd() * 4, 0, 0, Math.PI * 2);
-    g.fill();
-  }
-  g.restore();
+  softly(g, "blur(6px)", [left - 60, 270, size + 120, 70], (b) => {
+    for (let i = 0; i < 14; i++) {
+      const dx = left + rd() * size;
+      const dy = 280 + rd() * 45;
+      b.fillStyle = i % 2 ? "rgba(255,255,255,0.7)" : "rgba(150,172,210,0.28)";
+      b.beginPath();
+      b.ellipse(dx, dy, 22 + rd() * 30, 3 + rd() * 4, 0, 0, Math.PI * 2);
+      b.fill();
+    }
+  });
 
   // 물체들이 눈 위에 드리우는 푸른 그림자. 오로라와 하늘빛이 뒤에서 비추므로 앞쪽 오른편으로 늘어짐
-  g.save();
-  g.filter = "blur(2.5px)";
-  g.fillStyle = "rgba(85,110,165,0.34)";
-  const shadow = (x0, x1, y, len) => {
-    g.beginPath();
-    g.moveTo(x0, y);
-    g.lineTo(x1, y);
-    g.lineTo(x1 + len * 0.6, y + len * 0.45);
-    g.lineTo(x0 + len * 0.6, y + len * 0.45);
-    g.closePath();
-    g.fill();
-  };
-  shadow(81, 123, 282, 18); // 우체국
-  shadow(165, 235, 278, 22); // 집무실
-  shadow(140, 160, 296, 14); // 트리
-  shadow(277, 305, 290, 12); // 이글루
-  shadow(311, 335, 294, 10);
-  shadow(252, 256, 298, 16); // 이정표 기둥
-  shadow(288, 342, 312, 14); // 썰매와 순록
-  g.restore();
+  softly(g, "blur(2.5px)", [80, 276, 272, 46], (b) => {
+    b.fillStyle = "rgba(85,110,165,0.34)";
+    const shadow = (x0, x1, y, len) => {
+      b.beginPath();
+      b.moveTo(x0, y);
+      b.lineTo(x1, y);
+      b.lineTo(x1 + len * 0.6, y + len * 0.45);
+      b.lineTo(x0 + len * 0.6, y + len * 0.45);
+      b.closePath();
+      b.fill();
+    };
+    shadow(81, 123, 282, 18); // 우체국
+    shadow(165, 235, 278, 22); // 집무실
+    shadow(140, 160, 296, 14); // 트리
+    shadow(277, 305, 290, 12); // 이글루
+    shadow(311, 335, 294, 10);
+    shadow(252, 256, 298, 16); // 이정표 기둥
+    shadow(288, 342, 312, 14); // 썰매와 순록
+  });
 
   lights = [];
 
@@ -231,16 +236,16 @@ function paintSanta(g, globe, groundAt) {
   xmasTree(g, 150, 296, 34);
 
   // 굴뚝 연기
-  g.filter = "blur(3px)";
-  for (const [sx, sy] of [[116, 240], [214, 236]]) {
-    for (let i = 0; i < 5; i++) {
-      g.fillStyle = `rgba(200,205,215,${0.5 - i * 0.08})`;
-      g.beginPath();
-      g.arc(sx + i * 3, sy - i * 9, 4 + i * 1.5, 0, Math.PI * 2);
-      g.fill();
+  softly(g, "blur(3px)", [108, 190, 130, 56], (b) => {
+    for (const [sx, sy] of [[116, 240], [214, 236]]) {
+      for (let i = 0; i < 5; i++) {
+        b.fillStyle = `rgba(200,205,215,${0.5 - i * 0.08})`;
+        b.beginPath();
+        b.arc(sx + i * 3, sy - i * 9, 4 + i * 1.5, 0, Math.PI * 2);
+        b.fill();
+      }
     }
-  }
-  g.filter = "none";
+  });
 
   // 오른쪽: 유리 이글루
   igloo(g, 290, 290, 15);
