@@ -1229,6 +1229,14 @@ body.picker-open .meta {
   display: inline;
 }
 
+.weather-toggle .weather-off {
+  display: none;
+}
+
+.weather-toggle[data-off="true"] .weather-off {
+  display: inline;
+}
+
 /* 튜토리얼: 대상만 밝게 비추고 나머지는 어둡게 */
 .tour-spot {
   position: fixed;
