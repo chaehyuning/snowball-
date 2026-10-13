@@ -11,6 +11,25 @@ const INDOOR = new Set(["spain"]);
 
 let now = {}; // id → { kind, temp, isDay }
 
+// 날씨 덧그리기 켜기/끄기 (끄면 원래 그림 그대로). 다음에 와도 기억함
+const OFF_KEY = "snowball-weather-off";
+let enabled = true;
+try {
+  enabled = localStorage.getItem(OFF_KEY) !== "1";
+} catch {
+  // 저장소를 못 쓰면 켠 상태로
+}
+export const isWeatherOn = () => enabled;
+export function setWeatherOn(on) {
+  enabled = on;
+  try {
+    if (on) localStorage.removeItem(OFF_KEY);
+    else localStorage.setItem(OFF_KEY, "1");
+  } catch {
+    // 이번 화면에서만 적용
+  }
+}
+
 // WMO 날씨 코드 → 종류
 function kindOf(code) {
   if (code >= 95) return "storm";
@@ -93,7 +112,7 @@ const hash = (i, k) => frac(Math.sin(i * 127.1 + k * 311.7) * 43758.5453);
 // 유리구 안, 장면 그림 바로 위에 덧그림. 입자(꽃잎·눈꽃 등)는 이 위에 그려져 밝게 남음
 export function drawWeather(ctx, t, globe, id) {
   const w = now[id];
-  if (!w) return;
+  if (!w || !enabled) return;
   const indoor = INDOOR.has(id);
   const { x: cx, y: cy, r } = globe;
   ctx.save();

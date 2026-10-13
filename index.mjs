@@ -11,7 +11,7 @@ import { barcelona } from "./scene-barcelona.mjs";
 import { uyuni } from "./scene-uyuni.mjs";
 import { hongkong } from "./scene-hongkong.mjs";
 import { openPicker, PLACES } from "./picker.mjs";
-import { loadWeather, drawWeather, weatherLabel } from "./weather.mjs";
+import { loadWeather, drawWeather, weatherLabel, isWeatherOn, setWeatherOn } from "./weather.mjs";
 import * as sfx from "./sound.mjs";
 import { showSceneInfo, fillTicker, setupMetaToggle } from "./editorial.mjs";
 import { setupKeepsakes } from "./keepsake.mjs";
@@ -1182,6 +1182,22 @@ musicButton.addEventListener("click", () => {
   showMusic();
 });
 showMusic();
+
+// 실시간 날씨 켜기/끄기: 끄면 유리구 속은 원래 그림 그대로 (띠의 날씨 글은 남김)
+const weatherButton = document.querySelector(".weather-toggle");
+function showWeatherButton() {
+  const on = isWeatherOn();
+  weatherButton.dataset.off = String(!on);
+  const label = on ? "실시간 날씨 끄기" : "실시간 날씨 켜기";
+  weatherButton.setAttribute("aria-label", label);
+  weatherButton.title = label;
+}
+weatherButton.addEventListener("click", () => {
+  setWeatherOn(!isWeatherOn());
+  showWeatherButton();
+  buzz(8);
+});
+showWeatherButton();
 
 // 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
 // 편지를 받은 사람에게는 조작법 안내를 띄우지 않음. 안내는 링크로 처음 들어와 지구본에서 고른 뒤에만
