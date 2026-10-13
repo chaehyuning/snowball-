@@ -290,6 +290,21 @@ body {
   color: var(--ink);
 }
 
+/* 현지 시각 옆 지금 날씨: "비 · 14°" */
+.meta-weather {
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.meta-weather[hidden] {
+  display: none;
+}
+
 .sheet-grip,
 .sheet-close,
 .sheet-title,

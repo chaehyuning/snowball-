@@ -10,7 +10,8 @@ import { istanbul } from "./scene-istanbul.mjs";
 import { barcelona } from "./scene-barcelona.mjs";
 import { uyuni } from "./scene-uyuni.mjs";
 import { hongkong } from "./scene-hongkong.mjs";
-import { openPicker } from "./picker.mjs";
+import { openPicker, PLACES } from "./picker.mjs";
+import { loadWeather, drawWeather, weatherLabel } from "./weather.mjs";
 import * as sfx from "./sound.mjs";
 import { showSceneInfo, fillTicker, setupMetaToggle } from "./editorial.mjs";
 import { setupKeepsakes } from "./keepsake.mjs";
@@ -533,6 +534,16 @@ function loadScene(id) {
     button.setAttribute("aria-pressed", String(button.dataset.scene === scene.id));
   }
   showSceneInfo(scene.id, SCENES.indexOf(scene), SCENES.length);
+  showWeather();
+}
+
+// 아래 띠의 현지 시각 옆에 지금 날씨 한 줄
+function showWeather() {
+  const el = document.querySelector(".meta-weather");
+  if (!el) return;
+  const text = weatherLabel(scene.id);
+  el.textContent = text;
+  el.hidden = !text;
 }
 
 // 장면이 바뀔 때 직전 화면을 잠깐 겹쳐 그려 부드럽게 넘어가게 함
@@ -1134,6 +1145,9 @@ function paintBaseFront(g) {
 fillTicker(SCENES.map((s) => s.id));
 setupMetaToggle();
 setupKeepsakes({ capture: capturePostcard });
+// 12곳의 지금 날씨를 받아 오면 유리구에 덧그리고 띠에 적음
+loadWeather(PLACES, () => scene && showWeather());
+
 const startId = idFromUrl();
 const letter = readLetter();
 if (letter?.plate && startId) platePin = { id: startId, text: letter.plate };
@@ -1216,6 +1230,7 @@ function draw(t) {
   ctx.translate(-globe.x, -base.bottom);
   ctx.drawImage(layers.baseBack, 0, 0, W, H);
   ctx.drawImage(layers.scene, 0, 0, W, H);
+  drawWeather(ctx, t, globe, scene.id);
   drawParticles(t);
   ctx.drawImage(layers.glass, 0, 0, W, H);
   ctx.drawImage(layers.baseFront, 0, 0, W, H);
