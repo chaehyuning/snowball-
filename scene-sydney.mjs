@@ -360,144 +360,149 @@ function paintBridge(g) {
   g.fillRect(fx, fy - 9, 3, 0.6);
 }
 
-// 오페라하우스: 분홍 화강암 기단과 대계단, 구릿빛 유리벽,
-// 흰색·크림색 타일 껍데기 두 무리(콘서트홀·오페라 극장)와 작은 레스토랑 껍데기
+// 오페라하우스: 옆에서 본 전형적인 모습을 참고 그림 좌표 그대로 옮겨 그림.
+// 참고 그림 좌표(가로 약 1000) → 장면 좌표: x = 148 + (rx − 30)·0.22, y = 286 − (970 − ry)·0.22
+const OX = (rx) => 148 + (rx - 30) * 0.22;
+const OY = (ry) => 286 - (970 - ry) * 0.22;
+const OP = (p) => [OX(p[0]), OY(p[1])];
+
+// 조가비: 끝(tip)에서 등 곡선(c1, c2)을 따라 밑동(end)까지 내려오는 흰 겉면과,
+// 끝에서 앞 모서리를 따라 내려오는 입구(앞 밑동 front → 안쪽 밑동 inner). 입구 안은 끝 쪽이 짙은 그늘, 아래는 연한 안쪽 면
+const OPERA_SHELLS = [
+  // 오른쪽을 향해 누운 큰 조가비 (가장 뒤)
+  { tip: [775, 732], c1: [690, 712], c2: [600, 760], end: [585, 880], front: [770, 880], inner: [690, 880] },
+  // 왼쪽을 향한 조가비 셋: 가장 큰 것부터 (뒤에서 앞으로)
+  { tip: [378, 572], c1: [490, 585], c2: [585, 700], end: [605, 880], front: [400, 862], inner: [505, 880] },
+  { tip: [280, 648], c1: [385, 640], c2: [480, 720], end: [505, 880], front: [300, 862], inner: [410, 876] },
+  { tip: [145, 698], c1: [250, 688], c2: [365, 735], end: [392, 842], front: [168, 840], inner: [292, 842] },
+  // 레스토랑 한 쌍
+  { tip: [962, 795], c1: [905, 788], c2: [855, 815], end: [838, 885], front: [952, 885], inner: [900, 885] },
+  { tip: [750, 795], c1: [795, 788], c2: [835, 815], end: [848, 885], front: [765, 885], inner: [806, 885] },
+];
+
 function paintOperaHouse(g) {
-  const rnd = seeded(1973);
-  const r = (a, b) => a + rnd() * (b - a);
-  // 기단: 분홍 화강암 블록. 줄을 긋지 않고 단마다 밝기를 조금씩 달리 칠하고,
-  // 블록 이음매는 짧게 끊긴 그늘로만 보임. 물가로 내려갈수록 어두움
-  function podiumShape() {
+  const line = "#8f7454";
+  const poly = (pts) => {
     g.beginPath();
-    g.moveTo(160, 286);
-    g.lineTo(170, 263);
-    g.lineTo(352, 263);
-    g.lineTo(358, 286);
+    g.moveTo(...OP(pts[0]));
+    for (const q of pts.slice(1)) g.lineTo(...OP(q));
     g.closePath();
-  }
-  // 기단: 낮고 길게 깔린 모래색 테라스 (실제처럼 붉은 벽돌 벽이 아니라 층층이 물러나는 돌 단)
-  const podium = g.createLinearGradient(0, 262, 0, 286);
-  podium.addColorStop(0, "#e2cba6");
-  podium.addColorStop(0.6, "#c4a47c");
-  podium.addColorStop(1, "#8e7254");
-  g.fillStyle = podium;
-  podiumShape();
-  g.fill();
-  g.save();
-  podiumShape();
-  g.clip();
-  // 층층이 물러나는 테라스 턱과, 그 사이 가로로 길게 이어진 어두운 창 띠
-  for (const [ty, band] of [[268, 2.2], [276, 1.6]]) {
-    g.fillStyle = "rgba(255,240,215,0.55)";
-    g.fillRect(160, ty - 1, 200, 0.8);
-    g.fillStyle = "#3a2e28";
-    g.fillRect(176, ty + 1, 168, band);
-    g.fillStyle = "rgba(255,226,180,0.35)";
-    for (let x = 178; x < 344; x += 4) g.fillRect(x, ty + 1.2, 0.5, band - 0.4);
-    g.fillStyle = "rgba(90,66,48,0.3)";
-    g.fillRect(160, ty + 1 + band, 200, 1.2);
-  }
-  // 윗면 테두리에 받은 햇빛, 물에 닿는 아래쪽 젖은 그늘
-  g.fillStyle = "rgba(255,244,230,0.6)";
-  g.fillRect(160, 263, 200, 1);
-  const wet = g.createLinearGradient(0, 281, 0, 286);
-  wet.addColorStop(0, "rgba(60,50,60,0)");
-  wet.addColorStop(1, "rgba(60,50,60,0.35)");
-  g.fillStyle = wet;
-  g.fillRect(160, 281, 200, 5);
-  g.restore();
-
-  // 대계단: 디딤판은 밝고 챌판은 그늘. 계단 폭이 아래로 갈수록 넓어짐
-  const steps = 12;
-  for (let k = 0; k < steps; k++) {
-    const y0 = 263 + (k * 23) / steps;
-    const y1 = 263 + ((k + 1) * 23) / steps;
-    const l0 = 170 - (k * 10) / steps;
-    const r0 = 206 - (k * 6) / steps;
-    const l1 = 170 - ((k + 1) * 10) / steps;
-    const r1 = 206 - ((k + 1) * 6) / steps;
-    const mid = y0 + (y1 - y0) * 0.45;
-    g.fillStyle = "#f1dccb";
-    g.beginPath();
-    g.moveTo(l0, y0);
-    g.lineTo(r0, y0);
-    g.lineTo(r0 - 0.3, mid);
-    g.lineTo(l0 - 0.4, mid);
-    g.closePath();
+  };
+  const block = (pts, fill) => {
+    poly(pts);
+    g.fillStyle = fill;
     g.fill();
-    g.fillStyle = "#c9a690";
+    g.strokeStyle = line;
+    g.lineWidth = 0.5;
+    g.stroke();
+  };
+  // 맨 아래 바닥판
+  block([[30, 940], [1030, 940], [1030, 970], [30, 970]], "#dcc49c");
+  // 기단 몸체: 왼쪽 위로 한 단 높은 테라스, 오른쪽은 낮게 물러남
+  block([[110, 940], [110, 898], [128, 880], [1000, 880], [1000, 900], [1030, 905], [1030, 940]], "#c9a87c");
+  block([[128, 880], [128, 848], [470, 848], [470, 880]], "#d4b488");
+  block([[470, 880], [470, 862], [880, 862], [880, 880]], "#cdae82");
+  // 위에서 받은 햇빛: 단마다 윗면 가장자리
+  g.fillStyle = "rgba(255,244,222,0.6)";
+  for (const [x0, x1, y] of [[128, 470, 848], [470, 880, 862], [110, 1030, 940], [880, 1000, 880]]) g.fillRect(OX(x0), OY(y), OX(x1) - OX(x0), 0.7);
+  // 어두운 가로 창 띠
+  g.fillStyle = "#4a3828";
+  for (const [x, y, w, h] of [
+    [150, 912, 90, 6],
+    [250, 900, 70, 5],
+    [330, 914, 120, 6],
+    [160, 860, 120, 5],
+    [300, 868, 140, 4],
+    [500, 900, 250, 5],
+    [520, 920, 240, 8],
+    [770, 904, 90, 5],
+    [890, 914, 110, 6],
+    [500, 868, 120, 4],
+    [700, 868, 150, 4],
+  ]) {
+    g.fillRect(OX(x), OY(y), w * 0.22, h * 0.22);
+  }
+  g.fillStyle = "rgba(255,226,180,0.4)";
+  for (let x = 522; x < 760; x += 14) g.fillRect(OX(x), OY(920), 0.4, 8 * 0.22);
+
+  // 조가비들
+  for (const sh of OPERA_SHELLS) {
+    const tip = OP(sh.tip);
+    const c1 = OP(sh.c1);
+    const c2 = OP(sh.c2);
+    const end = OP(sh.end);
+    const front = OP(sh.front);
+    const inner = OP(sh.inner);
+    // 앞 모서리는 끝에서 거의 곧게, 살짝 바깥으로 휘며 내려옴
+    const frontCtl = [tip[0] + (front[0] - tip[0]) * 0.15, tip[1] + (front[1] - tip[1]) * 0.6];
+    // 겉면과 입구의 경계: 끝에서 안쪽 밑동까지 살짝 오목한 곡선
+    const innerCtl = [tip[0] + (inner[0] - tip[0]) * 0.45, tip[1] + (inner[1] - tip[1]) * 0.42];
+    // 입구 바탕 (연한 안쪽 면)
     g.beginPath();
-    g.moveTo(l0 - 0.4, mid);
-    g.lineTo(r0 - 0.3, mid);
-    g.lineTo(r1, y1);
-    g.lineTo(l1, y1);
+    g.moveTo(...tip);
+    g.quadraticCurveTo(frontCtl[0], frontCtl[1], front[0], front[1]);
+    g.lineTo(...inner);
+    g.quadraticCurveTo(innerCtl[0], innerCtl[1], tip[0], tip[1]);
     g.closePath();
+    g.fillStyle = "#d2bf9e";
     g.fill();
-  }
-  // 계단 오른쪽 옆면 그늘
-  g.fillStyle = "rgba(90,60,50,0.25)";
-  g.beginPath();
-  g.moveTo(206, 263);
-  g.lineTo(209, 263);
-  g.lineTo(203, 286);
-  g.lineTo(200, 286);
-  g.closePath();
-  g.fill();
-
-  // 물에 비친 기단과 껍데기: 물결에 끊긴 흰 가로 획
-  g.save();
-  g.globalCompositeOperation = "lighter";
-  for (let y = 288; y < 306; y += 1.6) {
-    const fade = 1 - (y - 288) / 18;
-    let x = 176;
-    while (x < 350) {
-      const w = r(3, 12);
-      if (rnd() < 0.55) {
-        g.fillStyle = `rgba(230,230,220,${0.16 * fade})`;
-        g.fillRect(x + r(-1.5, 1.5), y, w, 0.8);
-      }
-      x += w + r(1, 5);
-    }
-  }
-  g.restore();
-
-  // 껍데기를 받치는 윗단: 베이지 콘크리트 띠와 어두운 창 띠
-  const tier = g.createLinearGradient(0, 254, 0, 263);
-  tier.addColorStop(0, "#efdcc4");
-  tier.addColorStop(1, "#cdb193");
-  g.fillStyle = tier;
-  g.fillRect(208, 254, 144, 9);
-  g.fillStyle = "#3a2e2a";
-  g.fillRect(208, 258.5, 144, 2.2);
-  g.fillStyle = "rgba(255,230,190,0.35)";
-  for (let x = 210; x < 350; x += 3.5) g.fillRect(x, 258.7, 0.5, 1.8);
-  g.fillStyle = "rgba(255,248,235,0.6)";
-  g.fillRect(208, 254, 144, 0.8);
-
-  // 껍데기: 꼭짓점이 왼쪽 위에 있고, 바깥 곡선이 오른쪽 아래로 크게 휘어 내려옴.
-  // 왼쪽으로 열린 입구 안은 어두운 내부와 구릿빛 유리. 뒤(오른쪽)부터 그려서 앞 껍데기가 겹침
-  // [꼭짓점 x, 꼭짓점 y, 밑변 폭, 밑변 y]. 꼭짓점이 밑동보다 왼쪽으로 튀어나와 앞으로 기운 모양
-  // 맨 오른쪽 껍데기는 뒤로 맞붙어 반대쪽(오른쪽)을 보고 있어 좌우를 뒤집어 그림
-  // 두 무리가 나란히: 뒤(오른쪽 위)는 큰 콘서트홀, 앞(왼쪽 아래)은 오페라극장. 무리마다 같은 쪽을 향한 조가비 셋과
-  // 끝에서 등을 맞댄 반대쪽 조가비 하나. 맨 왼쪽 앞에는 작은 레스토랑 조가비 한 쌍이 따로 앉음
-  const shells = [
-    // 큰 무리: 끝이 왼쪽 위를 향한 조가비 셋이 점점 커지고, 오른쪽에 반대로 누운 넓고 낮은 조가비가 등을 맞댐
-    [342, 214, 74, 258, true],
-    [238, 182, 58, 258, false],
-    [212, 204, 48, 258, false],
-    [190, 224, 38, 258, false],
-    // 오른쪽 끝 작은 레스토랑 조가비 한 쌍
-    [364, 242, 16, 260, true],
-    [346, 242, 18, 260, false],
-  ];
-  for (const [ax, ay, w, by, flip] of shells) {
+    g.strokeStyle = line;
+    g.lineWidth = 0.5;
+    g.stroke();
+    // 끝 쪽 짙은 그늘 삼각형
+    const mid = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+    const fA = mid(tip, front, 0.55);
+    const iA = mid(tip, inner, 0.5);
+    g.beginPath();
+    g.moveTo(...tip);
+    g.lineTo(...fA);
+    g.lineTo(...iA);
+    g.closePath();
+    g.fillStyle = "#6a5440";
+    g.fill();
+    // 아래쪽 연한 면을 가르는 갈비뼈 선
+    g.strokeStyle = "rgba(130,105,78,0.6)";
+    g.lineWidth = 0.4;
+    g.beginPath();
+    g.moveTo(...fA);
+    g.lineTo(...mid(front, inner, 0.5));
+    g.moveTo(...iA);
+    g.lineTo(...mid(front, inner, 0.5));
+    g.stroke();
+    // 흰 겉면
+    g.beginPath();
+    g.moveTo(...tip);
+    g.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
+    g.lineTo(...inner);
+    g.quadraticCurveTo(innerCtl[0], innerCtl[1], tip[0], tip[1]);
+    g.closePath();
+    const skin = g.createLinearGradient(tip[0], tip[1], end[0], end[1]);
+    skin.addColorStop(0, "#fbf6ea");
+    skin.addColorStop(0.6, "#f1e9d8");
+    skin.addColorStop(1, "#ddd2bc");
+    g.fillStyle = skin;
+    g.fill();
+    // 겉면 안 옅은 면 나눔: 끝에서 밑동으로 퍼지는 가는 선 두 줄 (참고 그림의 면 경계)
     g.save();
-    if (flip) {
-      g.translate(ax * 2, 0);
-      g.scale(-1, 1);
+    g.clip();
+    g.strokeStyle = "rgba(190,175,150,0.55)";
+    g.lineWidth = 0.4;
+    for (const t of [0.35, 0.7]) {
+      g.beginPath();
+      g.moveTo(...tip);
+      g.lineTo(...mid(inner, end, t));
+      g.stroke();
     }
-    shell(g, ax, ay, w, by);
     g.restore();
+    g.beginPath();
+    g.moveTo(...tip);
+    g.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
+    g.lineTo(...inner);
+    g.quadraticCurveTo(innerCtl[0], innerCtl[1], tip[0], tip[1]);
+    g.closePath();
+    g.strokeStyle = line;
+    g.lineWidth = 0.6;
+    g.stroke();
   }
 }
 
