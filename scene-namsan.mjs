@@ -230,9 +230,9 @@ function paintTower(g, x, baseY) {
   const shaftBottom = baseY - 14;
   const shaftTop = baseY - 86;
   const shaft = g.createLinearGradient(x - 5, 0, x + 5, 0);
-  shaft.addColorStop(0, "#7f93bd");
-  shaft.addColorStop(0.45, "#f4f7ff");
-  shaft.addColorStop(1, "#8ea2c9");
+  shaft.addColorStop(0, "#b8c6e6");
+  shaft.addColorStop(0.3, "#f6f8ff");
+  shaft.addColorStop(1, "#6a7ca6");
   g.fillStyle = shaft;
   g.beginPath();
   g.moveTo(x - 5, shaftBottom);
@@ -271,41 +271,58 @@ function paintTower(g, x, baseY) {
     [26, 3, false],
     [14, 4, false],
   ];
+  // 원통 한 층의 옆면: 위·아래 가장자리가 앞으로 둥글게 휜 모양 (직사각형이면 납작한 판처럼 보임)
+  const drum = (w, yTop, h, ry) => {
+    g.beginPath();
+    g.moveTo(x - w / 2, yTop);
+    g.ellipse(x, yTop, w / 2, ry, 0, Math.PI, 0, true);
+    g.lineTo(x + w / 2, yTop + h);
+    g.ellipse(x, yTop + h, w / 2, ry, 0, 0, Math.PI);
+    g.closePath();
+  };
   for (const [w, h, lit] of decks) {
     y -= h;
+    const ry = w * 0.07;
     // 원반 아래쪽 그늘: 둥근 바닥면이 살짝 보임
-    g.fillStyle = "rgba(40,50,90,0.55)";
+    g.fillStyle = "rgba(30,40,80,0.6)";
     g.beginPath();
-    g.ellipse(x, y + h, w / 2, 1.6, 0, 0, Math.PI);
+    g.ellipse(x, y + h, w / 2, ry + 0.6, 0, 0, Math.PI);
     g.fill();
+    drum(w, y, h, ry);
     if (lit) {
-      const band = g.createLinearGradient(0, y, 0, y + h);
-      band.addColorStop(0, "#ffe9b8");
-      band.addColorStop(1, "#ffc56a");
+      const band = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+      band.addColorStop(0, "#ffe2a0");
+      band.addColorStop(0.4, "#fff0c8");
+      band.addColorStop(1, "#d99a4a");
       g.fillStyle = band;
-      g.fillRect(x - w / 2, y, w, h);
-      // 창틀: 가운데는 넓고 가장자리로 갈수록 촘촘 (둥근 원통이라)
+      g.fill();
+      // 창틀: 가운데는 넓고 가장자리로 갈수록 촘촘 (둥근 원통이라), 아래 곡선을 따라 휨
+      g.save();
+      g.clip();
       g.fillStyle = "rgba(60,40,70,0.45)";
       for (let k = -6; k <= 6; k++) {
         const a = (k / 6) * (Math.PI / 2);
-        g.fillRect(x + Math.sin(a) * (w / 2 - 0.5) - 0.3, y, 0.6, h);
+        const fx = x + Math.sin(a) * (w / 2 - 0.5);
+        g.fillRect(fx - 0.3, y - ry, 0.6, h + ry * 2);
       }
-      // 창 안 사람 그림자 대신 위쪽 밝은 띠
-      g.fillStyle = "rgba(255,255,240,0.5)";
-      g.fillRect(x - w / 2, y, w, 0.8);
+      g.restore();
     } else {
+      // 달이 왼쪽 위에 있어 왼쪽이 밝고 오른쪽으로 어두워짐
       const ring = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
-      ring.addColorStop(0, "#9aa8c6");
-      ring.addColorStop(0.45, "#f1f4fb");
-      ring.addColorStop(1, "#a3b0cc");
+      ring.addColorStop(0, "#c9d3ea");
+      ring.addColorStop(0.3, "#f6f8fd");
+      ring.addColorStop(1, "#7e8cad");
       g.fillStyle = ring;
-      g.fillRect(x - w / 2, y, w, h);
-      // 둥근 테 윗면
-      g.fillStyle = "rgba(255,255,255,0.55)";
-      g.beginPath();
-      g.ellipse(x, y, w / 2, 1.2, 0, Math.PI, 0);
       g.fill();
     }
+    // 둥근 윗면 (위에서 살짝 내려다보이는 원반)
+    g.fillStyle = lit ? "rgba(255,250,230,0.5)" : "rgba(255,255,255,0.6)";
+    g.beginPath();
+    g.ellipse(x, y, w / 2, ry, 0, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = "rgba(60,70,110,0.35)";
+    g.lineWidth = 0.4;
+    g.stroke();
   }
 
   // 흰색·빨간색이 번갈아 칠해진 안테나

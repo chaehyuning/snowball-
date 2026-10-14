@@ -184,6 +184,7 @@ function paintSydney(g, globe, groundAt) {
   }
 
   paintOperaHouse(g);
+  harbourReflection(g, rnd);
   paintFerry(g, 262, 298, 1.1);
 
   // 바닥: 물가의 사암 테라스
@@ -211,6 +212,39 @@ function paintSydney(g, globe, groundAt) {
 
 // 하버브리지: 강철 아치와 양끝 화강암 기둥, 꼭대기 국기
 // 미세스 매쿼리스 체어에서 보면 다리가 오페라하우스 뒤를 크게 감쌈
+// 물에 비친 오페라하우스와 다리: 물가 선(y 287)을 기준으로 위 그림을 뒤집어, 줄마다 물결만큼 좌우로 흔들어 찍음.
+// 아래로 갈수록 흐리고 물빛에 잠김
+function harbourReflection(g, rnd) {
+  const WATERLINE = 287;
+  const x0 = 150;
+  const x1 = 372;
+  const depth = 60;
+  const m = g.getTransform();
+  const k = m.a;
+  // 지금까지 그린 그림에서 물가 위쪽 띠를 떠 옴 (자기 캔버스를 직접 읽으면 겹쳐 그려져서 복사본을 씀)
+  const src = document.createElement("canvas");
+  src.width = Math.ceil((x1 - x0) * k);
+  src.height = Math.ceil(depth * k);
+  src.getContext("2d").drawImage(g.canvas, x0 * k + m.e, (WATERLINE - depth) * k + m.f, src.width, src.height, 0, 0, src.width, src.height);
+  g.save();
+  for (let row = 0; row < depth; row += 1) {
+    const fade = 1 - row / depth;
+    const wobble = Math.sin(row * 1.7) * (0.6 + row * 0.08) + (rnd() - 0.5) * 0.8;
+    g.globalAlpha = 0.5 * fade;
+    // 물가에서 row만큼 아래 = 원래 그림에서 물가 row만큼 위 (거울)
+    const sy = (depth - row - 1) * k;
+    g.drawImage(src, 0, sy, src.width, k, x0 + wobble, WATERLINE + row, x1 - x0, 1.05);
+  }
+  g.globalAlpha = 1;
+  // 물빛으로 살짝 덮어 반사가 물 아래 있는 느낌
+  const tint = g.createLinearGradient(0, WATERLINE, 0, WATERLINE + depth);
+  tint.addColorStop(0, "rgba(40,120,150,0.12)");
+  tint.addColorStop(1, "rgba(40,120,150,0.3)");
+  g.fillStyle = tint;
+  g.fillRect(x0, WATERLINE, x1 - x0, depth);
+  g.restore();
+}
+
 function paintBridge(g) {
   const x0 = 58;
   const x1 = 318;

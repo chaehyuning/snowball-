@@ -462,6 +462,33 @@ function paintTower(g) {
   }
   g.stroke();
 
+  // 탑의 부피: 네 다리가 사각뿔을 이루므로 왼쪽 면은 조명을 받아 밝고 오른쪽 면은 그늘. 위로 갈수록 조명이 약해짐
+  g.save();
+  outline();
+  arch(true);
+  g.closePath();
+  g.clip();
+  const vol = g.createLinearGradient(cx - TOWER.half, 0, cx + TOWER.half, 0);
+  vol.addColorStop(0, "rgba(255,236,180,0.22)");
+  vol.addColorStop(0.42, "rgba(255,236,180,0.05)");
+  vol.addColorStop(0.55, "rgba(50,24,40,0.12)");
+  vol.addColorStop(1, "rgba(50,24,40,0.42)");
+  g.fillStyle = vol;
+  g.fillRect(cx - TOWER.half - 2, top - 30, TOWER.half * 2 + 4, base - top + 32);
+  const fadeUp = g.createLinearGradient(0, base, 0, top);
+  fadeUp.addColorStop(0, "rgba(255,200,120,0.1)");
+  fadeUp.addColorStop(1, "rgba(40,30,70,0.25)");
+  g.fillStyle = fadeUp;
+  g.fillRect(cx - TOWER.half - 2, top - 30, TOWER.half * 2 + 4, base - top + 32);
+  // 두 면이 만나는 가운데 모서리선
+  g.strokeStyle = "rgba(255,240,200,0.35)";
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.moveTo(cx - 1, top);
+  g.lineTo(cx - 3, archTop);
+  g.stroke();
+  g.restore();
+
   // 4) 탑 둘레로 번지는 조명
   g.save();
   g.globalCompositeOperation = "lighter";
@@ -480,6 +507,13 @@ function paintTower(g) {
     g.fillRect(cx - w, y - h, w * 2, h);
     g.fillStyle = "#ffe2a0";
     for (let x = cx - w + 2; x < cx + w - 1; x += 3) g.fillRect(x, y - h + 1, 1.4, 1.6);
+    // 전망대 두께: 위 난간은 밝은 테, 아래는 그늘, 오른쪽 끝은 그늘진 옆면
+    g.fillStyle = "rgba(255,236,190,0.75)";
+    g.fillRect(cx - w - 0.5, y - h - 0.8, w * 2 + 1, 0.8);
+    g.fillStyle = "rgba(40,20,20,0.45)";
+    g.fillRect(cx - w, y, w * 2, 1.4);
+    g.fillStyle = "rgba(40,20,30,0.35)";
+    g.fillRect(cx + w - 3, y - h, 3, h);
   }
   // 꼭대기 전망대와 안테나
   g.fillStyle = "#c58f3a";
