@@ -99,6 +99,18 @@ function paintEgypt(g, globe, groundAt) {
   pyramid(g, 285, 266, 58, 86, false, 0.2);
   pyramid(g, 222, 270, 70, 108, true, 0);
 
+  // 해가 왼쪽 지평선에 걸려 있어 피라미드 그림자가 오른쪽 모래 위로 길게 늘어짐
+  g.fillStyle = "rgba(96,60,110,0.32)";
+  for (const [cx, baseY, half] of [[330, 262, 26], [285, 266, 58], [222, 270, 70]]) {
+    g.beginPath();
+    g.moveTo(cx + half * 0.25, baseY);
+    g.lineTo(cx + half, baseY);
+    g.lineTo(cx + half + half * 1.6, baseY + 4);
+    g.lineTo(cx + half * 0.6, baseY + 6);
+    g.closePath();
+    g.fill();
+  }
+
   // 앞쪽 사막
   const duneY = (x) => 286 + 6 * Math.sin(x * 0.025 + 2) + 2 * Math.sin(x * 0.09);
   const dune = g.createLinearGradient(0, 280, 0, 335);
@@ -131,7 +143,53 @@ function paintEgypt(g, globe, groundAt) {
     g.stroke();
   }
 
+  // 오른쪽 앞 모래 언덕: 바람이 깎은 날카로운 능선. 해 쪽(왼쪽) 면은 밝고 반대 면은 보랏빛 그늘
+  const crest = (x) => 292 - 16 * Math.exp(-(((x - 330) / 46) ** 2)) + 1.2 * Math.sin(x * 0.2);
+  const crestTop = 330;
+  g.fillStyle = "#f2b679";
+  g.beginPath();
+  g.moveTo(232, 312);
+  for (let x = 232; x <= crestTop; x += 2) g.lineTo(x, crest(x));
+  g.lineTo(crestTop + 8, 318);
+  g.lineTo(232, 318);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "#a86a70";
+  g.beginPath();
+  g.moveTo(crestTop, crest(crestTop));
+  for (let x = crestTop; x <= 400; x += 2) g.lineTo(x, crest(x));
+  g.lineTo(400, 320);
+  g.lineTo(crestTop + 8, 318);
+  g.closePath();
+  g.fill();
+  // 능선 위 빛 한 줄과 밝은 면의 잔물결
+  g.strokeStyle = "rgba(255,226,180,0.85)";
+  g.lineWidth = 0.9;
+  g.beginPath();
+  for (let x = 240; x <= crestTop; x += 2) g.lineTo(x, crest(x));
+  g.stroke();
+  g.strokeStyle = "rgba(190,120,90,0.35)";
+  g.lineWidth = 0.6;
+  for (let i = 0; i < 10; i++) {
+    const x = 246 + i * 8;
+    const y = crest(x) + 5 + (i % 3) * 3;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + 6, y - 1.5, x + 12, y + 0.5);
+    g.stroke();
+  }
+
   sphinx(g);
+  // 낙타가 걸어온 발자국: 앞쪽에서 언덕 쪽으로 점점 작아지며 이어짐
+  g.fillStyle = "rgba(120,70,70,0.4)";
+  for (let k = 0; k < 14; k++) {
+    const t = k / 13;
+    const x = 250 + t * 62 + (k % 2 ? 2 : -2);
+    const y = 318 - t * 18;
+    g.beginPath();
+    g.ellipse(x, y, 1.6 - t * 0.8, 0.8 - t * 0.35, 0, 0, Math.PI * 2);
+    g.fill();
+  }
   camel(g, 318, 300);
 
   // 바닥: 고운 모래

@@ -50,6 +50,8 @@ function paintForbidden(g, globe, groundAt) {
   g.fillStyle = RED[1];
   g.fillRect(194, 230, 12, 4);
 
+  farHalls(g);
+
   // 궁궐 담장: 붉은 벽에 노란 기와
   for (const [x0, x1] of [[left, 120], [280, right]]) {
     g.fillStyle = RED[0];
@@ -319,16 +321,44 @@ function roof(g, cx, baseY, bottomW, topW, h) {
   g.fillStyle = grad;
   const bl = cx - bottomW / 2;
   const br = cx + bottomW / 2;
+  // 처마 귀퉁이가 날렵하게 들려 올라감 (중국 궁궐 지붕의 가장 큰 특징)
+  const tipX = 10;
+  const tipY = 15;
   function shape() {
     g.beginPath();
-    g.moveTo(bl - 6, baseY - 8);
-    g.quadraticCurveTo(bl + 16, baseY + 2, cx, baseY + 1);
-    g.quadraticCurveTo(br - 16, baseY + 2, br + 6, baseY - 8);
-    g.quadraticCurveTo(br - 14, baseY - h * 0.45, cx + topW / 2, baseY - h);
+    g.moveTo(bl - tipX, baseY - tipY);
+    g.quadraticCurveTo(bl + 10, baseY + 3, bl + bottomW * 0.28, baseY + 2);
+    g.lineTo(br - bottomW * 0.28, baseY + 2);
+    g.quadraticCurveTo(br - 10, baseY + 3, br + tipX, baseY - tipY);
+    g.quadraticCurveTo(br - 12, baseY - h * 0.5, cx + topW / 2, baseY - h);
     g.lineTo(cx - topW / 2, baseY - h);
-    g.quadraticCurveTo(bl + 14, baseY - h * 0.45, bl - 6, baseY - 8);
+    g.quadraticCurveTo(bl + 12, baseY - h * 0.5, bl - tipX, baseY - tipY);
     g.closePath();
   }
+  // 처마 밑면: 들린 처마 아래로 서까래가 보이는 어두운 띠. 지붕에 두께가 생김
+  g.save();
+  g.beginPath();
+  g.moveTo(bl - tipX, baseY - tipY);
+  g.quadraticCurveTo(bl + 10, baseY + 3, bl + bottomW * 0.28, baseY + 2);
+  g.lineTo(br - bottomW * 0.28, baseY + 2);
+  g.quadraticCurveTo(br - 10, baseY + 3, br + tipX, baseY - tipY);
+  g.lineTo(br + tipX - 3, baseY - tipY + 4);
+  g.quadraticCurveTo(br - 12, baseY + 7, br - bottomW * 0.28, baseY + 6);
+  g.lineTo(bl + bottomW * 0.28, baseY + 6);
+  g.quadraticCurveTo(bl + 12, baseY + 7, bl - tipX + 3, baseY - tipY + 4);
+  g.closePath();
+  const soffit = g.createLinearGradient(0, baseY, 0, baseY + 6);
+  soffit.addColorStop(0, "#5a2a14");
+  soffit.addColorStop(1, "#2a1208");
+  g.fillStyle = soffit;
+  g.fill();
+  g.clip();
+  // 서까래 끝: 청록과 금빛이 번갈아
+  for (let x = bl - tipX; x < br + tipX; x += 2.4) {
+    g.fillStyle = Math.round(x / 2.4) % 2 ? "rgba(60,140,130,0.8)" : "rgba(240,200,110,0.7)";
+    g.fillRect(x, baseY - tipY, 1.1, tipY + 8);
+  }
+  g.restore();
   // 처마 밑으로 떨어지는 그림자
   g.save();
   g.shadowColor = "rgba(40,15,0,0.45)";
@@ -358,17 +388,17 @@ function roof(g, cx, baseY, bottomW, topW, h) {
   // 내림마루: 용마루 끝에서 처마 귀퉁이로 내려오는 굵은 마루와 잡상 줄
   for (const dir of [-1, 1]) {
     const sx = cx + (dir * topW) / 2;
-    const ex = dir > 0 ? br + 6 : bl - 6;
+    const ex = dir > 0 ? br + tipX : bl - tipX;
     g.strokeStyle = GOLD_ROOF[2];
     g.lineWidth = 1.6;
     g.beginPath();
     g.moveTo(sx, baseY - h);
-    g.quadraticCurveTo(cx + dir * (bottomW / 2 - 14), baseY - h * 0.45, ex, baseY - 8);
+    g.quadraticCurveTo(cx + dir * (bottomW / 2 - 12), baseY - h * 0.5, ex, baseY - tipY);
     g.stroke();
     g.fillStyle = GOLD_ROOF[2];
     for (let k = 0.72; k < 0.95; k += 0.05) {
       const px = sx + (ex - sx) * k;
-      const py = baseY - h + (h - 8) * Math.pow(k, 1.4);
+      const py = baseY - h + (h - tipY) * Math.pow(k, 1.4);
       g.beginPath();
       g.arc(px, py - 1.2, 0.8, 0, Math.PI * 2);
       g.fill();
@@ -383,12 +413,55 @@ function roof(g, cx, baseY, bottomW, topW, h) {
   g.restore();
   // 처마 끝 막새: 둥근 기와 끝이 한 줄로 반짝임
   g.fillStyle = "rgba(255,230,150,0.75)";
-  for (let x = bl + 2; x < br - 2; x += 2.6) {
-    const t = (x - bl) / bottomW;
-    const ey = baseY + 1 - 9 * Math.pow(Math.abs(t - 0.5) * 2, 3);
+  for (let x = bl - tipX + 2; x < br + tipX - 2; x += 2.6) {
+    const t = (x - (bl - tipX)) / (bottomW + tipX * 2);
+    const ey = baseY + 2 - (tipY + 2) * Math.pow(Math.abs(t - 0.5) * 2, 4);
     g.beginPath();
     g.arc(x, ey, 0.6, 0, Math.PI * 2);
     g.fill();
+  }
+  // 귀퉁이 끝 장식: 들린 처마 끝에 작은 선인(仙人) 장식
+  for (const ex of [bl - tipX, br + tipX]) {
+    g.fillStyle = GOLD_ROOF[2];
+    g.beginPath();
+    g.arc(ex, baseY - tipY - 1.2, 1.3, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+// 담장 너머로 겹겹이 이어지는 다른 전각들의 지붕: 멀수록 작고 노을 안개에 묻힘
+function farHalls(g) {
+  const halls = [
+    { cx: 92, y: 262, w: 70, h: 12, fade: 0.55 },
+    { cx: 312, y: 262, w: 74, h: 13, fade: 0.55 },
+    { cx: 40, y: 258, w: 54, h: 10, fade: 0.68 },
+    { cx: 362, y: 258, w: 56, h: 10, fade: 0.68 },
+  ];
+  for (const hl of halls) {
+    const bl = hl.cx - hl.w / 2;
+    const br = hl.cx + hl.w / 2;
+    // 붉은 몸체
+    g.fillStyle = RED[1];
+    g.fillRect(bl + 8, hl.y, hl.w - 16, 9);
+    // 금빛 지붕과 들린 처마
+    const grad = g.createLinearGradient(0, hl.y - hl.h, 0, hl.y);
+    grad.addColorStop(0, GOLD_ROOF[0]);
+    grad.addColorStop(1, GOLD_ROOF[1]);
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(bl - 4, hl.y - 5);
+    g.quadraticCurveTo(bl + 6, hl.y + 1, hl.cx, hl.y + 1);
+    g.quadraticCurveTo(br - 6, hl.y + 1, br + 4, hl.y - 5);
+    g.quadraticCurveTo(br - 8, hl.y - hl.h * 0.5, hl.cx + hl.w * 0.24, hl.y - hl.h);
+    g.lineTo(hl.cx - hl.w * 0.24, hl.y - hl.h);
+    g.quadraticCurveTo(bl + 8, hl.y - hl.h * 0.5, bl - 4, hl.y - 5);
+    g.closePath();
+    g.fill();
+    g.fillStyle = GOLD_ROOF[2];
+    g.fillRect(hl.cx - hl.w * 0.24, hl.y - hl.h - 1.4, hl.w * 0.48, 1.4);
+    // 노을 안개로 덮어 멀리 보이게
+    g.fillStyle = `rgba(246,196,120,${hl.fade})`;
+    g.fillRect(bl - 6, hl.y - hl.h - 3, hl.w + 12, hl.h + 14);
   }
 }
 
