@@ -388,9 +388,14 @@ function paintOperaHouse(g) {
     for (const q of pts.slice(1)) g.lineTo(...OP(q));
     g.closePath();
   };
+  // 정면은 위가 밝고 아래로 갈수록 어두워 서 있는 벽처럼 보임
   const block = (pts, fill) => {
     poly(pts);
-    g.fillStyle = fill;
+    const ys = pts.map((q) => OY(q[1]));
+    const vg = g.createLinearGradient(0, Math.min(...ys), 0, Math.max(...ys));
+    vg.addColorStop(0, fill);
+    vg.addColorStop(1, "#8a6c4c");
+    g.fillStyle = vg;
     g.fill();
     g.strokeStyle = line;
     g.lineWidth = 0.5;
@@ -424,6 +429,19 @@ function paintOperaHouse(g) {
   }
   g.fillStyle = "rgba(255,226,180,0.4)";
   for (let x = 522; x < 760; x += 14) g.fillRect(OX(x), OY(920), 0.4, 8 * 0.22);
+
+  // 조가비가 기단 위에 드리운 그림자: 왼쪽 위에서 해가 드니 밑동 오른쪽으로 비스듬히
+  g.save();
+  g.filter = "blur(1.5px)";
+  g.fillStyle = "rgba(70,50,35,0.35)";
+  for (const sh of OPERA_SHELLS) {
+    const [fx, fy] = OP(sh.front);
+    const [ex, ey] = OP(sh.end);
+    g.beginPath();
+    g.ellipse((Math.min(fx, ex) + Math.max(fx, ex)) / 2 + 3, Math.max(fy, ey) + 1, Math.abs(ex - fx) / 2 + 2, 2.2, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
 
   // 조가비들
   for (const sh of OPERA_SHELLS) {
@@ -476,12 +494,31 @@ function paintOperaHouse(g) {
     g.lineTo(...inner);
     g.quadraticCurveTo(innerCtl[0], innerCtl[1], tip[0], tip[1]);
     g.closePath();
+    // 둥근 겉면: 해를 받는 끝 쪽은 하얗게 빛나고, 등 곡선을 따라 내려갈수록 그늘
     const skin = g.createLinearGradient(tip[0], tip[1], end[0], end[1]);
-    skin.addColorStop(0, "#fbf6ea");
-    skin.addColorStop(0.6, "#f1e9d8");
-    skin.addColorStop(1, "#ddd2bc");
+    skin.addColorStop(0, "#ffffff");
+    skin.addColorStop(0.4, "#f4ede0");
+    skin.addColorStop(0.8, "#d9ccb2");
+    skin.addColorStop(1, "#c2b294");
     g.fillStyle = skin;
     g.fill();
+    // 등 곡선 안쪽을 따라 도는 그늘 띠: 껍데기가 둥글게 넘어가는 면
+    g.save();
+    g.clip();
+    g.strokeStyle = "rgba(150,128,96,0.35)";
+    g.lineWidth = 4;
+    g.beginPath();
+    g.moveTo(...tip);
+    g.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
+    g.stroke();
+    // 겉면과 입구 경계 바로 옆은 빛을 받는 모서리
+    g.strokeStyle = "rgba(255,255,255,0.8)";
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.moveTo(...inner);
+    g.quadraticCurveTo(innerCtl[0], innerCtl[1], tip[0], tip[1]);
+    g.stroke();
+    g.restore();
     // 겉면 안 옅은 면 나눔: 끝에서 밑동으로 퍼지는 가는 선 두 줄 (참고 그림의 면 경계)
     g.save();
     g.clip();

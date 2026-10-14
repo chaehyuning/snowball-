@@ -95,11 +95,7 @@ function paintQuebec(g, globe, groundAt) {
   g.globalAlpha = 1;
 
   // 언덕 아래 강가 절벽 위의 샤토 프롱트낙: 장면의 주인공이라 크게
-  g.save();
-  g.translate(272, 270);
-  g.scale(0.8, 0.8);
-  paintChateau(g, r, rnd, 0, 0);
-  g.restore();
+  paintChateauPhoto(g, rnd);
   // 성 앞 뒤프랭 테라스
   dufferin(g, 196, 352, 272);
 
@@ -591,6 +587,152 @@ function paintChateau(g, r, rnd, cx, ground) {
   g.lineTo(flagX, flagY - 5);
   g.closePath();
   g.fill();
+}
+
+// 샤토 프롱트낙: 언덕(테라스 피에르뒤과드몽) 위에서 찍은 사진의 윤곽을 좌표 그대로 옮겨 그림.
+// 사진 좌표(1080×1350) → 장면 좌표: x = 172 + (px − 160)·0.33, y = 274 − (620 − py)·0.33
+const QS = 0.33;
+const QX = (px) => 172 + (px - 160) * QS;
+const QY = (py) => 274 - (620 - py) * QS;
+function paintChateauPhoto(g, rnd) {
+  const poly = (pts, fill, stroke = "rgba(30,20,20,0.5)") => {
+    g.beginPath();
+    g.moveTo(QX(pts[0][0]), QY(pts[0][1]));
+    for (const [x, y] of pts.slice(1)) g.lineTo(QX(x), QY(y));
+    g.closePath();
+    g.fillStyle = fill;
+    g.fill();
+    if (stroke) {
+      g.strokeStyle = stroke;
+      g.lineWidth = 0.4;
+      g.stroke();
+    }
+  };
+  const grad = (x0, x1, a, b) => {
+    const gr = g.createLinearGradient(QX(x0), 0, QX(x1), 0);
+    gr.addColorStop(0, a);
+    gr.addColorStop(1, b);
+    return gr;
+  };
+  const RIM = "rgba(255,210,150,0.8)";
+  // 창: 사진 좌표 기준 격자로 찍음
+  const windows = (x0, x1, y0, y1, dx, dy, dark = "#2a1c1c", litRate = 0.35) => {
+    for (let y = y0; y < y1; y += dy) {
+      for (let x = x0; x < x1; x += dx) {
+        g.fillStyle = rnd() < litRate ? "#ffd38a" : dark;
+        g.fillRect(QX(x), QY(y), 0.9, 1.6);
+      }
+    }
+  };
+  const spire = (x, y0, y1) => {
+    g.strokeStyle = "#1c1f1e";
+    g.lineWidth = 0.6;
+    g.beginPath();
+    g.moveTo(QX(x), QY(y0));
+    g.lineTo(QX(x), QY(y1));
+    g.stroke();
+  };
+  const cone = (xl, xr, yb, apx, apy, light) => {
+    poly([[xl, yb], [apx, apy], [xr, yb]], grad(xl, xr, light ? "#2c3f38" : "#1e2a27", light ? "#5f8070" : "#3c524a"));
+  };
+
+  // 1) 맨 왼쪽 뒤 초록 지붕 덩어리
+  poly([[165, 625], [165, 548], [192, 512], [222, 540], [252, 518], [292, 546], [292, 625]], grad(165, 292, "#22382f", "#3b5c4c"));
+  // 그 아래 돌벽과 창
+  poly([[165, 580], [292, 580], [292, 625], [165, 625]], grad(165, 292, "#7e7466", "#a39886"));
+  windows(172, 288, 588, 620, 14, 12, "#2a2a2c", 0.25);
+  spire(192, 512, 496);
+  // 2) 가운데 아래 초록 지붕 줄 (탑 앞으로 낮게 이어짐) + 박공 지붕창
+  poly([[392, 562], [612, 556], [612, 625], [392, 625]], grad(392, 612, "#2f4d40", "#5a7c6a"));
+  for (let x = 410; x < 600; x += 22) {
+    poly([[x - 7, 590], [x, 568], [x + 7, 590]], "#c8b89c");
+    g.fillStyle = rnd() < 0.5 ? "#ffd38a" : "#2a2a2a";
+    g.fillRect(QX(x - 2), QY(586), 1, 1.5);
+  }
+  // 3) 탑: 왼쪽 옆면(그늘) + 앞면(벽돌) + 가파른 슬레이트 지붕(왼쪽 면 어둡게, 앞면 지붕창 세 줄) + 모서리 망루
+  poly([[428, 456], [470, 463], [470, 625], [428, 625]], grad(428, 470, "#5a2a1c", "#7a3a26"));
+  poly([[470, 463], [606, 456], [606, 625], [470, 625]], grad(470, 606, "#a14a30", "#c9734a"));
+  // 벽돌 탑의 돌 띠와 창
+  g.fillStyle = "rgba(230,205,170,0.55)";
+  for (const y of [478, 500, 522, 544, 566, 588]) g.fillRect(QX(470), QY(y), QX(606) - QX(470), 0.6);
+  g.fillStyle = "rgba(200,175,145,0.4)";
+  for (const y of [478, 500, 522, 544, 566, 588]) g.fillRect(QX(428), QY(y) + 0.3, QX(470) - QX(428), 0.5);
+  windows(480, 600, 468, 615, 11, 11, "#2a1a1c", 0.3);
+  windows(434, 466, 468, 615, 12, 11, "#1e1414", 0.15);
+  g.fillStyle = RIM;
+  g.fillRect(QX(606) - 0.6, QY(456), 0.6, QY(625) - QY(456));
+  // 지붕
+  // 사진처럼 높고 가파른 지붕: 처마에서 거의 세 배 높이로 솟아 짧은 용마루에서 만남
+  // 아랫단은 거의 수직으로 서다가(망사르드) 위에서 급하게 좁아져 짧은 용마루에서 만남
+  poly([[428, 456], [470, 463], [482, 410], [518, 345], [500, 350], [438, 414]], "#1b2120");
+  poly([[470, 463], [606, 456], [598, 412], [552, 345], [518, 345], [482, 410]], grad(470, 606, "#2a3230", "#55605c"));
+  // 꺾이는 선
+  g.strokeStyle = "rgba(10,14,14,0.6)";
+  g.lineWidth = 0.4;
+  g.beginPath();
+  g.moveTo(QX(482), QY(410));
+  g.lineTo(QX(598), QY(412));
+  g.stroke();
+  g.strokeStyle = RIM;
+  g.lineWidth = 0.6;
+  g.beginPath();
+  g.moveTo(QX(606), QY(456));
+  g.lineTo(QX(598), QY(412));
+  g.lineTo(QX(552), QY(345));
+  g.stroke();
+  // 처마 돌 띠
+  g.fillStyle = "#d9c8a8";
+  g.fillRect(QX(428), QY(458), QX(606) - QX(428), 0.9);
+  // 지붕창: 크림색 틀에 뾰족한 모자
+  for (const [y, x0, x1] of [[446, 484, 596], [414, 494, 576], [384, 506, 560], [360, 520, 548]]) {
+    for (let x = x0; x <= x1; x += 18) {
+      poly([[x - 5, y + 2], [x - 5, y - 6], [x, y - 13], [x + 5, y - 6], [x + 5, y + 2]], "#e6d8bc", "rgba(40,30,20,0.6)");
+      g.fillStyle = rnd() < 0.45 ? "#ffd38a" : "#2a2e2c";
+      g.fillRect(QX(x - 2), QY(y - 4), 1, 1.4);
+    }
+  }
+  spire(535, 345, 300);
+  // 탑 모서리 원뿔 망루
+  cone(428, 446, 458, 437, 412, false);
+  spire(437, 412, 402);
+  cone(588, 608, 458, 598, 400, true);
+  spire(598, 400, 390);
+
+  // 4) 왼쪽 돌 박공 건물: 회색 돌벽 위로 가파른 초록 지붕, 가운데 돌 박공이 지붕을 뚫고 솟음
+  poly([[285, 528], [398, 528], [398, 625], [285, 625]], grad(285, 398, "#8e8474", "#b4a994"));
+  windows(292, 392, 540, 615, 13, 12, "#2a2a2c", 0.25);
+  poly([[280, 530], [402, 530], [346, 455], [326, 455]], grad(280, 402, "#2a4438", "#5c826e"));
+  poly([[305, 530], [365, 530], [335, 470]], grad(305, 365, "#a39884", "#cbbfa8"));
+  g.fillStyle = "#ffd38a";
+  g.fillRect(QX(332), QY(505), 1.2, 2);
+  spire(336, 455, 432);
+  poly([[350, 470], [362, 470], [362, 528], [350, 528]], "#8a4a32");
+
+  // 5) 탑 오른쪽 아래 작은 원뿔 망루와, 오른쪽 끝 원뿔 망루 두 개
+  cone(548, 576, 560, 562, 526, true);
+  poly([[648, 600], [742, 600], [742, 640], [648, 640]], grad(648, 742, "#8a3e28", "#b55a38"));
+  cone(648, 692, 602, 670, 552, true);
+  spire(670, 552, 540);
+  cone(694, 742, 610, 718, 564, true);
+  spire(718, 564, 550);
+
+  // 6) 앞을 가리는 나무들: 성의 아랫부분을 둥근 잎 덩어리가 덮음 (가을이라 초록에 주황이 섞임)
+  const tree = (cx, cy, rad) => {
+    for (let i = 0; i < 26; i++) {
+      const a = rnd() * Math.PI * 2;
+      const d = Math.sqrt(rnd()) * rad;
+      const x = cx + Math.cos(a) * d;
+      const y = cy + Math.sin(a) * d * 0.7;
+      g.fillStyle = ["#2e4a2c", "#3e5e34", "#56703a", "#b8652c", "#d8892e"][Math.floor(rnd() * 5)];
+      g.beginPath();
+      g.arc(QX(x), QY(y), rad * QS * 0.28 * (0.6 + rnd() * 0.6), 0, Math.PI * 2);
+      g.fill();
+    }
+  };
+  tree(410, 640, 70);
+  tree(300, 650, 60);
+  tree(680, 650, 55);
+  tree(540, 660, 50);
 }
 
 // 성 앞 강가 절벽 위 산책로(뒤프랭 테라스): 나무 데크와 녹색 지붕 정자, 가로등
