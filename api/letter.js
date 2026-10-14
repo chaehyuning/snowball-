@@ -27,7 +27,7 @@ function readLetter(code) {
     const json = Buffer.from(String(code).replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
     const d = JSON.parse(json);
     const clip = (v, n) => (typeof v === "string" ? v.slice(0, n) : "");
-    return { from: clip(d.f, 20), to: clip(d.t, 20) };
+    return { from: clip(d.f, 20), to: clip(d.t, 20), shake: !!clip(d.s, 16).trim() };
   } catch {
     return {};
   }
@@ -50,7 +50,9 @@ module.exports = (req, res) => {
   const to = q.get("to") || letter.to;
   const place = PLACES[(q.get("landmark") || "").toLowerCase()];
   const title = `📬 ${from ? `${from}님이 보낸 ` : ""}${place ? `${place} ` : ""}스노우볼 편지가 도착했어요`;
-  const desc = `${to ? `To. ${to} · ` : ""}봉투의 밀랍 도장을 떼고 편지를 열어 보세요 ✉️`;
+  const desc = letter.shake
+    ? `${to ? `To. ${to} · ` : ""}스노우볼을 흔들면 숨겨 둔 말이 나타나요 ❄️`
+    : `${to ? `To. ${to} · ` : ""}봉투의 밀랍 도장을 떼고 편지를 열어 보세요 ✉️`;
   const origin = `https://${req.headers.host}`;
   const html = page
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)

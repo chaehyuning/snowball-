@@ -36,6 +36,7 @@ function decode(code) {
       from: clip(data.f, 20),
       message: clip(data.m, MAX_MESSAGE),
       plate: clip(data.p, 20),
+      shake: clip(data.s, 16).trim(),
       date: /^\d{4}-\d{2}-\d{2}$/.test(data.d) ? data.d : "",
     };
   } catch {
@@ -75,6 +76,7 @@ function openWriter(prefill = {}) {
         <label class="postcard-field"><span>To</span><input name="to" type="text" maxlength="20" placeholder="Jieun" /></label>
         <label class="postcard-field"><span>Your note</span><textarea name="message" rows="5" maxlength="${MAX_MESSAGE}" placeholder="Write something warm…"></textarea><small class="letter-count"></small></label>
         <label class="postcard-field"><span>From</span><input name="from" type="text" maxlength="20" placeholder="Minji" /></label>
+        <label class="postcard-field shake-field"><span>Hidden line <em>(optional — appears when they shake the snowball)</em></span><input name="shake" type="text" maxlength="16" placeholder="보고 싶어" /></label>
         <label class="postcard-field"><span>Nameplate <em>(optional — engraved on the snowball)</em></span><input name="plate" type="text" maxlength="20" placeholder="Our first trip" /></label>
         <p class="letter-done" hidden></p>
         <div class="help-actions">
@@ -100,6 +102,7 @@ function openWriter(prefill = {}) {
         m: field("message").value.trim(),
         f: field("from").value.trim(),
         p: field("plate").value.trim(),
+        s: field("shake").value.trim(),
         d: new Date().toISOString().slice(0, 10),
       };
       if (!data.m) {
