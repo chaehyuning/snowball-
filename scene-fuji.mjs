@@ -249,6 +249,60 @@ function paintMountain(g, r, left, right, size) {
   g.fillStyle = side;
   g.fillRect(left, peak - 5, size, foot - peak + 30);
 
+  // 두 면으로 나뉜 산: 정상에서 왼쪽 아래로 흐르는 능선을 경계로 왼쪽은 그늘, 오른쪽은 햇빛.
+  // 경계는 곧은 선이 아니라 골짜기를 따라 살짝 굽이침
+  const ridgeX = (y) => cx - 4 - (y - peak) * 0.28 + 4 * Math.sin(y * 0.09);
+  g.fillStyle = "rgba(24,32,78,0.34)";
+  g.beginPath();
+  g.moveTo(left, peak - 5);
+  g.lineTo(cx - 4, peak - 5);
+  for (let y = peak; y <= foot + 30; y += 3) g.lineTo(ridgeX(y), y);
+  g.lineTo(left, foot + 30);
+  g.closePath();
+  g.fill();
+  // 능선 바로 오른쪽은 빛을 가장 세게 받아 밝은 띠
+  g.strokeStyle = "rgba(255,240,240,0.18)";
+  g.lineWidth = 3;
+  g.beginPath();
+  for (let y = peak + 4; y <= foot; y += 3) g.lineTo(ridgeX(y) + 2.5, y);
+  g.stroke();
+  // 산허리를 따라 패인 골짜기: 그늘 쪽은 짙고 빛 쪽은 옅은 세로 홈
+  for (let i = 0; i < 30; i++) {
+    const sx = cx + rs(-55, 55);
+    const ex = cx + (sx - cx) * rs(2.4, 3.4);
+    const shadeSide = sx < cx;
+    g.strokeStyle = shadeSide ? "rgba(18,24,60,0.22)" : "rgba(40,50,110,0.14)";
+    g.lineWidth = rs(0.6, 1.5);
+    g.beginPath();
+    g.moveTo(sx, snowY(sx) + 4);
+    g.quadraticCurveTo((sx + ex) / 2 + rs(-4, 4), (snowY(sx) + fujiY(ex)) / 2 + 10, ex, fujiY(ex) + 30);
+    g.stroke();
+  }
+
+  g.restore();
+
+  // 눈도 그늘 쪽은 푸르스름하게 (산 실루엣 안의 눈에만: 산 윤곽과 눈 경계 두 번 잘라 냄)
+  g.save();
+  g.beginPath();
+  g.moveTo(left, foot + 20);
+  for (let x = left; x <= right; x += 2) g.lineTo(x, fujiY(x));
+  g.lineTo(right, foot + 20);
+  g.closePath();
+  g.clip();
+  g.beginPath();
+  g.moveTo(left, peak - 10);
+  for (let x = left; x <= right; x += 1) g.lineTo(x, snowY(x));
+  g.lineTo(right, peak - 10);
+  g.closePath();
+  g.clip();
+  g.fillStyle = "rgba(110,130,190,0.28)";
+  g.beginPath();
+  g.moveTo(left, peak - 10);
+  g.lineTo(cx - 4, peak - 10);
+  for (let y = peak; y <= 240; y += 3) g.lineTo(ridgeX(y), y);
+  g.lineTo(left, 240);
+  g.closePath();
+  g.fill();
   g.restore();
 
   // 만년설과 하늘 경계가 또렷하도록 산꼭대기 윤곽에 가는 밝은 테와 그늘선

@@ -152,8 +152,8 @@ function paintIstanbul(g, globe, groundAt) {
     g.stroke();
   }
 
-  // 언덕 위 모스크: 공원 너머에 있어서 작게 그림
-  const MOSQUE = { x: 200, y: 262, s: 0.78 };
+  // 언덕 위 모스크: 공원 너머에 있지만 장면의 주인공이라 크게
+  const MOSQUE = { x: 200, y: 264, s: 0.8 };
   g.save();
   g.translate(MOSQUE.x, MOSQUE.y);
   g.scale(MOSQUE.s, MOSQUE.s);
@@ -495,80 +495,125 @@ function archWindow(g, wx, wy, ww, wh, lit) {
   g.fillRect(wx - ww / 2, wy + ww * 0.4, ww * 0.25, wh - ww * 0.4);
 }
 
-// 블루 모스크: 작은 돔 → 반돔 → 큰 돔이 층층이 쌓이고, 첨탑 여섯 개가 둘러섬
+// 블루 모스크: 벽은 거의 보이지 않고 돔이 주인공. 뒤의 큰 돔에서 반돔 → 작은 반원 돔(엑세드라) →
+// 안뜰 회랑 위 작은 돔 줄로 계단처럼 흘러내림. 뒤에서부터 차례로 그려 앞 돔이 뒤 돔 아랫단을 가림
 function paintMosque(g, cx, baseY) {
   // 마당 바깥쪽 첨탑 두 개 (가장 멀어서 흐리게)
-  minaret(g, cx - 128, baseY, 118, 2, 0.8);
-  minaret(g, cx + 128, baseY, 118, 2, 0.8);
+  minaret(g, cx - 132, baseY, 120, 2, 0.8);
+  minaret(g, cx + 132, baseY, 120, 2, 0.8);
 
-  // 아래 벽: 돌단, 벽기둥, 두 줄 아치 창
-  stoneWall(g, cx - 84, baseY - 34, 168, 34);
-  for (let i = 0; i <= 7; i++) {
-    const px = cx - 84 + (i * 168) / 7;
+  // 뒤쪽 첨탑 두 개
+  minaret(g, cx - 84, baseY - 4, 128, 3, 0.5);
+  minaret(g, cx + 84, baseY - 4, 128, 3, 0.5);
+
+  // 본당 몸체: 낮고 넓은 돌 덩어리 (대부분 돔과 회랑에 가려짐)
+  stoneWall(g, cx - 74, baseY - 44, 148, 44);
+  // 본당 벽: 벽기둥 사이로 아치 창 한 줄 (회랑 위로 보이는 부분)
+  for (let i = 0; i <= 8; i++) {
+    const px = cx - 74 + (i * 148) / 8;
     g.fillStyle = "rgba(255,250,235,0.35)";
-    g.fillRect(px - 1.6, baseY - 32, 1, 32);
+    g.fillRect(px - 1.4, baseY - 42, 0.9, 24);
     g.fillStyle = "rgba(110,90,65,0.22)";
-    g.fillRect(px - 0.6, baseY - 32, 1.4, 32);
+    g.fillRect(px - 0.5, baseY - 42, 1.2, 24);
   }
-  for (const [n, wy, wh] of [[14, baseY - 27, 7], [12, baseY - 15, 9]]) {
-    for (let i = 0; i < n; i++) {
-      const wx = cx - 78 + (i * 156) / (n - 1);
-      archWindow(g, wx, wy, 3.6, wh, (i * 7 + n) % 5 === 0);
-    }
+  for (let i = 0; i < 16; i++) {
+    const wx = cx - 68 + (i * 136) / 15;
+    archWindow(g, wx, baseY - 33, 3, 8, i % 5 === 2);
   }
-  // 처마 돌림띠
-  g.fillStyle = "#f4ead6";
-  g.fillRect(cx - 85, baseY - 35, 170, 1.4);
 
-  // 모서리 작은 돔들
-  for (const dx of [-70, -46, 46, 70]) dome(g, cx + dx, baseY - 34, 11, 10, true);
-  // 반돔 두 개와 그 아래 벽
-  stoneWall(g, cx - 58, baseY - 46, 116, 12);
-  for (let i = 0; i < 9; i++) archWindow(g, cx - 48 + i * 12, baseY - 43, 2.6, 6, i % 4 === 1);
-  dome(g, cx - 34, baseY - 46, 24, 20, false);
-  dome(g, cx + 34, baseY - 46, 24, 20, false);
-  // 큰 돔의 드럼: 아치 창이 빙 둘리고, 가장자리 창은 비스듬해서 좁게 보임
-  stoneWall(g, cx - 34, baseY - 64, 68, 16);
-  for (let i = 0; i < 11; i++) {
-    const a = ((i + 0.5) / 11) * Math.PI;
-    const wx = cx - Math.cos(a) * 31;
-    archWindow(g, wx, baseY - 61, 2.6 * Math.sin(a) + 0.6, 8, i === 5);
+  // 1) 가운데 큰 돔: 아치 창이 둘린 드럼 위에, 드럼 둘레에 버팀 작은 탑
+  stoneWall(g, cx - 34, baseY - 82, 68, 14);
+  for (let i = 0; i < 13; i++) {
+    const t = (i + 0.5) / 13;
+    const ang = t * Math.PI;
+    const wx = cx - Math.cos(ang) * 31;
+    archWindow(g, wx, baseY - 79.5, 2.4 * Math.sin(ang) + 0.5, 7, i === 6 || i === 3);
   }
-  // 드럼을 받치는 작은 탑(버팀벽 위 뾰족 지붕)
-  for (const dx of [-36, 36]) {
+  for (const dx of [-37, -20, 20, 37]) {
     g.fillStyle = "#e6d9bf";
-    g.fillRect(cx + dx - 2, baseY - 70, 4, 10);
+    g.fillRect(cx + dx - 2, baseY - 88, 4, 12);
     g.fillStyle = LEAD[1];
     g.beginPath();
-    g.moveTo(cx + dx - 2.6, baseY - 70);
-    g.lineTo(cx + dx, baseY - 76);
-    g.lineTo(cx + dx + 2.6, baseY - 70);
+    g.moveTo(cx + dx - 2.8, baseY - 88);
+    g.quadraticCurveTo(cx + dx, baseY - 91, cx + dx, baseY - 95);
+    g.quadraticCurveTo(cx + dx, baseY - 91, cx + dx + 2.8, baseY - 88);
     g.closePath();
     g.fill();
   }
-  // 가운데 큰 돔
-  dome(g, cx, baseY - 64, 38, 32, true);
+  dome(g, cx, baseY - 82, 40, 34, true);
 
-  // 안쪽 첨탑 네 개: 뒤쪽 두 개는 조금 작고 흐리게, 앞쪽 두 개는 크고 진하게
-  minaret(g, cx - 82, baseY, 126, 3, 0.5);
-  minaret(g, cx + 82, baseY, 126, 3, 0.5);
-  minaret(g, cx - 98, baseY, 142, 3, 0);
-  minaret(g, cx + 98, baseY, 142, 3, 0);
+  // 2) 큰 돔을 네 방향에서 받치는 반돔: 좌우 둘과, 앞쪽(우리를 향한) 하나가 가장 앞에 와서 큰 돔 아랫단을 가림
+  const semi = (x, y, rx, ry) => {
+    dome(g, x, y, rx, ry, false);
+    // 반돔 아래 받침벽과 작은 창
+    stoneWall(g, x - rx + 2, y, rx * 2 - 4, 7);
+    for (let i = 0; i < 5; i++) archWindow(g, x - rx * 0.6 + (i * rx * 1.2) / 4, y + 1.5, 1.8, 4, i === 2);
+  };
+  semi(cx - 40, baseY - 60, 26, 20);
+  semi(cx + 40, baseY - 60, 26, 20);
+  semi(cx, baseY - 58, 30, 18);
+
+  // 3) 반돔 둘레 작은 반원 돔들과 모서리 탑 돔
+  for (const [dx, dy, rx] of [
+    [-62, -44, 10],
+    [-46, -46, 8],
+    [-18, -45, 8],
+    [18, -45, 8],
+    [46, -46, 8],
+    [62, -44, 10],
+  ]) {
+    dome(g, cx + dx, baseY + dy, rx, rx * 0.85, false);
+  }
+  for (const dx of [-74, 74]) dome(g, cx + dx, baseY - 44, 9, 9, true);
+
+  // 4) 앞 안뜰 회랑: 아치가 끝없이 이어진 낮은 벽과, 그 위에 줄지어 얹힌 작은 돔들
+  const arcadeTop = baseY - 18;
+  stoneWall(g, cx - 108, arcadeTop, 216, 18);
+  for (let i = 0; i < 22; i++) {
+    const wx = cx - 103 + i * 9.8;
+    if (Math.abs(wx - cx) < 12) continue;
+    archWindow(g, wx, arcadeTop + 5, 4.6, 12, (i * 5) % 7 === 0);
+  }
+  g.fillStyle = "#f4ead6";
+  g.fillRect(cx - 109, arcadeTop - 1.2, 218, 1.4);
+  for (let i = 0; i < 22; i++) {
+    const wx = cx - 103 + i * 9.8;
+    if (Math.abs(wx - cx) < 12) continue;
+    dome(g, wx, arcadeTop - 0.5, 4.6, 4.2, false);
+  }
+  // 정문: 회랑보다 높게 솟은 뾰족 아치 문
+  stoneWall(g, cx - 11, arcadeTop - 12, 22, 30);
+  g.fillStyle = "#24394d";
+  g.beginPath();
+  g.moveTo(cx - 6, baseY);
+  g.lineTo(cx - 6, arcadeTop - 1);
+  g.quadraticCurveTo(cx - 6, arcadeTop - 9, cx, arcadeTop - 11);
+  g.quadraticCurveTo(cx + 6, arcadeTop - 9, cx + 6, arcadeTop - 1);
+  g.lineTo(cx + 6, baseY);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(242,194,122,0.85)";
+  g.fillRect(cx - 4, arcadeTop + 4, 8, 14);
+  dome(g, cx, arcadeTop - 12, 7, 6, true);
+
+  // 앞쪽 첨탑 두 개: 크고 진하게
+  minaret(g, cx - 100, baseY, 146, 3, 0);
+  minaret(g, cx + 100, baseY, 146, 3, 0);
 
   // 첨탑 사이 등불 줄(마흐야)
   mahya = [];
-  for (const [x0, x1] of [[cx - 96, cx - 128], [cx + 96, cx + 128]]) {
+  for (const [x0, x1] of [[cx - 98, cx - 132], [cx + 98, cx + 132]]) {
     for (let i = 1; i < 8; i++) {
       const k = i / 8;
-      mahya.push({ x: x0 + (x1 - x0) * k, y: baseY - 104 + 10 * 4 * k * (1 - k), phase: i * 0.9 });
+      mahya.push({ x: x0 + (x1 - x0) * k, y: baseY - 106 + 10 * 4 * k * (1 - k), phase: i * 0.9 });
     }
   }
   g.strokeStyle = "rgba(60,50,40,0.6)";
   g.lineWidth = 0.4;
-  for (const [x0, x1] of [[cx - 96, cx - 128], [cx + 96, cx + 128]]) {
+  for (const [x0, x1] of [[cx - 98, cx - 132], [cx + 98, cx + 132]]) {
     g.beginPath();
-    g.moveTo(x0, baseY - 104);
-    g.quadraticCurveTo((x0 + x1) / 2, baseY - 84, x1, baseY - 104);
+    g.moveTo(x0, baseY - 106);
+    g.quadraticCurveTo((x0 + x1) / 2, baseY - 86, x1, baseY - 106);
     g.stroke();
   }
 }
