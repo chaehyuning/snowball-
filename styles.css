@@ -1229,13 +1229,7 @@ body.picker-open .meta {
   display: inline;
 }
 
-.weather-toggle .weather-off {
-  display: none;
-}
 
-.weather-toggle[data-off="true"] .weather-off {
-  display: inline;
-}
 
 /* 튜토리얼: 대상만 밝게 비추고 나머지는 어둡게 */
 .tour-spot {
@@ -2172,4 +2166,58 @@ body.picker-open .reply-float {
 .letter-card textarea {
   font-family: var(--story);
   font-size: 15px;
+}
+
+/* ── 실시간 낮·밤 배경 ─────────────────────────────────────
+   지금 보는 도시의 현지 시각에 맞춰 배경 빛이 바뀜 (스노우볼 속 그림은 그대로).
+   새벽 분홍빛 · 낮 푸른 하늘빛 · 해 질 녘 주황빛 · 밤 짙은 남색과 별 */
+.daylight {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.6s ease, background 1.6s ease;
+}
+
+html[data-daypart] .daylight {
+  opacity: 1;
+}
+
+html[data-daypart="dawn"] .daylight {
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 100%, rgba(255, 150, 140, 0.34), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(150, 160, 220, 0.22), transparent 70%);
+}
+
+html[data-daypart="day"] .daylight {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(140, 185, 245, 0.42), transparent 72%),
+    radial-gradient(ellipse 50% 35% at 78% 8%, rgba(255, 236, 190, 0.22), transparent 70%);
+}
+
+html[data-daypart="dusk"] .daylight {
+  background:
+    radial-gradient(ellipse 95% 55% at 50% 100%, rgba(255, 140, 70, 0.36), transparent 70%),
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(120, 90, 180, 0.28), transparent 72%);
+}
+
+html[data-daypart="night"] .daylight {
+  background:
+    radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.7), transparent 60%),
+    radial-gradient(1px 1px at 27% 8%, rgba(255, 255, 255, 0.5), transparent 60%),
+    radial-gradient(1.5px 1.5px at 41% 22%, rgba(255, 255, 255, 0.6), transparent 60%),
+    radial-gradient(1px 1px at 63% 12%, rgba(255, 255, 255, 0.55), transparent 60%),
+    radial-gradient(1.5px 1.5px at 78% 26%, rgba(255, 255, 255, 0.6), transparent 60%),
+    radial-gradient(1px 1px at 88% 9%, rgba(255, 255, 255, 0.5), transparent 60%),
+    radial-gradient(1px 1px at 8% 44%, rgba(255, 255, 255, 0.4), transparent 60%),
+    radial-gradient(1px 1px at 93% 48%, rgba(255, 255, 255, 0.4), transparent 60%),
+    radial-gradient(1px 1px at 55% 4%, rgba(255, 255, 255, 0.45), transparent 60%),
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(40, 60, 140, 0.42), transparent 72%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daylight {
+    transition: none;
+  }
 }

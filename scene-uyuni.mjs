@@ -168,7 +168,11 @@ function paintUyuni(g, globe, groundAt) {
     ridge.push([x, h]);
   }
   for (const [flip, color] of [[-1, "rgba(150,140,190,0.75)"], [1, "rgba(150,140,190,0.4)"]]) {
-    g.fillStyle = color;
+    // 능선 꼭대기는 해 뜨는 빛을 받아 복숭아빛, 지평선 쪽은 짙은 라일락 (거울 속은 뒤집혀서 반대)
+    const shade = g.createLinearGradient(0, HORIZON + flip * 22, 0, HORIZON);
+    shade.addColorStop(0, flip < 0 ? "rgba(214,176,190,0.85)" : "rgba(170,150,200,0.35)");
+    shade.addColorStop(1, color);
+    g.fillStyle = shade;
     g.beginPath();
     g.moveTo(left, HORIZON);
     for (const [x, h] of ridge) g.lineTo(x, HORIZON + flip * h);

@@ -58,6 +58,13 @@ function paintParis(g, globe, groundAt) {
     // 벽
     g.fillStyle = "rgba(196,160,170,0.75)";
     g.fillRect(x, wallTop, w - 1, wallH + 4);
+    // 탑 조명이 있는 가운데 쪽 면은 밝고, 바깥쪽으로 갈수록 그늘 (건물마다 부드럽게 번짐)
+    const toward = x + w / 2 < 200 ? 1 : -1;
+    const face = g.createLinearGradient(x, 0, x + w - 1, 0);
+    face.addColorStop(toward > 0 ? 1 : 0, "rgba(255,214,170,0.18)");
+    face.addColorStop(toward > 0 ? 0 : 1, "rgba(60,40,80,0.22)");
+    g.fillStyle = face;
+    g.fillRect(x, wallTop, w - 1, wallH + 4);
     // 층을 나누는 발코니 줄
     g.fillStyle = "rgba(110,80,110,0.5)";
     for (let fy = wallTop + 3.5; fy < base; fy += 3.5) g.fillRect(x, fy, w - 1, 0.5);
@@ -106,9 +113,17 @@ function paintParis(g, globe, groundAt) {
   for (let i = 0; i < 26; i++) {
     const side = i % 2 ? 1 : -1;
     const tx = 200 + side * r(28, 120);
-    g.fillStyle = ["#24324a", "#2b3b52", "#1e2a40"][Math.floor(rnd() * 3)];
+    const ty = 262 - r(2, 6);
+    const rx = r(5, 9);
+    const ry = r(5, 8);
+    // 둥근 나무 덩어리: 탑 쪽(가운데) 위는 조명을 받아 밝고 반대쪽 아래로 어두워짐
+    const lit = g.createRadialGradient(tx - side * rx * 0.4, ty - ry * 0.4, 0, tx, ty, Math.max(rx, ry) * 1.1);
+    lit.addColorStop(0, "#3e5068");
+    lit.addColorStop(0.6, ["#24324a", "#2b3b52", "#1e2a40"][Math.floor(rnd() * 3)]);
+    lit.addColorStop(1, "#141c2c");
+    g.fillStyle = lit;
     g.beginPath();
-    g.ellipse(tx, 262 - r(2, 6), r(5, 9), r(5, 8), 0, 0, Math.PI * 2);
+    g.ellipse(tx, ty, rx, ry, 0, 0, Math.PI * 2);
     g.fill();
   }
 

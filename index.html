@@ -24,6 +24,7 @@
 
   <body>
     <!-- 배경: 어두운 바탕 위로 비단처럼 흐르는 빛줄기 -->
+    <div class="daylight" aria-hidden="true"></div>
     <svg class="silk" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <defs>
         <linearGradient id="silk-a" x1="0" y1="1" x2="1" y2="0">
@@ -77,13 +78,6 @@
             <circle cx="6.5" cy="17" r="2.5" fill="#ecebe8" />
             <circle cx="16.5" cy="15" r="2.5" fill="#ecebe8" />
             <path class="music-off" d="M3 3l18 18" stroke="#ff8a8a" />
-          </svg>
-        </button>
-        <button type="button" class="weather-toggle" aria-label="실시간 날씨 끄기" title="실시간 날씨 끄기">
-          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#ecebe8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M7 15.5a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17 8.5a3.5 3.5 0 0 1 .5 7Z" />
-            <path d="M9 18.5l-.8 2M13 18.5l-.8 2M17 18.5l-.8 2" />
-            <path class="weather-off" d="M3 3l18 18" stroke="#ff8a8a" />
           </svg>
         </button>
         <button type="button" class="letter-toggle" aria-label="스노우볼 편지 보내기" title="편지 보내기">

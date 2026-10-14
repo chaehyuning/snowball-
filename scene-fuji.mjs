@@ -343,8 +343,11 @@ function paintPagoda(g, x, baseY, scale) {
     g.fillStyle = wall;
     g.fillRect(-w * 0.32, y - h, w * 0.64, h);
     // 처마 밑 그늘
-    g.fillStyle = "rgba(30,10,10,0.45)";
-    g.fillRect(-w * 0.32, y - h, w * 0.64, 2);
+    const eave = g.createLinearGradient(0, y - h, 0, y - h + 4);
+    eave.addColorStop(0, "rgba(30,10,10,0.5)");
+    eave.addColorStop(1, "rgba(30,10,10,0)");
+    g.fillStyle = eave;
+    g.fillRect(-w * 0.32, y - h, w * 0.64, 4);
     // 기둥 사이 문살
     g.fillStyle = "rgba(255,220,190,0.35)";
     for (let k = -1; k <= 1; k++) g.fillRect(k * w * 0.16 - 0.3, y - h + 2.5, 0.6, h - 3);

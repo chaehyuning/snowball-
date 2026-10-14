@@ -162,6 +162,33 @@ function paintHall(g, cx, ground) {
     marble.addColorStop(1, "#c9c4b4");
     g.fillStyle = marble;
     g.fillRect(cx - w / 2, y - h, w, h);
+    // 단의 양끝: 뒤로 물러나는 옆면 (해가 왼쪽에서 들어 왼쪽 옆면은 밝고 오른쪽은 그늘)
+    for (const side of [-1, 1]) {
+      const ex = cx + (side * w) / 2;
+      g.fillStyle = side < 0 ? "#efebe0" : "#a9a392";
+      g.beginPath();
+      g.moveTo(ex, y);
+      g.lineTo(ex, y - h);
+      g.lineTo(ex - side * 6, y - h - 3);
+      g.lineTo(ex - side * 6, y - 3);
+      g.closePath();
+      g.fill();
+    }
+    // 위에서 내려다보이는 단의 윗면: 뒤로 물러나는 밝은 띠
+    g.fillStyle = "#fdfcf7";
+    g.beginPath();
+    g.moveTo(cx - w / 2, y - h);
+    g.lineTo(cx + w / 2, y - h);
+    g.lineTo(cx + w / 2 - 6, y - h - 3);
+    g.lineTo(cx - w / 2 + 6, y - h - 3);
+    g.closePath();
+    g.fill();
+    // 단 아래쪽이 땅·아래 단에 닿는 곳은 어두움
+    const foot = g.createLinearGradient(0, y - 3, 0, y);
+    foot.addColorStop(0, "rgba(80,70,50,0)");
+    foot.addColorStop(1, "rgba(80,70,50,0.3)");
+    g.fillStyle = foot;
+    g.fillRect(cx - w / 2, y - 3, w, 3);
     // 턱 밑 그늘
     const lip = g.createLinearGradient(0, y - h + 1, 0, y - h + 4);
     lip.addColorStop(0, "rgba(90,80,60,0.35)");
@@ -212,16 +239,38 @@ function paintHall(g, cx, ground) {
   wall.addColorStop(1, RED[1]);
   g.fillStyle = wall;
   g.fillRect(cx - 82, bodyTop, 164, 30);
+  // 몸체 양끝 옆벽: 뒤로 물러나는 붉은 벽 (오른쪽은 그늘)
+  for (const side of [-1, 1]) {
+    const ex = cx + side * 82;
+    g.fillStyle = side < 0 ? "#c4382a" : "#5e140c";
+    g.beginPath();
+    g.moveTo(ex, bodyTop + 30);
+    g.lineTo(ex, bodyTop);
+    g.lineTo(ex - side * 8, bodyTop - 4);
+    g.lineTo(ex - side * 8, bodyTop + 26);
+    g.closePath();
+    g.fill();
+  }
   const bay = 164 / 11;
   for (let i = 0; i <= 11; i++) {
     const x = cx - 82 + i * bay;
     // 둥근 기둥: 왼쪽에 빛, 오른쪽에 그늘
-    const col = g.createLinearGradient(x - 1.4, 0, x + 1.4, 0);
-    col.addColorStop(0, "#d24434");
-    col.addColorStop(0.5, RED[1]);
+    // 기둥이 문 쪽(오른쪽)에 드리운 그림자
+    const cast = g.createLinearGradient(x + 1.4, 0, x + 5, 0);
+    cast.addColorStop(0, "rgba(40,8,4,0.3)");
+    cast.addColorStop(1, "rgba(40,8,4,0)");
+    g.fillStyle = cast;
+    g.fillRect(x + 1.4, bodyTop, 3.6, 30);
+    const col = g.createLinearGradient(x - 1.6, 0, x + 1.6, 0);
+    col.addColorStop(0, "#c03a2c");
+    col.addColorStop(0.3, "#ee6a52");
+    col.addColorStop(0.65, RED[1]);
     col.addColorStop(1, RED[2]);
     g.fillStyle = col;
-    g.fillRect(x - 1.4, bodyTop, 2.8, 30);
+    g.fillRect(x - 1.6, bodyTop, 3.2, 30);
+    // 기둥 받침돌
+    g.fillStyle = "#e9e4d6";
+    g.fillRect(x - 2.4, bodyTop + 28.4, 4.8, 1.6);
     if (i < 11) {
       // 문짝: 안쪽으로 들어가 위가 어둡고, 위는 마름모 격자 창살, 아래는 판문
       const dx = x + 2.4;
@@ -403,6 +452,20 @@ function roof(g, cx, baseY, bottomW, topW, h) {
       g.arc(px, py - 1.2, 0.8, 0, Math.PI * 2);
       g.fill();
     }
+  }
+  // 우진각 지붕의 양 끝 경사면: 내림마루 바깥쪽 삼각 면. 왼쪽 끝은 해를 받아 밝고 오른쪽 끝은 그늘
+  for (const dir of [-1, 1]) {
+    const sx = cx + (dir * topW) / 2;
+    const ex = dir > 0 ? br + tipX : bl - tipX;
+    g.fillStyle = dir < 0 ? "rgba(255,246,210,0.28)" : "rgba(90,50,0,0.32)";
+    g.beginPath();
+    g.moveTo(sx, baseY - h);
+    g.quadraticCurveTo(cx + dir * (bottomW / 2 - 12), baseY - h * 0.5, ex, baseY - tipY);
+    g.lineTo(ex, baseY + 4);
+    g.lineTo(ex + dir * 20, baseY + 4);
+    g.lineTo(ex + dir * 20, baseY - h - 4);
+    g.closePath();
+    g.fill();
   }
   // 햇빛을 받는 왼쪽 면
   const light = g.createLinearGradient(bl, 0, br, 0);
