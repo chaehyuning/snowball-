@@ -481,12 +481,22 @@ function paintOperaHouse(g) {
   // 왼쪽으로 열린 입구 안은 어두운 내부와 구릿빛 유리. 뒤(오른쪽)부터 그려서 앞 껍데기가 겹침
   // [꼭짓점 x, 꼭짓점 y, 밑변 폭, 밑변 y]. 꼭짓점이 밑동보다 왼쪽으로 튀어나와 앞으로 기운 모양
   // 맨 오른쪽 껍데기는 뒤로 맞붙어 반대쪽(오른쪽)을 보고 있어 좌우를 뒤집어 그림
+  // 두 무리가 나란히: 뒤(오른쪽 위)는 큰 콘서트홀, 앞(왼쪽 아래)은 오페라극장. 무리마다 같은 쪽을 향한 조가비 셋과
+  // 끝에서 등을 맞댄 반대쪽 조가비 하나. 맨 왼쪽 앞에는 작은 레스토랑 조가비 한 쌍이 따로 앉음
   const shells = [
-    [346, 210, 56, 256, true],
-    [262, 186, 56, 256, false],
-    [233, 204, 48, 256, false],
-    [210, 226, 38, 256, false],
-    [176, 242, 26, 263, false],
+    // 콘서트홀 (뒤)
+    [348, 204, 48, 256, true],
+    [292, 184, 54, 256, false],
+    [268, 200, 46, 256, false],
+    [249, 218, 36, 256, false],
+    // 오페라극장 (앞, 조금 작고 왼쪽 아래)
+    [304, 216, 42, 260, true],
+    [240, 200, 46, 260, false],
+    [219, 214, 38, 260, false],
+    [203, 230, 28, 260, false],
+    // 레스토랑
+    [196, 246, 18, 263, true],
+    [172, 244, 22, 263, false],
   ];
   for (const [ax, ay, w, by, flip] of shells) {
     g.save();
@@ -504,14 +514,14 @@ function paintOperaHouse(g) {
 function shell(g, ax, ay, w, by) {
   const h = by - ay;
   const x0 = ax + w * 0.16; // 입구 밑동 왼쪽: 끝보다 오른쪽이라 끝이 앞으로 튀어나옴
-  const innerX = ax + w * 0.5; // 흰 겉면과 입구가 만나는 밑동
+  const innerX = ax + w * 0.38; // 흰 겉면과 입구가 만나는 밑동 (입구는 조가비의 3분의 1 남짓)
   const x1 = ax + w;
   // 등 곡선: 구의 한 조각이라 끝에서 거의 수평으로 나가다 둥글게 부풀어 밑동으로 떨어짐 (3차 곡선)
   const outerCtl = [x1 - w * 0.02, ay - h * 0.04];
   const back1 = [ax + w * 0.42, ay - h * 0.1];
   const back2 = [x1 + w * 0.04, ay + h * 0.3];
   const backTo = () => g.bezierCurveTo(back1[0], back1[1], back2[0], back2[1], x1, by);
-  const innerCtl = [ax + w * 0.5, ay + h * 0.3]; // 흰 겉면 아래 경계는 오른쪽 위로 오목하게 파여 입구가 크게 보임
+  const innerCtl = [ax + w * 0.36, ay + h * 0.42]; // 흰 겉면 아래 경계: 살짝 오목하게 파인 곡선
   const edgeCtl = [ax + w * 0.06, ay + h * 0.62];
 
   // 입구: 꼭짓점에서 왼쪽 가장자리를 따라 내려왔다가 안쪽 곡선으로 올라감
@@ -521,16 +531,18 @@ function shell(g, ax, ay, w, by) {
   g.lineTo(innerX, by);
   g.quadraticCurveTo(innerCtl[0], innerCtl[1], ax, ay);
   g.closePath();
+  // 입구: 위는 조가비 안쪽 콘크리트 갈비뼈의 그늘, 아래로 내려올수록 하늘과 햇빛을 비추는 구릿빛 유리벽
   const mouth = g.createLinearGradient(0, ay, 0, by);
-  mouth.addColorStop(0, "#2c2a32");
-  mouth.addColorStop(0.55, "#3e3434");
-  mouth.addColorStop(1, "#7a5a3e");
+  mouth.addColorStop(0, "#4a3e3a");
+  mouth.addColorStop(0.45, "#7a5638");
+  mouth.addColorStop(0.8, "#b9824a");
+  mouth.addColorStop(1, "#d8a46a");
   g.fillStyle = mouth;
   g.fill();
   g.save();
   g.clip();
   // 아래쪽 유리벽의 세로 살과 위쪽 콘크리트 갈비뼈
-  g.strokeStyle = "rgba(230,190,140,0.3)";
+  g.strokeStyle = "rgba(70,45,30,0.45)";
   g.lineWidth = 0.4;
   for (let x = x0; x < innerX; x += 2.2) {
     g.beginPath();
@@ -584,6 +596,23 @@ function shell(g, ax, ay, w, by) {
       x1 + (innerX - x1) * t,
       by,
     );
+    g.stroke();
+  }
+  g.restore();
+  // V자 타일 결: 등 곡선 쪽으로 열린 아주 옅은 갈매기 무늬 (실제 지붕의 타일 판)
+  g.save();
+  surface();
+  g.clip();
+  g.strokeStyle = "rgba(170,160,140,0.16)";
+  g.lineWidth = 0.35;
+  for (let k = 0; k < 9; k++) {
+    const t = (k + 0.5) / 9;
+    const px = ax + (x1 - ax) * t;
+    const py = ay + (by - ay) * t * 0.9;
+    g.beginPath();
+    g.moveTo(px - 3, py - 3);
+    g.lineTo(px, py);
+    g.lineTo(px + 3.2, py - 2.4);
     g.stroke();
   }
   g.restore();
