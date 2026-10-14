@@ -984,12 +984,31 @@ function paintFrontenac(g, rnd) {
     g.stroke();
   };
   // 사진의 원뿔(벽 위 원뿔 지붕)을 ②의 망루로: 밑변 x0~x1, 처마 y, 꼭짓점 높이 apexY, 몸통 아래 끝 baseY
-  const coneP = (x0, x1, eaveY, apexY, baseY) => {
+  // hang: 벽 모서리에 매달린 작은 망루(바르티잔) — 몸통 아래를 거꾸로 선 돌 받침이 받침
+  const coneP = (x0, x1, eaveY, apexY, baseY, hang = false) => {
     const w = (x1 - x0) * S * 0.78;
-    turret(X((x0 + x1) / 2), w, (baseY - eaveY) * S, (eaveY - apexY) * S, Y(baseY));
+    const cx = X((x0 + x1) / 2);
+    turret(cx, w, (baseY - eaveY) * S, (eaveY - apexY) * S, Y(baseY));
+    if (hang) {
+      const by = Y(baseY);
+      const corb = g.createLinearGradient(cx - w / 2, 0, cx + w / 2, 0);
+      corb.addColorStop(0, "#6e675e");
+      corb.addColorStop(1, "#b9b0a0");
+      g.fillStyle = corb;
+      g.beginPath();
+      g.moveTo(cx - w / 2, by);
+      g.lineTo(cx + w / 2, by);
+      g.lineTo(cx, by + w * 0.9);
+      g.closePath();
+      g.fill();
+      g.fillStyle = "rgba(230,215,190,0.6)";
+      g.fillRect(cx - w / 2, by - 0.6, w, 0.6);
+    }
   };
 
-  // 1) 맨 왼쪽 뒤: 뾰족한 초록 지붕들과 그 아래 돌벽
+  // 1) 맨 왼쪽 뒤: 뾰족한 초록 지붕들과 그 아래 돌벽. 굴뚝은 지붕 뒤에서 솟아 윗부분만 보이게 먼저 그림
+  chimney(X(214), Y(560), 50 * S);
+  chimney(X(270), Y(560), 46 * S);
   copperP([[165, 625], [165, 548], [192, 512], [222, 540], [252, 518], [292, 546], [292, 625]], 165, 292);
   sunLine([[192, 512], [222, 540]]);
   sunLine([[252, 518], [292, 546]]);
@@ -1005,7 +1024,9 @@ function paintFrontenac(g, rnd) {
   dormer(X(205), Y(566), 0.9);
   dormer(X(268), Y(566), 0.9);
 
-  // 2) 탑 앞 낮은 초록 지붕 줄과 박공 지붕창
+  // 2) 탑 앞 낮은 초록 지붕 줄과 박공 지붕창 (굴뚝은 지붕 뒤에서)
+  chimney(X(452), Y(572), 30 * S);
+  chimney(X(566), Y(568), 30 * S);
   copperP([[392, 562], [612, 556], [612, 625], [392, 625]], 392, 612);
   for (let x = 410; x < 600; x += 22) dormer(X(x), Y(592), 1);
 
@@ -1034,8 +1055,9 @@ function paintFrontenac(g, rnd) {
   for (let px = 518; px <= 552; px += 5) g.fillRect(X(px), Y(345) - 2.4, 0.4, 1.6);
   g.fillStyle = "#d9c8a8";
   g.fillRect(X(428), Y(458), (606 - 428) * S, 0.9);
-  for (const [y, x0, x1] of [[446, 484, 596], [414, 494, 576], [384, 506, 560], [360, 520, 548]]) {
-    for (let x = x0; x <= x1; x += 18) dormer(X(x), Y(y), 0.95);
+  // 지붕창: 아래 벽의 창 열에 맞춰 세로로 줄을 세우고, 위로 갈수록 작고 적게 (줄끼리 겹치지 않게)
+  for (const [y, x0, x1, sc] of [[448, 486, 590, 0.8], [418, 503, 573, 0.72], [390, 520, 556, 0.64], [366, 529, 547, 0.56]]) {
+    for (let x = x0; x <= x1 + 0.1; x += 17.4) dormer(X(x), Y(y), sc);
   }
   g.strokeStyle = "#1c2a26";
   g.lineWidth = 0.8;
@@ -1054,35 +1076,34 @@ function paintFrontenac(g, rnd) {
   g.fillStyle = "#1f342b";
   g.fill();
   wallP(285, 398, 528, 625, { lit: 0.4, stoneAll: true });
+  // 굴뚝은 지붕 뒤 용마루 가까이에서 솟음: 지붕보다 먼저 그려 아랫부분이 지붕에 가려지게
+  chimney(X(318), Y(500), 52 * S);
+  chimney(X(352), Y(470), 60 * S);
+  chimney(X(378), Y(505), 48 * S);
   copperP([[280, 530], [402, 530], [346, 455], [326, 455]], 280, 402);
   sunLine([[346, 455], [402, 530]]);
   gable(X(335), Y(530), 60 * S, 60 * S, "#b2a894");
-  chimney(X(350), Y(528), (528 - 470) * S);
   dormer(X(296), Y(520), 0.85);
   dormer(X(384), Y(520), 0.85);
 
   // 5) 탑 오른쪽 아래 작은 원뿔과, 오른쪽 벽돌 건물 위 원뿔 망루 둘
-  coneP(548, 576, 560, 526, 600);
+  // 탑 앞에 따로 선 작은 원뿔 망루: 땅에서부터 솟음 (벽 한가운데에 떠 있지 않게)
+  coneP(546, 578, 566, 528, 625);
+  chimney(X(690), Y(604), 26 * S);
   wallP(648, 742, 600, 640, { lit: 0.85, rows: 1 });
   coneP(648, 692, 602, 552, 640);
   coneP(694, 742, 610, 564, 640);
 
   // 5-1) ②처럼 지붕선 곳곳에 작은 망루와 굴뚝을 촘촘히: 건물 모서리와 덩어리가 만나는 자리마다
-  // 굴뚝 무리
-  for (const [x, y, h] of [[214, 548, 34], [236, 540, 30], [316, 505, 34], [372, 505, 30], [452, 584, 26], [566, 580, 28], [684, 604, 22]]) {
-    chimney(X(x), Y(y), h * S);
-  }
   // 맨 왼쪽 끝과 왼쪽 무리·돌 건물 사이의 원뿔 망루
   coneP(160, 184, 556, 500, 625);
   coneP(280, 300, 552, 506, 625);
   // 돌 건물 양 모서리의 작은 매달린 망루(바르티잔)
-  coneP(282, 298, 534, 498, 572);
-  coneP(392, 408, 534, 500, 572);
+  coneP(282, 298, 534, 498, 572, true);
+  coneP(392, 408, 534, 500, 572, true);
   // 낮은 지붕 줄 양끝과 가운데의 원뿔
   coneP(398, 418, 572, 534, 625);
   coneP(612, 632, 566, 524, 625);
-  // 탑 앞면 가운데 아래 작은 장식 박공
-  gable(X(538), Y(560), 24 * S, 34 * S);
   // 오른쪽 벽돌 건물 뒤 작은 원뿔과 박공
   coneP(740, 758, 612, 572, 640);
   gable(X(670), Y(600), 20 * S, 26 * S);
