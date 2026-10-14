@@ -273,14 +273,23 @@ function mottle(g, rnd, x0, x1, y0, y1, count, colors) {
 // fade: 멀리 있을수록 하늘빛 먼지에 묻혀 흐려지는 정도
 function pyramid(g, cx, baseY, half, h, cap, fade) {
   const apexY = baseY - h;
-  g.fillStyle = "#efae6c";
+  // 해 쪽 면: 꼭대기는 노을빛을 받아 밝고 아래로 갈수록 모래 반사로 따뜻하게
+  const litFace = g.createLinearGradient(0, apexY, 0, baseY);
+  litFace.addColorStop(0, "#ffd29a");
+  litFace.addColorStop(0.5, "#efae6c");
+  litFace.addColorStop(1, "#d68a56");
+  g.fillStyle = litFace;
   g.beginPath();
   g.moveTo(cx - half, baseY);
   g.lineTo(cx, apexY);
   g.lineTo(cx + half * 0.25, baseY);
   g.closePath();
   g.fill();
-  g.fillStyle = "#8a5866";
+  // 그늘 면: 꼭대기 쪽은 하늘빛이 비쳐 보랏빛, 아래는 짙음
+  const darkFace = g.createLinearGradient(0, apexY, 0, baseY);
+  darkFace.addColorStop(0, "#9c6c80");
+  darkFace.addColorStop(1, "#6e4456");
+  g.fillStyle = darkFace;
   g.beginPath();
   g.moveTo(cx + half * 0.25, baseY);
   g.lineTo(cx, apexY);
@@ -314,6 +323,12 @@ function pyramid(g, cx, baseY, half, h, cap, fade) {
   g.moveTo(cx, apexY);
   g.lineTo(cx + half * 0.25, baseY);
   g.stroke();
+  // 땅에 닿는 아랫단은 모래에 묻혀 어두움
+  const foot = g.createLinearGradient(0, baseY - h * 0.12, 0, baseY);
+  foot.addColorStop(0, "rgba(90,50,40,0)");
+  foot.addColorStop(1, "rgba(90,50,40,0.35)");
+  g.fillStyle = foot;
+  g.fillRect(cx - half, baseY - h * 0.12, half * 2, h * 0.12);
   g.restore();
   // 바깥 모서리는 돌단이 깨져 살짝 들쭉날쭉
   g.fillStyle = "#efae6c";
@@ -427,6 +442,27 @@ function sphinx(g) {
   light.addColorStop(1, "rgba(60,24,6,0.32)");
   g.fillStyle = light;
   g.fillRect(40, 205, 212, 98);
+  // 몸통의 둥근 부피: 등은 밝고 배 쪽은 어둡게 한 번 더, 오른쪽 가슴과 앞발 앞면은 그늘
+  const belly = g.createLinearGradient(0, 255, 0, 300);
+  belly.addColorStop(0, "rgba(60,24,6,0)");
+  belly.addColorStop(1, "rgba(60,24,6,0.28)");
+  g.fillStyle = belly;
+  g.fillRect(40, 255, 212, 48);
+  const chest = g.createLinearGradient(150, 0, 200, 0);
+  chest.addColorStop(0, "rgba(70,30,30,0)");
+  chest.addColorStop(1, "rgba(70,30,30,0.22)");
+  g.fillStyle = chest;
+  g.fillRect(150, 230, 102, 72);
+  // 왼쪽 뒤에서 비치는 노을: 윗선을 따라 밝은 테 (윤곽을 오른쪽 아래로 밀어 그린 선의 바깥만 남김)
+  g.save();
+  outline();
+  g.clip();
+  g.translate(1.6, 1.6);
+  outline();
+  g.strokeStyle = "rgba(255,214,150,0.75)";
+  g.lineWidth = 2.4;
+  g.stroke();
+  g.restore();
 
   // 두건 부분: 같은 돌 위에 머리 곡면을 따라 휜 줄무늬만 더함
   const nemesPath = () => {

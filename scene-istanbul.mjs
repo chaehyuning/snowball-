@@ -378,6 +378,32 @@ function dome(g, x, baseY, rx, ry, finial) {
   g.fillStyle = sheen;
   g.fillRect(x - rx, baseY - ry, rx * 2, ry);
   g.restore();
+  // 돔 아랫단은 둥글게 넘어가며 어두워짐 (공 모양 부피)
+  g.save();
+  g.beginPath();
+  g.ellipse(x, baseY, rx, ry, 0, Math.PI, 0);
+  g.closePath();
+  g.clip();
+  const ao = g.createLinearGradient(0, baseY - ry * 0.45, 0, baseY);
+  ao.addColorStop(0, "rgba(30,40,60,0)");
+  ao.addColorStop(1, "rgba(30,40,60,0.38)");
+  g.fillStyle = ao;
+  g.fillRect(x - rx, baseY - ry, rx * 2, ry);
+  // 오른쪽 위 달빛이 돔 가장자리에 가늘게 맺힘
+  g.filter = "blur(1px)";
+  g.strokeStyle = "rgba(220,235,255,0.35)";
+  g.lineWidth = Math.max(1, rx * 0.08);
+  g.beginPath();
+  g.ellipse(x, baseY, rx - g.lineWidth / 2, ry - g.lineWidth / 2, 0, -Math.PI * 0.42, -Math.PI * 0.08);
+  g.stroke();
+  g.filter = "none";
+  g.restore();
+  // 돔이 아래 벽에 드리운 그림자
+  const drop = g.createLinearGradient(0, baseY, 0, baseY + Math.max(3, ry * 0.25));
+  drop.addColorStop(0, "rgba(40,40,50,0.35)");
+  drop.addColorStop(1, "rgba(40,40,50,0)");
+  g.fillStyle = drop;
+  g.fillRect(x - rx * 0.9, baseY, rx * 1.8, Math.max(3, ry * 0.25));
   // 돔 아래 밝은 돌 테
   g.fillStyle = "#efe4cf";
   g.fillRect(x - rx - 0.5, baseY - 1.2, rx * 2 + 1, 1.4);
@@ -462,6 +488,17 @@ function stoneWall(g, x, y, w, h) {
     g.fillRect(x, by, w, 1.7);
     odd = !odd;
   }
+  // 아래로 갈수록, 오른쪽 모서리일수록 그늘: 벽이 땅에 붙어 있고 옆으로 꺾여 들어가는 느낌
+  const base = g.createLinearGradient(0, y + h * 0.5, 0, y + h);
+  base.addColorStop(0, "rgba(60,50,40,0)");
+  base.addColorStop(1, "rgba(60,50,40,0.22)");
+  g.fillStyle = base;
+  g.fillRect(x, y + h * 0.5, w, h * 0.5);
+  const endShade = g.createLinearGradient(x + w * 0.7, 0, x + w, 0);
+  endShade.addColorStop(0, "rgba(60,50,40,0)");
+  endShade.addColorStop(1, "rgba(60,50,40,0.16)");
+  g.fillStyle = endShade;
+  g.fillRect(x + w * 0.7, y, w * 0.3, h);
   const eave = g.createLinearGradient(0, y, 0, y + 4);
   eave.addColorStop(0, "rgba(80,60,40,0.4)");
   eave.addColorStop(1, "rgba(80,60,40,0)");

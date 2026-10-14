@@ -386,6 +386,14 @@ function paintSkyline(g, r, rnd, left, right) {
       const top = base - h - (layer ? 0 : 6);
       g.fillStyle = color;
       g.fillRect(x, top, w - 1.5, h + 40);
+      // 빌딩 오른쪽 옆면(그늘)과 달빛 받는 왼쪽 모서리, 옥상 윗면
+      // 왼쪽(달빛)에서 오른쪽으로 갈수록 서서히 어두워지는 면
+      const side = g.createLinearGradient(x, 0, x + w - 1.5, 0);
+      side.addColorStop(0, "rgba(150,170,230,0.12)");
+      side.addColorStop(0.5, "rgba(0,0,10,0)");
+      side.addColorStop(1, "rgba(0,0,10,0.3)");
+      g.fillStyle = side;
+      g.fillRect(x, top, w - 1.5, h + 40);
       // 옥상 붉은 항공 장애등
       if (rnd() < 0.25) {
         g.fillStyle = "#ff6a6a";
@@ -434,9 +442,17 @@ function pavilion(g, x, baseY) {
   // 기단
   g.fillStyle = "#6b6a78";
   g.fillRect(x - 30, baseY - 5, 60, 5);
-  // 기둥
+  // 기단 윗면과 오른쪽 옆면
+  // 정자 안쪽 뒤 그늘 (기둥 사이로 보이는 안쪽)
+  g.fillStyle = "rgba(20,15,25,0.55)";
+  g.fillRect(x - 25, baseY - 30, 50, 25);
+  // 기둥: 둥근 기둥이라 왼쪽(달빛)은 밝고 오른쪽은 어둡게
   for (const dx of [-24, -12, 0, 12, 24]) {
-    g.fillStyle = "#9a2a22";
+    const col = g.createLinearGradient(x + dx - 1.6, 0, x + dx + 1.6, 0);
+    col.addColorStop(0, "#c24438");
+    col.addColorStop(0.45, "#9a2a22");
+    col.addColorStop(1, "#5a160f");
+    g.fillStyle = col;
     g.fillRect(x + dx - 1.6, baseY - 30, 3.2, 25);
   }
   // 난간
@@ -470,6 +486,27 @@ function pavilion(g, x, baseY) {
     g.lineTo(x + k * 4.4, baseY - 35);
     g.stroke();
   }
+  // 지붕 양 끝 경사면: 왼쪽은 달빛, 오른쪽은 그늘
+  g.fillStyle = "rgba(170,180,220,0.18)";
+  g.beginPath();
+  g.moveTo(x - 10, baseY - 56);
+  g.quadraticCurveTo(x - 22, baseY - 46, x - 40, baseY - 40);
+  g.lineTo(x - 26, baseY - 36);
+  g.closePath();
+  g.fill();
+  g.fillStyle = "rgba(0,0,10,0.35)";
+  g.beginPath();
+  g.moveTo(x + 10, baseY - 56);
+  g.quadraticCurveTo(x + 22, baseY - 46, x + 40, baseY - 40);
+  g.lineTo(x + 26, baseY - 36);
+  g.closePath();
+  g.fill();
+  // 처마 밑 그늘: 아래로 번지며 옅어짐
+  const eaveG = g.createLinearGradient(0, baseY - 30, 0, baseY - 22);
+  eaveG.addColorStop(0, "rgba(0,0,10,0.4)");
+  eaveG.addColorStop(1, "rgba(0,0,10,0)");
+  g.fillStyle = eaveG;
+  g.fillRect(x - 28, baseY - 30, 56, 8);
   g.fillStyle = "#3a3d4a";
   g.fillRect(x - 11, baseY - 58, 22, 2.5);
   // 처마 밑 초롱

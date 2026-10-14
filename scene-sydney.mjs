@@ -421,7 +421,10 @@ function paintOperaHouse(g) {
     g.fillRect(OX(x0), OY(y) - 0.3, OX(x1) - OX(x0), 0.6);
   }
   // 어두운 가로 창 띠
-  g.fillStyle = "#4a3828";
+  // 창 띠: 검은 막대가 아니라 벽에 살짝 파인 그늘처럼 (옅고 가장자리가 번짐)
+  g.save();
+  g.filter = "blur(0.8px)";
+  g.fillStyle = "rgba(90,66,46,0.55)";
   for (const [x, y, w, h] of [
     [150, 912, 90, 6],
     [250, 900, 70, 5],
@@ -437,15 +440,8 @@ function paintOperaHouse(g) {
   ]) {
     g.fillRect(OX(x), OY(y), w * 0.22, h * 0.22);
   }
-  g.fillStyle = "rgba(255,226,180,0.4)";
-  for (let x = 522; x < 760; x += 14) g.fillRect(OX(x), OY(920), 0.4, 8 * 0.22);
-  // 창 띠 깊이: 위 처마 그늘과 아래 밝은 턱
-  for (const [x, y, w, h] of [[150, 912, 90, 6], [330, 914, 120, 6], [500, 900, 250, 5], [520, 920, 240, 8], [890, 914, 110, 6]]) {
-    g.fillStyle = "rgba(40,28,20,0.35)";
-    g.fillRect(OX(x) - 0.5, OY(y) - 0.8, w * 0.22 + 1, 0.8);
-    g.fillStyle = "rgba(250,236,210,0.7)";
-    g.fillRect(OX(x) - 0.5, OY(y + h), w * 0.22 + 1, 0.5);
-  }
+  g.restore();
+
 
   // 조가비가 기단 위에 드리운 그림자: 왼쪽 위에서 해가 드니 밑동 오른쪽으로 비스듬히
   g.save();
@@ -529,19 +525,14 @@ function paintOperaHouse(g) {
     // 등 곡선 안쪽을 따라 도는 그늘 띠: 껍데기가 둥글게 넘어가는 면
     g.save();
     g.clip();
-    g.strokeStyle = "rgba(150,128,96,0.35)";
-    g.lineWidth = 4;
+    g.filter = "blur(2px)";
+    g.strokeStyle = "rgba(150,128,96,0.3)";
+    g.lineWidth = 6;
     g.beginPath();
     g.moveTo(...tip);
     g.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
     g.stroke();
-    // 겉면과 입구 경계 바로 옆은 빛을 받는 모서리
-    g.strokeStyle = "rgba(255,255,255,0.8)";
-    g.lineWidth = 1.2;
-    g.beginPath();
-    g.moveTo(...inner);
-    g.quadraticCurveTo(innerCtl[0], innerCtl[1], tip[0], tip[1]);
-    g.stroke();
+    g.filter = "none";
     g.restore();
     // 겉면 안 옅은 면 나눔: 끝에서 밑동으로 퍼지는 가는 선 두 줄 (참고 그림의 면 경계)
     g.save();

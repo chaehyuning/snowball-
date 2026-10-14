@@ -164,6 +164,10 @@ function tickClock() {
   if (!el || !clockTz) return;
   try {
     el.textContent = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: clockTz }).format(new Date());
+    // 현지 시각에 맞춰 배경 빛을 바꿈: 5~7시 새벽, 7~17시 낮, 17~19시 해 질 녘, 그 밖은 밤
+    const parts = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: clockTz }).formatToParts(new Date());
+    const h = Number(parts.find((p) => p.type === "hour")?.value) % 24 + Number(parts.find((p) => p.type === "minute")?.value) / 60;
+    document.documentElement.dataset.daypart = h >= 5 && h < 7 ? "dawn" : h >= 7 && h < 17 ? "day" : h >= 17 && h < 19 ? "dusk" : "night";
   } catch {
     el.textContent = "";
   }

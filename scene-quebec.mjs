@@ -659,26 +659,10 @@ function paintChateauPhoto(g, rnd) {
   poly([[428, 456], [470, 463], [470, 625], [428, 625]], grad(428, 470, "#5a2a1c", "#7a3a26"));
   poly([[470, 463], [606, 456], [606, 625], [470, 625]], grad(470, 606, "#a14a30", "#c9734a"));
   // 벽돌 탑의 돌 띠와 창
-  g.fillStyle = "rgba(230,205,170,0.55)";
-  for (const y of [478, 500, 522, 544, 566, 588]) g.fillRect(QX(470), QY(y), QX(606) - QX(470), 0.6);
-  g.fillStyle = "rgba(200,175,145,0.4)";
-  for (const y of [478, 500, 522, 544, 566, 588]) g.fillRect(QX(428), QY(y) + 0.3, QX(470) - QX(428), 0.5);
+  g.fillStyle = "rgba(230,205,170,0.22)";
+  for (const y of [500, 544, 588]) g.fillRect(QX(470), QY(y), QX(606) - QX(470), 0.6);
   windows(480, 600, 468, 615, 11, 11, "#2a1a1c", 0.3);
   windows(434, 466, 468, 615, 12, 11, "#1e1414", 0.15);
-  // 세로 벽기둥: 벽면이 들고 나는 마디 (밝은 모서리 + 오른쪽 그늘)
-  for (const x of [505, 540, 575]) {
-    g.fillStyle = "rgba(255,220,180,0.18)";
-    g.fillRect(QX(x), QY(463), 0.7, QY(625) - QY(463));
-    g.fillStyle = "rgba(60,20,12,0.22)";
-    g.fillRect(QX(x) + 0.7, QY(463), 1.1, QY(625) - QY(463));
-  }
-  // 모서리 돌: 앞면 양끝에 번갈아 길고 짧은 밝은 돌
-  for (let y = 465; y < 620; y += 9) {
-    const long = Math.round((y - 465) / 9) % 2 === 0;
-    g.fillStyle = "rgba(226,206,176,0.7)";
-    g.fillRect(QX(470), QY(y), long ? 1.6 : 1, 1.4);
-    g.fillRect(QX(606) - (long ? 1.6 : 1), QY(y), long ? 1.6 : 1, 1.4);
-  }
   // 처마 바로 아래 그늘과, 아래로 갈수록 짙어지는 그늘 (나무와 집들에 묻히는 쪽)
   const under = g.createLinearGradient(0, QY(458), 0, QY(472));
   under.addColorStop(0, "rgba(30,12,10,0.55)");
@@ -690,8 +674,12 @@ function paintChateauPhoto(g, rnd) {
   low.addColorStop(1, "rgba(30,15,20,0.35)");
   g.fillStyle = low;
   g.fillRect(QX(428), QY(560), QX(606) - QX(428), QY(625) - QY(560));
-  g.fillStyle = RIM;
-  g.fillRect(QX(606) - 0.6, QY(456), 0.6, QY(625) - QY(456));
+  const across = g.createLinearGradient(QX(470), 0, QX(606), 0);
+  across.addColorStop(0, "rgba(40,15,10,0.18)");
+  across.addColorStop(0.6, "rgba(40,15,10,0)");
+  across.addColorStop(1, "rgba(255,200,140,0.14)");
+  g.fillStyle = across;
+  g.fillRect(QX(470), QY(456), QX(606) - QX(470), QY(625) - QY(456));
   // 지붕
   // 사진처럼 높고 가파른 지붕: 처마에서 거의 세 배 높이로 솟아 짧은 용마루에서 만남
   // 아랫단은 거의 수직으로 서다가(망사르드) 위에서 급하게 좁아져 짧은 용마루에서 만남
@@ -717,14 +705,6 @@ function paintChateauPhoto(g, rnd) {
   for (const [x, y] of [[470, 463], [606, 456], [598, 412], [552, 345], [518, 345], [482, 410]]) g.lineTo(QX(x), QY(y));
   g.closePath();
   g.clip();
-  g.strokeStyle = "rgba(140,160,160,0.18)";
-  g.lineWidth = 0.3;
-  for (let y = 350; y < 462; y += 4) {
-    g.beginPath();
-    g.moveTo(QX(470), QY(y));
-    g.lineTo(QX(606), QY(y));
-    g.stroke();
-  }
   const sky = g.createLinearGradient(0, QY(345), 0, QY(460));
   sky.addColorStop(0, "rgba(255,210,170,0.22)");
   sky.addColorStop(1, "rgba(255,210,170,0)");
@@ -766,9 +746,6 @@ function paintChateauPhoto(g, rnd) {
   poly([[398, 528], [414, 520], [414, 618], [398, 625]], "#6e665a");
   poly([[402, 530], [346, 455], [360, 452], [416, 522]], "#1f342b");
   poly([[285, 528], [398, 528], [398, 625], [285, 625]], grad(285, 398, "#8e8474", "#b4a994"));
-  // 돌 쌓은 결
-  g.fillStyle = "rgba(70,60,50,0.18)";
-  for (let y = 534; y < 622; y += 6) g.fillRect(QX(285), QY(y), QX(398) - QX(285), 0.35);
   windows(292, 392, 540, 615, 13, 12, "#2a2a2c", 0.25);
   // 처마 밑 그늘
   const eave = g.createLinearGradient(0, QY(528), 0, QY(542));
@@ -777,16 +754,6 @@ function paintChateauPhoto(g, rnd) {
   g.fillStyle = eave;
   g.fillRect(QX(285), QY(528), QX(398) - QX(285), QY(542) - QY(528));
   poly([[280, 530], [402, 530], [346, 455], [326, 455]], grad(280, 402, "#2a4438", "#5c826e"));
-  // 지붕 결
-  g.strokeStyle = "rgba(150,200,175,0.15)";
-  g.lineWidth = 0.3;
-  for (let y = 465; y < 528; y += 5) {
-    const k = (y - 455) / 75;
-    g.beginPath();
-    g.moveTo(QX(326 - 46 * k), QY(y));
-    g.lineTo(QX(346 + 56 * k), QY(y));
-    g.stroke();
-  }
   // 돌 박공: 빛을 받는 왼쪽 반과 그늘진 오른쪽 반
   poly([[305, 530], [335, 530], [335, 470]], "#cdbfa6");
   poly([[335, 530], [365, 530], [335, 470]], "#9c907c");
