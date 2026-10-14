@@ -139,7 +139,6 @@ function pop(power) {
   squashVel += 0.16 * power;
   sfx.pop(power, scene.id);
   window.dispatchEvent(new CustomEvent("snowball:pop", { detail: { power } }));
-  noteShake();
 
   // 번쩍임, 두 번째 고리, 불꽃 줄기
   const now = performance.now();
@@ -324,167 +323,6 @@ export async function capturePostcard(text, scale = POSTCARD_SCALE) {
 
 export const currentSceneId = () => scene.id;
 
-// ── 흔들어야 읽히는 편지 ──────────────────────────────────────
-// 받은 편지에 숨겨 둔 한 줄이 있으면: 스노우볼만 보여 주고 "흔들어 보세요". 흔들다 멈추면
-// 흩날리던 입자가 공중에서 모여 그 한 줄이 되고, 몇 초 뒤 흩어져 내려앉은 다음 편지를 열 수 있음
-const WORD_DOT = 2.6; // 글자를 이루는 동안의 입자 크기 (꽃잎처럼 큰 입자도 작게 모여 글씨가 또렷하게)
-const WORD_POINTS = 420;
-const WORD_HOLD_MS = 4200;
-let wordVeil = 0;
-let wordsUntil = 0;
-let lastShakeAt = 0;
-let shakeMode = null; // { text, shaken, forming }
-
-// 글자 점: 하얀 심지에 따뜻한 빛 번짐. 한 번 그려 두고 붙여 씀
-let wordDotSprite = null;
-function wordDot() {
-  if (wordDotSprite) return wordDotSprite;
-  const c = document.createElement("canvas");
-  c.width = c.height = 40;
-  const g = c.getContext("2d");
-  const glow = g.createRadialGradient(20, 20, 0, 20, 20, 20);
-  glow.addColorStop(0, "rgba(255,255,255,1)");
-  glow.addColorStop(0.22, "rgba(255,250,235,0.95)");
-  glow.addColorStop(0.45, "rgba(255,226,170,0.35)");
-  glow.addColorStop(1, "rgba(255,210,140,0)");
-  g.fillStyle = glow;
-  g.fillRect(0, 0, 40, 40);
-  wordDotSprite = c;
-  return c;
-}
-
-function noteShake() {
-  lastShakeAt = performance.now();
-  if (shakeMode) shakeMode.shaken = true;
-}
-
-// 글자 모양 자리: 글자를 몰래 그려 두고 잉크가 묻은 칸을 고르게 골라 씀
-function wordPoints(text) {
-  const SCALE = 2;
-  const boxW = 290;
-  const boxH = 170;
-  const c = document.createElement("canvas");
-  c.width = boxW * SCALE;
-  c.height = boxH * SCALE;
-  const g = c.getContext("2d", { willReadFrequently: true });
-  const family = `"Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", Pretendard, sans-serif`;
-  const fontAt = (size) => `800 ${size}px ${family}`;
-  g.font = fontAt(64);
-  let lines = [text];
-  // 한 줄에 넣으면 너무 작아지는 긴 말은 가운데 가까운 띄어쓰기에서 두 줄로
-  if (g.measureText(text).width > boxW * 1.25 && text.includes(" ")) {
-    const mid = text.length / 2;
-    let cut = -1;
-    for (let i = 0; i < text.length; i++) if (text[i] === " " && (cut < 0 || Math.abs(i - mid) < Math.abs(cut - mid))) cut = i;
-    lines = [text.slice(0, cut), text.slice(cut + 1)];
-  }
-  const widest = Math.max(...lines.map((l) => g.measureText(l).width));
-  const size = Math.max(22, Math.min(64, (64 * (boxW - 20)) / widest, lines.length > 1 ? 54 : 64));
-  g.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-  g.font = fontAt(size);
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.fillStyle = "#000";
-  const lineH = size * 1.15;
-  lines.forEach((l, i) => g.fillText(l, boxW / 2, boxH / 2 + (i - (lines.length - 1) / 2) * lineH));
-  const data = g.getImageData(0, 0, c.width, c.height).data;
-  const ink = (x, y) => data[(Math.round(y * SCALE) * c.width + Math.round(x * SCALE)) * 4 + 3] > 128;
-  let inkCount = 0;
-  for (let y = 0; y < boxH; y++) for (let x = 0; x < boxW; x++) if (ink(x, y)) inkCount++;
-  const step = Math.max(1.5, Math.sqrt(inkCount / WORD_POINTS));
-  const pts = [];
-  const left = globe.x - boxW / 2;
-  const top = globe.y - 30 - boxH / 2;
-  for (let y = 0; y < boxH; y += step) {
-    for (let x = 0; x < boxW; x += step) {
-      const jx = Math.min(boxW - 1, x + rand(0, step * 0.6));
-      const jy = Math.min(boxH - 1, y + rand(0, step * 0.6));
-      if (ink(jx, jy)) pts.push({ x: left + jx, y: top + jy });
-    }
-  }
-  return pts;
-}
-
-function formWords(text) {
-  const pts = wordPoints(text);
-  if (!pts.length) return;
-  const now = performance.now();
-  const pool = particles.filter((p) => !p.temp || !p.settled);
-  // 입자가 모자라면 바닥에서 덤 입자를 띄워 채움 (흩어진 뒤 바닥에 닿으면 사라짐)
-  while (pool.length < pts.length) {
-    const p = makeParticle();
-    p.temp = true;
-    p.launched = true;
-    p.x = globe.x + rand(-140, 140);
-    p.y = groundAt(p.x) - rand(1, 6);
-    p.vx = 0;
-    p.vy = 0;
-    p.settled = true;
-    particles.push(p);
-    pool.push(p);
-  }
-  // 왼쪽 입자는 왼쪽 글자로: 서로 엇갈리지 않고 쓸어 모이듯 이동
-  pool.sort((a, b) => a.x - b.x);
-  const chosen = pool.length > pts.length ? pool.filter((_, i) => i % (pool.length / pts.length) < 1).slice(0, pts.length) : pool;
-  pts.sort((a, b) => a.x - b.x);
-  chosen.forEach((p, i) => {
-    p.word = pts[i];
-    p.wordAt = now + rand(0, 420) + (i / chosen.length) * 380;
-    p.inWord = false;
-  });
-  wordsUntil = now + WORD_HOLD_MS + 800;
-  sfx.pop(0.6, scene.id);
-  buzz([12, 60, 12]);
-  setTimeout(releaseWords, WORD_HOLD_MS + 800);
-}
-
-function releaseWords() {
-  for (const p of particles) {
-    if (!p.word) continue;
-    p.word = null;
-    p.inWord = false;
-    if (p.wordSize != null) p.size = p.wordSize;
-    p.wordSize = null;
-    p.vx = rand(-1.6, 1.6);
-    p.vy = rand(-2.2, 0.4);
-    if (p.temp) p.launched = true;
-  }
-  wordsUntil = 0;
-  if (shakeMode) {
-    shakeMode.forming = false;
-    shakeMode.shaken = false;
-    shakeMode.done = true;
-    document.body.classList.add("shake-read");
-    document.querySelector(".shake-hint").textContent = "Shake again to see it again";
-  }
-}
-
-// 흔들기를 멈추고 0.9초 지나면 글자를 모음
-setInterval(() => {
-  if (!shakeMode || shakeMode.forming || !shakeMode.shaken) return;
-  if (performance.now() - lastShakeAt < 900) return;
-  shakeMode.forming = true;
-  formWords(shakeMode.text);
-}, 150);
-
-function enterShakeMode(letter, open) {
-  shakeMode = { text: letter.shake, shaken: false, forming: false };
-  document.body.classList.add("shake-mode");
-  const box = document.querySelector(".shake-reveal");
-  box.querySelector(".shake-from").textContent = `A snowball from ${letter.from || "a friend"}`;
-  box.hidden = false;
-  box.querySelector(".shake-open").addEventListener(
-    "click",
-    () => {
-      shakeMode = null;
-      box.hidden = true;
-      document.body.classList.remove("shake-mode", "shake-read");
-      open();
-    },
-    { once: true },
-  );
-}
-
 // 편지에 꽂아 줄 폴라로이드 사진: 지금 스노우볼의 유리구 부분만 정사각형으로 떠 옴 (이미 만든 그림 층을 그대로 씀)
 function sceneSnapshot(size = 320) {
   const shot = document.createElement("canvas");
@@ -543,7 +381,6 @@ export function motionShake(power, dirX = 0, dirY = 0) {
   startAutoShake(0.4 + 0.4 * k);
   sfx.shake(k, scene.id);
   buzz(Math.round(10 + 12 * k));
-  noteShake();
 }
 
 function settle(p) {
@@ -763,7 +600,6 @@ function switchScene(id, { fade = true } = {}) {
 // 멍때리기 모드: 버튼·글자·스노우볼이 아닌 빈 곳을 톡 치면 UI를 모두 숨기고, 다시 치면 보여 줌
 const UI_PARTS = "button, a, input, textarea, canvas, label, .meta, .tools, .scenes, .picker, .help, .letter-view, .keep-modal, .tour-bubble, .tour-spot, .sheet-backdrop, .reply-float";
 document.addEventListener("click", (e) => {
-  if (document.body.classList.contains("shake-mode")) return;
   if (document.body.classList.contains("zen")) {
     // 스노우볼을 톡톡 치며 노는 건 그대로 두고, 그 밖을 치면 돌아옴
     const onBall = e.target === canvas && onSnowball(e.clientX, e.clientY);
@@ -910,7 +746,6 @@ canvas.addEventListener("pointermove", (e) => {
   const now = performance.now();
   if (dir && dir !== lastShakeDir && Math.abs(next - target) > 2 && now - lastShakeSound > 140) {
     sfx.shake(Math.min(1, Math.abs(next - target) / 12), scene.id);
-    noteShake();
     buzz(8);
     lastShakeSound = now;
   }
@@ -958,25 +793,6 @@ function update(t, accel) {
       p.settled = false;
       p.vy = -rand(2, 6) * (0.5 + shakeEnergy) * (1.2 - p.inertia * 0.4);
       p.vx = rand(-2.5, 2.5);
-    }
-    // 숨겨 둔 말: 정해진 시각이 되면 글자 모양 자리로 모여 그 자리에서 살짝 반짝이며 머묾
-    if (p.word && now >= p.wordAt) {
-      if (!p.inWord) {
-        p.inWord = true;
-        p.settled = false;
-        p.rising = false;
-        p.target = null;
-        p.wordSize ??= p.size;
-        p.size = Math.min(p.wordSize, WORD_DOT);
-      }
-      const gx = p.word.x + Math.sin(t * 0.002 + p.swayPhase) * 0.5;
-      const gy = p.word.y + Math.cos(t * 0.0023 + p.swayPhase) * 0.5;
-      p.vx = (p.vx + (gx - p.x) * 0.055) * 0.8;
-      p.vy = (p.vy + (gy - p.y) * 0.055) * 0.8;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.angle += p.spin * 0.4;
-      continue;
     }
     // 출발 시각이 되면 목적지를 향해 솟아오름
     if (p.target && now >= p.launchAt) {
@@ -1086,17 +902,6 @@ function drawParticles(t) {
   ctx.globalCompositeOperation = scene.particles.blend;
   const lensStart = globe.r * 0.7;
   for (const p of particles) {
-    // 글자 자리에 다 온 입자는 어느 나라든 같은 빛 점으로: 물방울·꽃잎 모양 그대로면 글씨가 안 읽힘
-    if (p.inWord && Math.abs(p.word.x - p.x) + Math.abs(p.word.y - p.y) < 12) {
-      const k = 1 - (Math.abs(p.word.x - p.x) + Math.abs(p.word.y - p.y)) / 12;
-      const prevOp = ctx.globalCompositeOperation;
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.35 + 0.65 * k;
-      ctx.drawImage(wordDot(), p.x - 5, p.y - 5, 10, 10);
-      ctx.globalCompositeOperation = prevOp;
-      ctx.globalAlpha = 1;
-      continue;
-    }
     const dx = p.x - globe.x;
     const dy = p.y - globe.y;
     const d = Math.hypot(dx, dy);
@@ -1396,9 +1201,7 @@ showWeatherButton();
 
 // 나라가 지정되지 않은 주소로 들어오면 지구본 선택창부터 보여줌
 // 편지를 받은 사람에게는 조작법 안내를 띄우지 않음. 안내는 링크로 처음 들어와 지구본에서 고른 뒤에만
-const openLetter = () => showLetter(letter, scene.id, undefined, { snapshot: sceneSnapshot });
-if (letter && startId && letter.shake) enterShakeMode(letter, openLetter);
-else if (letter && startId) openLetter();
+if (letter && startId) showLetter(letter, scene.id, undefined, { snapshot: sceneSnapshot });
 else if (!startId) openPicker(SCENES, scene.id, pickFromGlobe, maybeTutorial);
 else maybeTutorial();
 
@@ -1444,16 +1247,6 @@ function draw(t) {
   ctx.drawImage(layers.baseBack, 0, 0, W, H);
   ctx.drawImage(layers.scene, 0, 0, W, H);
   drawWeather(ctx, t, globe, scene.id);
-  // 글자가 모이는 동안 유리구 속을 살짝 어둡게 해서 어느 나라에서든 글자가 또렷하게
-  wordVeil += ((wordsUntil > performance.now() ? 1 : 0) - wordVeil) * 0.05;
-  if (wordVeil > 0.01) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(globe.x, globe.y, globe.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(8,10,26,${0.42 * wordVeil})`;
-    ctx.fill();
-    ctx.restore();
-  }
   drawParticles(t);
   ctx.drawImage(layers.glass, 0, 0, W, H);
   ctx.drawImage(layers.baseFront, 0, 0, W, H);
