@@ -407,9 +407,19 @@ function paintOperaHouse(g) {
   block([[110, 940], [110, 898], [128, 880], [1000, 880], [1000, 900], [1030, 905], [1030, 940]], "#c9a87c");
   block([[128, 880], [128, 848], [470, 848], [470, 880]], "#d4b488");
   block([[470, 880], [470, 862], [880, 862], [880, 880]], "#cdae82");
-  // 위에서 받은 햇빛: 단마다 윗면 가장자리
-  g.fillStyle = "rgba(255,244,222,0.6)";
-  for (const [x0, x1, y] of [[128, 470, 848], [470, 880, 862], [110, 1030, 940], [880, 1000, 880]]) g.fillRect(OX(x0), OY(y), OX(x1) - OX(x0), 0.7);
+  // 단마다 위에서 내려다보이는 윗면: 뒤로 살짝 물러나는 밝은 판 (턱 앞 모서리에 햇빛)
+  for (const [x0, x1, y] of [[128, 470, 848], [470, 880, 862], [110, 1030, 940], [880, 1000, 880], [30, 110, 940]]) {
+    g.fillStyle = "#efe0c2";
+    g.beginPath();
+    g.moveTo(OX(x0), OY(y));
+    g.lineTo(OX(x1), OY(y));
+    g.lineTo(OX(x1) - 1.2, OY(y) - 1.6);
+    g.lineTo(OX(x0) + 1.2, OY(y) - 1.6);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "rgba(255,250,236,0.9)";
+    g.fillRect(OX(x0), OY(y) - 0.3, OX(x1) - OX(x0), 0.6);
+  }
   // 어두운 가로 창 띠
   g.fillStyle = "#4a3828";
   for (const [x, y, w, h] of [
@@ -429,6 +439,13 @@ function paintOperaHouse(g) {
   }
   g.fillStyle = "rgba(255,226,180,0.4)";
   for (let x = 522; x < 760; x += 14) g.fillRect(OX(x), OY(920), 0.4, 8 * 0.22);
+  // 창 띠 깊이: 위 처마 그늘과 아래 밝은 턱
+  for (const [x, y, w, h] of [[150, 912, 90, 6], [330, 914, 120, 6], [500, 900, 250, 5], [520, 920, 240, 8], [890, 914, 110, 6]]) {
+    g.fillStyle = "rgba(40,28,20,0.35)";
+    g.fillRect(OX(x) - 0.5, OY(y) - 0.8, w * 0.22 + 1, 0.8);
+    g.fillStyle = "rgba(250,236,210,0.7)";
+    g.fillRect(OX(x) - 0.5, OY(y + h), w * 0.22 + 1, 0.5);
+  }
 
   // 조가비가 기단 위에 드리운 그림자: 왼쪽 위에서 해가 드니 밑동 오른쪽으로 비스듬히
   g.save();
@@ -501,7 +518,14 @@ function paintOperaHouse(g) {
     skin.addColorStop(0.8, "#d9ccb2");
     skin.addColorStop(1, "#c2b294");
     g.fillStyle = skin;
+    // 앞 조가비가 뒤 조가비 위에 드리우는 옅은 그림자: 겹친 면의 앞뒤가 갈림
+    g.save();
+    g.shadowColor = "rgba(70,55,40,0.4)";
+    g.shadowBlur = 4;
+    g.shadowOffsetX = 2;
+    g.shadowOffsetY = 1;
     g.fill();
+    g.restore();
     // 등 곡선 안쪽을 따라 도는 그늘 띠: 껍데기가 둥글게 넘어가는 면
     g.save();
     g.clip();
