@@ -644,6 +644,12 @@ function paintChateauPhoto(g, rnd) {
   spire(192, 512, 496);
   // 2) 가운데 아래 초록 지붕 줄 (탑 앞으로 낮게 이어짐) + 박공 지붕창
   poly([[392, 562], [612, 556], [612, 625], [392, 625]], grad(392, 612, "#2f4d40", "#5a7c6a"));
+  // 지붕이 아래로 꺾이는 처마 쪽은 어둡게
+  const midShade = g.createLinearGradient(0, QY(590), 0, QY(625));
+  midShade.addColorStop(0, "rgba(10,20,15,0)");
+  midShade.addColorStop(1, "rgba(10,20,15,0.45)");
+  g.fillStyle = midShade;
+  g.fillRect(QX(392), QY(590), QX(612) - QX(392), QY(625) - QY(590));
   for (let x = 410; x < 600; x += 22) {
     poly([[x - 7, 590], [x, 568], [x + 7, 590]], "#c8b89c");
     g.fillStyle = rnd() < 0.5 ? "#ffd38a" : "#2a2a2a";
@@ -659,6 +665,31 @@ function paintChateauPhoto(g, rnd) {
   for (const y of [478, 500, 522, 544, 566, 588]) g.fillRect(QX(428), QY(y) + 0.3, QX(470) - QX(428), 0.5);
   windows(480, 600, 468, 615, 11, 11, "#2a1a1c", 0.3);
   windows(434, 466, 468, 615, 12, 11, "#1e1414", 0.15);
+  // 세로 벽기둥: 벽면이 들고 나는 마디 (밝은 모서리 + 오른쪽 그늘)
+  for (const x of [505, 540, 575]) {
+    g.fillStyle = "rgba(255,220,180,0.18)";
+    g.fillRect(QX(x), QY(463), 0.7, QY(625) - QY(463));
+    g.fillStyle = "rgba(60,20,12,0.22)";
+    g.fillRect(QX(x) + 0.7, QY(463), 1.1, QY(625) - QY(463));
+  }
+  // 모서리 돌: 앞면 양끝에 번갈아 길고 짧은 밝은 돌
+  for (let y = 465; y < 620; y += 9) {
+    const long = Math.round((y - 465) / 9) % 2 === 0;
+    g.fillStyle = "rgba(226,206,176,0.7)";
+    g.fillRect(QX(470), QY(y), long ? 1.6 : 1, 1.4);
+    g.fillRect(QX(606) - (long ? 1.6 : 1), QY(y), long ? 1.6 : 1, 1.4);
+  }
+  // 처마 바로 아래 그늘과, 아래로 갈수록 짙어지는 그늘 (나무와 집들에 묻히는 쪽)
+  const under = g.createLinearGradient(0, QY(458), 0, QY(472));
+  under.addColorStop(0, "rgba(30,12,10,0.55)");
+  under.addColorStop(1, "rgba(30,12,10,0)");
+  g.fillStyle = under;
+  g.fillRect(QX(428), QY(458), QX(606) - QX(428), QY(472) - QY(458));
+  const low = g.createLinearGradient(0, QY(560), 0, QY(625));
+  low.addColorStop(0, "rgba(30,15,20,0)");
+  low.addColorStop(1, "rgba(30,15,20,0.35)");
+  g.fillStyle = low;
+  g.fillRect(QX(428), QY(560), QX(606) - QX(428), QY(625) - QY(560));
   g.fillStyle = RIM;
   g.fillRect(QX(606) - 0.6, QY(456), 0.6, QY(625) - QY(456));
   // 지붕
@@ -680,13 +711,45 @@ function paintChateauPhoto(g, rnd) {
   g.lineTo(QX(598), QY(412));
   g.lineTo(QX(552), QY(345));
   g.stroke();
+  // 슬레이트 결: 가로 줄이 촘촘하고, 위쪽은 하늘빛을 받아 살짝 밝음
+  g.save();
+  g.beginPath();
+  for (const [x, y] of [[470, 463], [606, 456], [598, 412], [552, 345], [518, 345], [482, 410]]) g.lineTo(QX(x), QY(y));
+  g.closePath();
+  g.clip();
+  g.strokeStyle = "rgba(140,160,160,0.18)";
+  g.lineWidth = 0.3;
+  for (let y = 350; y < 462; y += 4) {
+    g.beginPath();
+    g.moveTo(QX(470), QY(y));
+    g.lineTo(QX(606), QY(y));
+    g.stroke();
+  }
+  const sky = g.createLinearGradient(0, QY(345), 0, QY(460));
+  sky.addColorStop(0, "rgba(255,210,170,0.22)");
+  sky.addColorStop(1, "rgba(255,210,170,0)");
+  g.fillStyle = sky;
+  g.fillRect(QX(470), QY(345), QX(606) - QX(470), QY(460) - QY(345));
+  g.restore();
   // 처마 돌 띠
   g.fillStyle = "#d9c8a8";
   g.fillRect(QX(428), QY(458), QX(606) - QX(428), 0.9);
   // 지붕창: 크림색 틀에 뾰족한 모자
   for (const [y, x0, x1] of [[446, 484, 596], [414, 494, 576], [384, 506, 560], [360, 520, 548]]) {
     for (let x = x0; x <= x1; x += 18) {
+      // 지붕창이 지붕 위에 드리운 그림자 (오른쪽 아래로)
+      g.fillStyle = "rgba(10,12,12,0.45)";
+      g.beginPath();
+      g.moveTo(QX(x + 5), QY(y - 6));
+      g.lineTo(QX(x + 8), QY(y - 4));
+      g.lineTo(QX(x + 8), QY(y + 4));
+      g.lineTo(QX(x - 4), QY(y + 4));
+      g.lineTo(QX(x - 5), QY(y + 2));
+      g.closePath();
+      g.fill();
       poly([[x - 5, y + 2], [x - 5, y - 6], [x, y - 13], [x + 5, y - 6], [x + 5, y + 2]], "#e6d8bc", "rgba(40,30,20,0.6)");
+      // 지붕창 오른쪽 옆면
+      poly([[x + 5, y + 2], [x + 5, y - 6], [x + 7, y - 5], [x + 7, y + 3]], "#a8987c", null);
       g.fillStyle = rnd() < 0.45 ? "#ffd38a" : "#2a2e2c";
       g.fillRect(QX(x - 2), QY(y - 4), 1, 1.4);
     }
@@ -699,10 +762,41 @@ function paintChateauPhoto(g, rnd) {
   spire(598, 400, 390);
 
   // 4) 왼쪽 돌 박공 건물: 회색 돌벽 위로 가파른 초록 지붕, 가운데 돌 박공이 지붕을 뚫고 솟음
+  // 오른쪽 옆면 (뒤로 물러나는 그늘진 벽)과 지붕 옆면: 상자 모양 부피
+  poly([[398, 528], [414, 520], [414, 618], [398, 625]], "#6e665a");
+  poly([[402, 530], [346, 455], [360, 452], [416, 522]], "#1f342b");
   poly([[285, 528], [398, 528], [398, 625], [285, 625]], grad(285, 398, "#8e8474", "#b4a994"));
+  // 돌 쌓은 결
+  g.fillStyle = "rgba(70,60,50,0.18)";
+  for (let y = 534; y < 622; y += 6) g.fillRect(QX(285), QY(y), QX(398) - QX(285), 0.35);
   windows(292, 392, 540, 615, 13, 12, "#2a2a2c", 0.25);
+  // 처마 밑 그늘
+  const eave = g.createLinearGradient(0, QY(528), 0, QY(542));
+  eave.addColorStop(0, "rgba(30,25,20,0.5)");
+  eave.addColorStop(1, "rgba(30,25,20,0)");
+  g.fillStyle = eave;
+  g.fillRect(QX(285), QY(528), QX(398) - QX(285), QY(542) - QY(528));
   poly([[280, 530], [402, 530], [346, 455], [326, 455]], grad(280, 402, "#2a4438", "#5c826e"));
-  poly([[305, 530], [365, 530], [335, 470]], grad(305, 365, "#a39884", "#cbbfa8"));
+  // 지붕 결
+  g.strokeStyle = "rgba(150,200,175,0.15)";
+  g.lineWidth = 0.3;
+  for (let y = 465; y < 528; y += 5) {
+    const k = (y - 455) / 75;
+    g.beginPath();
+    g.moveTo(QX(326 - 46 * k), QY(y));
+    g.lineTo(QX(346 + 56 * k), QY(y));
+    g.stroke();
+  }
+  // 돌 박공: 빛을 받는 왼쪽 반과 그늘진 오른쪽 반
+  poly([[305, 530], [335, 530], [335, 470]], "#cdbfa6");
+  poly([[335, 530], [365, 530], [335, 470]], "#9c907c");
+  g.strokeStyle = "#ecdcc0";
+  g.lineWidth = 0.7;
+  g.beginPath();
+  g.moveTo(QX(303), QY(531));
+  g.lineTo(QX(335), QY(468));
+  g.lineTo(QX(367), QY(531));
+  g.stroke();
   g.fillStyle = "#ffd38a";
   g.fillRect(QX(332), QY(505), 1.2, 2);
   spire(336, 455, 432);
@@ -723,7 +817,9 @@ function paintChateauPhoto(g, rnd) {
       const d = Math.sqrt(rnd()) * rad;
       const x = cx + Math.cos(a) * d;
       const y = cy + Math.sin(a) * d * 0.7;
-      g.fillStyle = ["#2e4a2c", "#3e5e34", "#56703a", "#b8652c", "#d8892e"][Math.floor(rnd() * 5)];
+      // 잎 덩어리 위쪽·오른쪽(해 쪽)은 밝은 잎, 아래·왼쪽은 그늘진 잎
+      const lit = (x - cx) / rad - (y - cy) / rad > 0.2;
+      g.fillStyle = lit ? ["#6e8a44", "#d8892e", "#e8a040"][Math.floor(rnd() * 3)] : ["#24381f", "#2e4a2c", "#8a4a22"][Math.floor(rnd() * 3)];
       g.beginPath();
       g.arc(QX(x), QY(y), rad * QS * 0.28 * (0.6 + rnd() * 0.6), 0, Math.PI * 2);
       g.fill();
