@@ -919,6 +919,11 @@ function paintFrontenac(g, rnd) {
   function chimney(x, y, h) {
     g.fillStyle = "#8a3a26";
     g.fillRect(x, y - h, 3, h);
+    // 왼쪽 면은 그늘, 머리돌 아래 그늘 한 줄
+    g.fillStyle = "rgba(40,15,10,0.45)";
+    g.fillRect(x, y - h, 0.9, h);
+    g.fillStyle = "rgba(40,15,10,0.35)";
+    g.fillRect(x, y - h + 1.2, 3, 0.8);
     g.fillStyle = "rgba(255,206,140,0.7)";
     g.fillRect(x + 2.4, y - h, 0.6, h);
     g.fillStyle = "#d9c8a8";
@@ -1075,10 +1080,18 @@ function paintFrontenac(g, rnd) {
   P([[402, 530], [346, 455], [360, 452], [416, 522]]);
   g.fillStyle = "#1f342b";
   g.fill();
+  // 앞에 선 돌 건물이 뒤 건물들과 맞닿는 경계: 뒤쪽 벽·지붕에 번지는 그늘로 앞뒤를 가름
+  for (const [x0, x1, dir] of [[262, 285, -1], [398, 428, 1]]) {
+    const cs = g.createLinearGradient(X(dir < 0 ? x1 : x0), 0, X(dir < 0 ? x0 : x1), 0);
+    cs.addColorStop(0, "rgba(30,20,20,0.35)");
+    cs.addColorStop(1, "rgba(30,20,20,0)");
+    g.fillStyle = cs;
+    g.fillRect(X(x0), Y(540), (x1 - x0) * S, (625 - 540) * S);
+  }
   wallP(285, 398, 528, 625, { lit: 0.4, stoneAll: true });
   // 굴뚝은 지붕 뒤 용마루 가까이에서 솟음: 지붕보다 먼저 그려 아랫부분이 지붕에 가려지게
   chimney(X(318), Y(500), 52 * S);
-  chimney(X(352), Y(470), 60 * S);
+  chimney(X(352), Y(470), 42 * S);
   chimney(X(378), Y(505), 48 * S);
   copperP([[280, 530], [402, 530], [346, 455], [326, 455]], 280, 402);
   sunLine([[346, 455], [402, 530]]);
@@ -1099,10 +1112,8 @@ function paintFrontenac(g, rnd) {
   coneP(160, 184, 556, 500, 625);
   coneP(280, 300, 552, 506, 625);
   // 돌 건물 양 모서리의 작은 매달린 망루(바르티잔)
-  coneP(282, 298, 534, 498, 572, true);
   coneP(392, 408, 534, 500, 572, true);
   // 낮은 지붕 줄 양끝과 가운데의 원뿔
-  coneP(398, 418, 572, 534, 625);
   coneP(612, 632, 566, 524, 625);
   // 오른쪽 벽돌 건물 뒤 작은 원뿔과 박공
   coneP(740, 758, 612, 572, 640);
