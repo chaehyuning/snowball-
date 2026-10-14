@@ -1,6 +1,6 @@
 // 호주: 한낮의 시드니 항구, 오페라하우스와 하버브리지, 흩날리는 물방울
 
-import { seeded, fillSilhouette } from "./util.mjs";
+import { seeded, fillSilhouette, softly } from "./util.mjs";
 
 const DROP_COLORS = ["rgba(255,214,236,0.55)", "rgba(200,236,255,0.55)", "rgba(190,250,236,0.55)", "rgba(143,211,247,0.55)", "rgba(230,220,255,0.55)"];
 
@@ -33,18 +33,19 @@ function paintSydney(g, globe, groundAt) {
   g.fillRect(left, top, size, size);
 
   // 뭉게구름
-  g.filter = "blur(3px)";
-  for (let c = 0; c < 2; c++) {
-    const cx = r(60, 340);
-    const cy = r(90, 170);
-    for (let i = 0; i < 6; i++) {
-      g.fillStyle = `rgba(255,255,255,${r(0.55, 0.85)})`;
-      g.beginPath();
-      g.ellipse(cx + r(-22, 22), cy + r(-5, 4), r(10, 20), r(6, 11), 0, 0, Math.PI * 2);
-      g.fill();
+  // 흐림은 구름 한 장에 한 번만 (타원마다 흐리면 처음 그릴 때 느림)
+  softly(g, "blur(3px)", [left, 60, size, 130], (b) => {
+    for (let c = 0; c < 2; c++) {
+      const cx = r(60, 340);
+      const cy = r(90, 170);
+      for (let i = 0; i < 6; i++) {
+        b.fillStyle = `rgba(255,255,255,${r(0.55, 0.85)})`;
+        b.beginPath();
+        b.ellipse(cx + r(-22, 22), cy + r(-5, 4), r(10, 20), r(6, 11), 0, 0, Math.PI * 2);
+        b.fill();
+      }
     }
-  }
-  g.filter = "none";
+  });
 
   // 다리 너머 도심 빌딩과 시드니 타워 (멀어서 흐릿한 푸른빛)
   // 빌딩마다 햇빛 받는 왼쪽 면과 그늘진 오른쪽 면, 옅은 창 줄. 도심(왼쪽)은 높은 빌딩이 몰려 있음
@@ -96,17 +97,16 @@ function paintSydney(g, globe, groundAt) {
 
   // 바다 깊이: 얕은 곳은 밝은 청록, 깊은 곳은 짙은 청색이 넓고 흐리게 번짐
   const rw = seeded(2000);
-  g.save();
-  g.filter = "blur(10px)";
-  for (let i = 0; i < 12; i++) {
-    const wx = left + rw() * size;
-    const wy = 254 + rw() * 70;
-    g.fillStyle = i % 2 ? "rgba(70,190,200,0.16)" : "rgba(10,60,95,0.18)";
-    g.beginPath();
-    g.ellipse(wx, wy, 40 + rw() * 50, 5 + rw() * 7, 0, 0, Math.PI * 2);
-    g.fill();
-  }
-  g.restore();
+  softly(g, "blur(10px)", [left - 40, 240, size + 80, 100], (b) => {
+    for (let i = 0; i < 12; i++) {
+      const wx = left + rw() * size;
+      const wy = 254 + rw() * 70;
+      b.fillStyle = i % 2 ? "rgba(70,190,200,0.16)" : "rgba(10,60,95,0.18)";
+      b.beginPath();
+      b.ellipse(wx, wy, 40 + rw() * 50, 5 + rw() * 7, 0, 0, Math.PI * 2);
+      b.fill();
+    }
+  });
 
   // 도심 빌딩이 비친 흐린 세로 그림자
   g.fillStyle = "rgba(60,95,130,0.16)";
@@ -423,8 +423,7 @@ function paintOperaHouse(g) {
   // 어두운 가로 창 띠
   // 창 띠: 검은 막대가 아니라 벽에 살짝 파인 그늘처럼 (옅고 가장자리가 번짐)
   g.save();
-  g.filter = "blur(0.8px)";
-  g.fillStyle = "rgba(90,66,46,0.55)";
+  g.fillStyle = "rgba(90,66,46,0.45)";
   for (const [x, y, w, h] of [
     [150, 912, 90, 6],
     [250, 900, 70, 5],
@@ -445,8 +444,7 @@ function paintOperaHouse(g) {
 
   // 조가비가 기단 위에 드리운 그림자: 왼쪽 위에서 해가 드니 밑동 오른쪽으로 비스듬히
   g.save();
-  g.filter = "blur(1.5px)";
-  g.fillStyle = "rgba(70,50,35,0.35)";
+  g.fillStyle = "rgba(70,50,35,0.22)";
   for (const sh of OPERA_SHELLS) {
     const [fx, fy] = OP(sh.front);
     const [ex, ey] = OP(sh.end);
@@ -515,24 +513,28 @@ function paintOperaHouse(g) {
     skin.addColorStop(1, "#c2b294");
     g.fillStyle = skin;
     // 앞 조가비가 뒤 조가비 위에 드리우는 옅은 그림자: 겹친 면의 앞뒤가 갈림
+    // 앞 조가비가 뒤 조가비 위에 드리우는 그림자: 같은 모양을 오른쪽 아래로 밀어 옅게 먼저 칠함 (흐림 계산 없이)
     g.save();
-    g.shadowColor = "rgba(70,55,40,0.4)";
-    g.shadowBlur = 4;
-    g.shadowOffsetX = 2;
-    g.shadowOffsetY = 1;
+    g.translate(2, 1);
+    g.fillStyle = "rgba(70,55,40,0.22)";
+    g.fill();
+    g.translate(-1, -0.5);
     g.fill();
     g.restore();
+    g.fillStyle = skin;
+    g.fill();
     // 등 곡선 안쪽을 따라 도는 그늘 띠: 껍데기가 둥글게 넘어가는 면
     g.save();
     g.clip();
-    g.filter = "blur(2px)";
-    g.strokeStyle = "rgba(150,128,96,0.3)";
-    g.lineWidth = 6;
-    g.beginPath();
-    g.moveTo(...tip);
-    g.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
-    g.stroke();
-    g.filter = "none";
+    // 등 곡선 안쪽 그늘: 굵기를 달리한 옅은 선 세 겹으로 번지게 (흐림 필터 없이)
+    for (const [lw, a] of [[8, 0.08], [5, 0.1], [2.5, 0.12]]) {
+      g.strokeStyle = `rgba(150,128,96,${a})`;
+      g.lineWidth = lw;
+      g.beginPath();
+      g.moveTo(...tip);
+      g.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], end[0], end[1]);
+      g.stroke();
+    }
     g.restore();
     // 겉면 안 옅은 면 나눔: 끝에서 밑동으로 퍼지는 가는 선 두 줄 (참고 그림의 면 경계)
     g.save();

@@ -95,7 +95,73 @@ function paintQuebec(g, globe, groundAt) {
   g.globalAlpha = 1;
 
   // 언덕 아래 강가 절벽 위의 샤토 프롱트낙: 장면의 주인공이라 크게
-  paintChateauPhoto(g, rnd);
+  // 성이 앉은 곶(디아망 곶): 강가 절벽 위 땅과 숲. 성 발밑을 받쳐 떠 보이지 않게
+  const capeY = (x) => QY(612) + 2 * Math.sin(x * 0.35) + Math.max(0, (x - QX(700)) * 0.25);
+  const cape = g.createLinearGradient(0, QY(605), 0, 300);
+  cape.addColorStop(0, "#4a5230");
+  cape.addColorStop(1, "#2a2a22");
+  g.fillStyle = cape;
+  g.beginPath();
+  g.moveTo(QX(130), 300);
+  for (let x = QX(130); x <= QX(790); x += 2) g.lineTo(x, capeY(x));
+  g.lineTo(QX(790), 300);
+  g.closePath();
+  g.fill();
+
+  // 성은 따로 그린 뒤 역광 명암을 입혀 얹음: 해가 성 바로 뒤로 지므로 정면은 그늘지고 윤곽만 금빛으로 빛남
+  const m = g.getTransform();
+  const off = document.createElement("canvas");
+  off.width = g.canvas.width;
+  off.height = g.canvas.height;
+  const og = off.getContext("2d");
+  og.setTransform(m);
+  paintChateauPhoto(og, rnd);
+  // 역광: 아래로 갈수록 짙은 그늘, 위쪽은 노을 안개에 묻혀 살짝 따뜻하게
+  og.globalCompositeOperation = "source-atop";
+  const back = og.createLinearGradient(0, QY(300), 0, QY(640));
+  back.addColorStop(0, "rgba(255,190,140,0.18)");
+  back.addColorStop(0.45, "rgba(60,30,40,0.12)");
+  back.addColorStop(1, "rgba(30,15,25,0.5)");
+  og.fillStyle = back;
+  og.fillRect(QX(140), QY(280), QX(780) - QX(140), QY(660) - QY(280));
+  // 해 바로 앞인 탑 가운데 위는 빛이 번져 들어옴
+  const sunBleed = og.createRadialGradient(300, 222, 0, 300, 222, 60);
+  sunBleed.addColorStop(0, "rgba(255,210,150,0.35)");
+  sunBleed.addColorStop(1, "rgba(255,210,150,0)");
+  og.fillStyle = sunBleed;
+  og.fillRect(QX(140), QY(280), QX(780) - QX(140), QY(660) - QY(280));
+  og.globalCompositeOperation = "source-over";
+  // 윤곽 빛: 성 모양을 금빛으로 칠한 복사본을 위쪽으로 살짝 밀어 뒤에 깔면 위·옆 가장자리만 빛남
+  const rim = document.createElement("canvas");
+  rim.width = off.width;
+  rim.height = off.height;
+  const rg = rim.getContext("2d");
+  rg.drawImage(off, 0, 0);
+  rg.globalCompositeOperation = "source-in";
+  rg.fillStyle = "rgba(255,206,140,0.95)";
+  rg.fillRect(0, 0, rim.width, rim.height);
+  g.save();
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const k = m.a;
+  g.globalAlpha = 0.9;
+  g.drawImage(rim, 0.9 * k, -1.1 * k);
+  g.globalAlpha = 1;
+  g.drawImage(off, 0, 0);
+  g.restore();
+
+  // 성 발밑 숲: 둥근 나무 꼭대기가 줄지어 성 아랫단을 덮음 (위는 노을빛, 아래는 짙은 그늘)
+  for (let x = QX(150); x < QX(780); x += r(3.5, 6)) {
+    const y = capeY(x) + r(-2, 3);
+    const rr = r(3.5, 6.5);
+    const tree = g.createRadialGradient(x + rr * 0.3, y - rr * 0.5, 0, x, y, rr * 1.2);
+    tree.addColorStop(0, ["#9a8a3c", "#c27a32", "#7a7a38"][Math.floor(rnd() * 3)]);
+    tree.addColorStop(0.6, "#3e4a26");
+    tree.addColorStop(1, "#22281a");
+    g.fillStyle = tree;
+    g.beginPath();
+    g.arc(x, y, rr, 0, Math.PI * 2);
+    g.fill();
+  }
   // 성 앞 뒤프랭 테라스
   dufferin(g, 196, 352, 272);
 
@@ -105,7 +171,23 @@ function paintQuebec(g, globe, groundAt) {
     const base = r(278, 302);
     const w = r(6, 12);
     const h = r(6, 13);
-    g.fillStyle = ["#cbb79a", "#b49c80", "#9c8670", "#d8c6aa"][Math.floor(rnd() * 4)];
+    // 집 아래로 땅에 닿는 그림자
+    g.fillStyle = "rgba(30,20,20,0.3)";
+    g.beginPath();
+    g.ellipse(x + w / 2 + 1.5, base, w * 0.6, 1.4, 0, 0, Math.PI * 2);
+    g.fill();
+    // 역광이라 벽은 차분한 노을 그늘 톤, 오른쪽(해 쪽) 끝만 따뜻하게 밝음
+    const wallC = ["#a08a74", "#8e7866", "#7e6a5c", "#ac967c"][Math.floor(rnd() * 4)];
+    const wallG = g.createLinearGradient(x, 0, x + w, 0);
+    wallG.addColorStop(0, wallC);
+    wallG.addColorStop(0.75, wallC);
+    wallG.addColorStop(1, "#d8b088");
+    g.fillStyle = wallG;
+    g.fillRect(x, base - h, w, h);
+    const wallShade = g.createLinearGradient(0, base - h, 0, base);
+    wallShade.addColorStop(0, "rgba(40,20,30,0)");
+    wallShade.addColorStop(1, "rgba(40,20,30,0.3)");
+    g.fillStyle = wallShade;
     g.fillRect(x, base - h, w, h);
     g.fillStyle = rnd() < 0.3 ? COPPER[1] : ["#3d3a3e", "#5a4a44"][Math.floor(rnd() * 2)];
     g.beginPath();
