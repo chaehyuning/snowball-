@@ -246,6 +246,99 @@ function paintUyuni(g, globe, groundAt) {
     g.stroke();
   });
 
+  // 거울 위의 사람들과 지프: 우유니 사진의 상징 장면. 발밑에서 거꾸로 똑같이 비침
+  const figure = (x, base, h, pose, flip, alpha) => {
+    const k = h / 14;
+    const y = (dy) => base + flip * dy * k;
+    g.fillStyle = `rgba(58,52,78,${alpha})`;
+    g.strokeStyle = `rgba(58,52,78,${alpha})`;
+    g.lineCap = "round";
+    // 머리
+    g.beginPath();
+    g.arc(x, y(-12.6), 1.4 * k, 0, Math.PI * 2);
+    g.fill();
+    // 몸통
+    g.lineWidth = 2.2 * k;
+    g.beginPath();
+    g.moveTo(x, y(-11));
+    g.lineTo(x, y(-5.5));
+    g.stroke();
+    // 다리
+    g.lineWidth = 1.3 * k;
+    g.beginPath();
+    g.moveTo(x - 0.4 * k, y(-5.6));
+    g.lineTo(x - 1.2 * k, y(0));
+    g.moveTo(x + 0.4 * k, y(-5.6));
+    g.lineTo(x + 1.2 * k, y(0));
+    g.stroke();
+    // 팔: up = 두 팔 번쩍, wave = 한 팔 흔들기, hand = 옆 사람과 손잡기
+    g.lineWidth = 1 * k;
+    g.beginPath();
+    if (pose === "up") {
+      g.moveTo(x, y(-10));
+      g.lineTo(x - 3 * k, y(-15));
+      g.moveTo(x, y(-10));
+      g.lineTo(x + 3 * k, y(-15));
+    } else if (pose === "wave") {
+      g.moveTo(x, y(-10));
+      g.lineTo(x + 3.2 * k, y(-14));
+      g.moveTo(x, y(-10));
+      g.lineTo(x - 2 * k, y(-6.5));
+    } else {
+      g.moveTo(x, y(-10));
+      g.lineTo(x - 2.6 * k, y(-7));
+      g.moveTo(x, y(-10));
+      g.lineTo(x + 3.4 * k, y(-7.4));
+    }
+    g.stroke();
+  };
+  const jeep = (x, base, flip, alpha) => {
+    const y = (dy) => base + flip * dy;
+    g.fillStyle = `rgba(66,60,84,${alpha})`;
+    g.beginPath();
+    g.moveTo(x, y(-2));
+    g.lineTo(x, y(-6));
+    g.lineTo(x + 5, y(-6.5));
+    g.lineTo(x + 7, y(-10.5));
+    g.lineTo(x + 20, y(-10.5));
+    g.lineTo(x + 21, y(-6));
+    g.lineTo(x + 24, y(-5.5));
+    g.lineTo(x + 24, y(-2));
+    g.closePath();
+    g.fill();
+    // 지붕 짐칸
+    g.fillRect(x + 8, y(-12), 11, flip * 1);
+    // 바퀴
+    for (const wx of [x + 5, x + 19]) {
+      g.beginPath();
+      g.arc(wx, y(-2), 2.2, 0, Math.PI * 2);
+      g.fill();
+    }
+    // 창
+    g.fillStyle = `rgba(190,215,230,${alpha * 0.6})`;
+    g.fillRect(x + 8, y(-9.6), 5, flip * 3);
+    g.fillRect(x + 14, y(-9.6), 5, flip * 3);
+  };
+  const jeepBase = HORIZON + 14;
+  const peopleBase = HORIZON + 30;
+  // 거울 속 모습 (먼저, 옅게)
+  jeep(92, jeepBase, -1, 0.38);
+  figure(186, peopleBase, 15, "hand", -1, 0.4);
+  figure(195, peopleBase, 14, "up", -1, 0.4);
+  figure(206, peopleBase, 13, "wave", -1, 0.4);
+  jeep(92, jeepBase, 1, 0.9);
+  figure(186, peopleBase, 15, "hand", 1, 0.92);
+  figure(195, peopleBase, 14, "up", 1, 0.92);
+  figure(206, peopleBase, 13, "wave", 1, 0.92);
+  // 발밑 잔물결
+  g.strokeStyle = "rgba(255,255,255,0.45)";
+  g.lineWidth = 0.5;
+  for (const [x, b, w] of [[186, peopleBase, 4], [195, peopleBase, 4], [206, peopleBase, 3.6], [104, jeepBase, 14]]) {
+    g.beginPath();
+    g.ellipse(x, b, w, w * 0.18, 0, 0, Math.PI * 2);
+    g.stroke();
+  }
+
   // 바닥: 마른 소금 언덕. 흰 소금 위로 육각 테두리가 낮은 둑처럼 솟음 (밝은 윗선 + 옅은 그늘)
   const floorTop = groundAt(globe.x);
   const salt = g.createLinearGradient(0, floorTop - 10, 0, bottom);
