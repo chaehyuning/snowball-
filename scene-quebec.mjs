@@ -143,8 +143,8 @@ function paintQuebec(g, globe, groundAt) {
   g.save();
   g.setTransform(1, 0, 0, 1, 0, 0);
   const k = m.a;
-  g.globalAlpha = 0.9;
-  g.drawImage(rim, 0.9 * k, -1.1 * k);
+  g.globalAlpha = 0.55;
+  g.drawImage(rim, 0.5 * k, -0.6 * k);
   g.globalAlpha = 1;
   g.drawImage(off, 0, 0);
   g.restore();
@@ -754,7 +754,7 @@ function paintFrontenac(g, rnd) {
   }
 
   // 뾰족한 지붕창: 벽돌 틀 + 높은 삼각 모자 + 꼭대기 장식 바늘
-  function dormer(x, y, s = 1) {
+  function dormer(x, y, s = 1, finial = true) {
     g.fillStyle = "#b45a38";
     g.fillRect(x - 1.8 * s, y - 4.2 * s, 3.6 * s, 4.2 * s);
     g.fillStyle = rnd() < 0.45 ? "#ffd48a" : "#2c2220";
@@ -773,12 +773,14 @@ function paintFrontenac(g, rnd) {
     g.lineTo(x + 1.6 * s, y - 4.2 * s);
     g.closePath();
     g.fill();
-    g.strokeStyle = "#1c2a26";
-    g.lineWidth = 0.4;
-    g.beginPath();
-    g.moveTo(x, y - 9 * s);
-    g.lineTo(x, y - 11.5 * s);
-    g.stroke();
+    if (finial) {
+      g.strokeStyle = "#1c2a26";
+      g.lineWidth = 0.4;
+      g.beginPath();
+      g.moveTo(x, y - 9 * s);
+      g.lineTo(x, y - 11.5 * s);
+      g.stroke();
+    }
   }
 
   // 가파른 녹청 구리 지붕 (아래 폭 w, 위 용마루 폭 rw, 높이 h). 해 쪽(오른쪽)으로 밝아지고 녹물 줄이 번짐
@@ -1032,7 +1034,7 @@ function paintFrontenac(g, rnd) {
   // 2) 탑 앞 낮은 초록 지붕 줄과 박공 지붕창 (굴뚝은 지붕 뒤에서)
   chimney(X(452), Y(572), 30 * S);
   chimney(X(566), Y(568), 30 * S);
-  copperP([[392, 562], [612, 556], [612, 625], [392, 625]], 392, 612);
+  copperP([[392, 562], [604, 557], [604, 625], [392, 625]], 392, 604);
   for (let x = 410; x < 600; x += 22) dormer(X(x), Y(592), 1);
 
   // 3) 탑: 왼쪽 옆면(그늘) + 앞면(벽돌, 아래 돌) + 꺾인 짙은 지붕과 지붕창 네 줄 + 양 모서리 원뿔 망루
@@ -1062,7 +1064,7 @@ function paintFrontenac(g, rnd) {
   g.fillRect(X(428), Y(458), (606 - 428) * S, 0.9);
   // 지붕창: 아래 벽의 창 열에 맞춰 세로로 줄을 세우고, 위로 갈수록 작고 적게 (줄끼리 겹치지 않게)
   for (const [y, x0, x1, sc] of [[448, 486, 590, 0.8], [418, 503, 573, 0.72], [390, 520, 556, 0.64], [366, 529, 547, 0.56]]) {
-    for (let x = x0; x <= x1 + 0.1; x += 17.4) dormer(X(x), Y(y), sc);
+    for (let x = x0; x <= x1 + 0.1; x += 17.4) dormer(X(x), Y(y), sc, false);
   }
   g.strokeStyle = "#1c2a26";
   g.lineWidth = 0.8;
@@ -1114,22 +1116,23 @@ function paintFrontenac(g, rnd) {
   // 돌 건물 양 모서리의 작은 매달린 망루(바르티잔)
   coneP(392, 408, 534, 500, 572, true);
   // 낮은 지붕 줄 양끝과 가운데의 원뿔
-  coneP(612, 632, 566, 524, 625);
+  coneP(616, 636, 566, 524, 625);
   // 오른쪽 벽돌 건물 뒤 작은 원뿔과 박공
   coneP(740, 758, 612, 572, 640);
   gable(X(670), Y(600), 20 * S, 26 * S);
 
   // 6) 앞을 가리는 나무: 성 아랫단을 둥근 잎 덩어리가 덮음 (해 쪽은 밝은 잎, 반대쪽은 그늘)
   const tree = (cx, cy, rad) => {
-    for (let i = 0; i < 26; i++) {
+    // 작은 잎뭉치를 촘촘히 (큰 원 몇 개면 얼룩처럼 보임)
+    for (let i = 0; i < 60; i++) {
       const a = rnd() * Math.PI * 2;
       const d = Math.sqrt(rnd()) * rad;
       const x = cx + Math.cos(a) * d;
       const y = cy + Math.sin(a) * d * 0.7;
       const lit = (x - cx) / rad - (y - cy) / rad > 0.2;
-      g.fillStyle = lit ? ["#6e8a44", "#d8892e", "#e8a040"][Math.floor(rnd() * 3)] : ["#24381f", "#2e4a2c", "#8a4a22"][Math.floor(rnd() * 3)];
+      g.fillStyle = lit ? ["#6e8a44", "#b8783a", "#8a8a44"][Math.floor(rnd() * 3)] : ["#24381f", "#2e4a2c", "#3a3a22"][Math.floor(rnd() * 3)];
       g.beginPath();
-      g.arc(X(x), Y(y), rad * S * 0.28 * (0.6 + rnd() * 0.6), 0, Math.PI * 2);
+      g.arc(X(x), Y(y), rad * S * 0.14 * (0.6 + rnd() * 0.6), 0, Math.PI * 2);
       g.fill();
     }
   };
