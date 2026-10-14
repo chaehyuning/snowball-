@@ -375,30 +375,27 @@ function paintOperaHouse(g) {
     g.lineTo(358, 286);
     g.closePath();
   }
+  // 기단: 낮고 길게 깔린 모래색 테라스 (실제처럼 붉은 벽돌 벽이 아니라 층층이 물러나는 돌 단)
   const podium = g.createLinearGradient(0, 262, 0, 286);
-  podium.addColorStop(0, "#e8cab4");
-  podium.addColorStop(0.6, "#c9a38c");
-  podium.addColorStop(1, "#9c7764");
+  podium.addColorStop(0, "#e2cba6");
+  podium.addColorStop(0.6, "#c4a47c");
+  podium.addColorStop(1, "#8e7254");
   g.fillStyle = podium;
   podiumShape();
   g.fill();
   g.save();
   podiumShape();
   g.clip();
-  for (let y = 265; y < 286; y += 3.2) {
-    let x = 160;
-    while (x < 358) {
-      const w = r(8, 18);
-      g.fillStyle = rnd() < 0.5 ? "rgba(255,236,220,0.12)" : "rgba(120,80,62,0.1)";
-      g.fillRect(x, y, w, 3.2);
-      if (rnd() < 0.6) {
-        g.fillStyle = "rgba(100,66,52,0.12)";
-        g.fillRect(x + w - 0.4, y + 0.4, 0.5, 2.6);
-      }
-      x += w;
-    }
-    g.fillStyle = `rgba(100,66,52,${r(0.1, 0.2)})`;
-    g.fillRect(160, y + 3, 200, 0.5);
+  // 층층이 물러나는 테라스 턱과, 그 사이 가로로 길게 이어진 어두운 창 띠
+  for (const [ty, band] of [[268, 2.2], [276, 1.6]]) {
+    g.fillStyle = "rgba(255,240,215,0.55)";
+    g.fillRect(160, ty - 1, 200, 0.8);
+    g.fillStyle = "#3a2e28";
+    g.fillRect(176, ty + 1, 168, band);
+    g.fillStyle = "rgba(255,226,180,0.35)";
+    for (let x = 178; x < 344; x += 4) g.fillRect(x, ty + 1.2, 0.5, band - 0.4);
+    g.fillStyle = "rgba(90,66,48,0.3)";
+    g.fillRect(160, ty + 1 + band, 200, 1.2);
   }
   // 윗면 테두리에 받은 햇빛, 물에 닿는 아래쪽 젖은 그늘
   g.fillStyle = "rgba(255,244,230,0.6)";
@@ -484,19 +481,14 @@ function paintOperaHouse(g) {
   // 두 무리가 나란히: 뒤(오른쪽 위)는 큰 콘서트홀, 앞(왼쪽 아래)은 오페라극장. 무리마다 같은 쪽을 향한 조가비 셋과
   // 끝에서 등을 맞댄 반대쪽 조가비 하나. 맨 왼쪽 앞에는 작은 레스토랑 조가비 한 쌍이 따로 앉음
   const shells = [
-    // 콘서트홀 (뒤)
-    [348, 204, 48, 256, true],
-    [292, 184, 54, 256, false],
-    [268, 200, 46, 256, false],
-    [249, 218, 36, 256, false],
-    // 오페라극장 (앞, 조금 작고 왼쪽 아래)
-    [304, 216, 42, 260, true],
-    [240, 200, 46, 260, false],
-    [219, 214, 38, 260, false],
-    [203, 230, 28, 260, false],
-    // 레스토랑
-    [196, 246, 18, 263, true],
-    [172, 244, 22, 263, false],
+    // 큰 무리: 끝이 왼쪽 위를 향한 조가비 셋이 점점 커지고, 오른쪽에 반대로 누운 넓고 낮은 조가비가 등을 맞댐
+    [342, 214, 74, 258, true],
+    [238, 182, 58, 258, false],
+    [212, 204, 48, 258, false],
+    [190, 224, 38, 258, false],
+    // 오른쪽 끝 작은 레스토랑 조가비 한 쌍
+    [364, 242, 16, 260, true],
+    [346, 242, 18, 260, false],
   ];
   for (const [ax, ay, w, by, flip] of shells) {
     g.save();
@@ -580,6 +572,11 @@ function shell(g, ax, ay, w, by) {
   surface();
   g.fill();
   g.restore();
+  // 조가비 윤곽: 가는 테두리로 면을 또렷하게
+  surface();
+  g.strokeStyle = "rgba(140,120,92,0.75)";
+  g.lineWidth = 0.6;
+  g.stroke();
   // 타일 결: 바깥 곡선과 나란히 흐르는 아주 옅은 줄
   g.save();
   surface();
