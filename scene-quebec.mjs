@@ -925,99 +925,166 @@ function paintFrontenac(g, rnd) {
     g.fillRect(x - 0.5, y - h - 1.2, 4, 1.4);
   }
 
-  // 꺾인 탑 지붕 (사진처럼): 처마에서 거의 곧게 서다가 위에서 급히 좁아짐. 짙은 구리색, 지붕창 네 줄
-  function mansard(x, y, w, h) {
-    const kneeY = y - h * 0.4;
-    const kx = 2;
-    const topW = w * 0.24;
-    const tx0 = x + (w - topW) / 2;
-    const pts = [[x - 1, y], [x + kx, kneeY], [tx0, y - h], [tx0 + topW, y - h], [x + w - kx, kneeY], [x + w + 1, y]];
-    const dark = g.createLinearGradient(x, 0, x + w, 0);
-    dark.addColorStop(0, "#1e2624");
-    dark.addColorStop(0.6, "#33403c");
-    dark.addColorStop(1, "#5f726a");
-    g.fillStyle = dark;
+  // ① 사진 버전의 형태를 그대로: 사진 좌표(px, py)를 장면 좌표로 옮겨 같은 자리·같은 비율에 그림
+  const X = QX;
+  const Y = QY;
+  const S = QS;
+  const P = (pts) => {
     g.beginPath();
-    for (const [px, py] of pts) g.lineTo(px, py);
+    g.moveTo(X(pts[0][0]), Y(pts[0][1]));
+    for (const [px, py] of pts.slice(1)) g.lineTo(X(px), Y(py));
     g.closePath();
+  };
+  // 사진 좌표 사각형에 ②의 벽 그리기
+  const wallP = (x0, x1, y0, y1, opts) => wall(X(x0), Y(y0), (x1 - x0) * S, (y1 - y0) * S, opts);
+  // 사진 좌표 다각형 지붕에 ②의 녹청 구리 결 (해 쪽이 밝고 위는 하늘빛, 녹물 번짐, 해 쪽 능선 금빛)
+  const copperP = (pts, x0, x1, dark = false) => {
+    P(pts);
+    const c = g.createLinearGradient(X(x0), 0, X(x1), 0);
+    if (dark) {
+      c.addColorStop(0, "#1e2624");
+      c.addColorStop(0.6, "#33403c");
+      c.addColorStop(1, "#5f726a");
+    } else {
+      c.addColorStop(0, COPPER[0]);
+      c.addColorStop(0.55, COPPER[1]);
+      c.addColorStop(0.9, COPPER[2]);
+      c.addColorStop(1, COPPER[3]);
+    }
+    g.fillStyle = c;
     g.fill();
     g.save();
     g.clip();
-    const v = g.createLinearGradient(0, y - h, 0, y);
-    v.addColorStop(0, "rgba(255,210,170,0.2)");
-    v.addColorStop(1, "rgba(0,0,0,0.25)");
+    const ys = pts.map((q) => Y(q[1]));
+    const top = Math.min(...ys);
+    const bot = Math.max(...ys);
+    const v = g.createLinearGradient(0, top, 0, bot);
+    v.addColorStop(0, "rgba(255,220,180,0.2)");
+    v.addColorStop(1, "rgba(10,25,20,0.3)");
     g.fillStyle = v;
-    g.fillRect(x - 2, y - h, w + 4, h);
+    g.fillRect(X(x0) - 2, top, (x1 - x0) * S + 4, bot - top);
+    if (!dark) {
+      for (let i = 0; i < Math.round(((x1 - x0) * S) / 6); i++) {
+        const sx = X(x0) + rnd() * (x1 - x0) * S;
+        const st = g.createLinearGradient(0, top, 0, bot);
+        st.addColorStop(0, "rgba(150,215,190,0.14)");
+        st.addColorStop(1, "rgba(150,215,190,0)");
+        g.fillStyle = st;
+        g.fillRect(sx, top, 1.6, bot - top);
+      }
+    }
     g.restore();
+  };
+  const sunLine = (pts) => {
     g.strokeStyle = SUN;
     g.lineWidth = 0.6;
     g.beginPath();
-    g.moveTo(x + w + 1, y);
-    g.lineTo(x + w - kx, kneeY);
-    g.lineTo(tx0 + topW, y - h);
+    g.moveTo(X(pts[0][0]), Y(pts[0][1]));
+    for (const [px, py] of pts.slice(1)) g.lineTo(X(px), Y(py));
     g.stroke();
-    g.fillStyle = "#1c2a26";
-    g.fillRect(tx0, y - h - 0.8, topW, 0.8);
-    for (let px = tx0; px <= tx0 + topW; px += 1.8) g.fillRect(px, y - h - 2.4, 0.4, 1.6);
-    // 지붕창: 아랫단 두 줄은 넓게, 윗단 두 줄은 좁아지며
-    const rowsDef = [[y - h * 0.1, w - 10], [y - h * 0.3, w - 12], [y - h * 0.55, w * 0.5], [y - h * 0.75, w * 0.32]];
-    for (const [ry, span] of rowsDef) {
-      const n = Math.max(1, Math.floor(span / 6.5));
-      for (let i = 0; i < n; i++) dormer(x + w / 2 - span / 2 + 3 + (i * (span - 6)) / Math.max(1, n - 1), ry + 3, 0.9);
+  };
+  // 사진의 원뿔(벽 위 원뿔 지붕)을 ②의 망루로: 밑변 x0~x1, 처마 y, 꼭짓점 높이 apexY, 몸통 아래 끝 baseY
+  const coneP = (x0, x1, eaveY, apexY, baseY) => {
+    const w = (x1 - x0) * S * 0.78;
+    turret(X((x0 + x1) / 2), w, (baseY - eaveY) * S, (eaveY - apexY) * S, Y(baseY));
+  };
+
+  // 1) 맨 왼쪽 뒤: 뾰족한 초록 지붕들과 그 아래 돌벽
+  copperP([[165, 625], [165, 548], [192, 512], [222, 540], [252, 518], [292, 546], [292, 625]], 165, 292);
+  sunLine([[192, 512], [222, 540]]);
+  sunLine([[252, 518], [292, 546]]);
+  wallP(165, 292, 580, 625, { lit: 0.3, stoneAll: true });
+  for (const [x, y] of [[192, 512], [252, 518]]) {
+    g.strokeStyle = "#1c2a26";
+    g.lineWidth = 0.5;
+    g.beginPath();
+    g.moveTo(X(x), Y(y));
+    g.lineTo(X(x), Y(y - 16));
+    g.stroke();
+  }
+  dormer(X(205), Y(566), 0.9);
+  dormer(X(268), Y(566), 0.9);
+
+  // 2) 탑 앞 낮은 초록 지붕 줄과 박공 지붕창
+  copperP([[392, 562], [612, 556], [612, 625], [392, 625]], 392, 612);
+  for (let x = 410; x < 600; x += 22) dormer(X(x), Y(592), 1);
+
+  // 3) 탑: 왼쪽 옆면(그늘) + 앞면(벽돌, 아래 돌) + 꺾인 짙은 지붕과 지붕창 네 줄 + 양 모서리 원뿔 망루
+  P([[428, 456], [470, 463], [470, 625], [428, 625]]);
+  const sideB = g.createLinearGradient(X(428), 0, X(470), 0);
+  sideB.addColorStop(0, "#4e2016");
+  sideB.addColorStop(1, "#6e2e1e");
+  g.fillStyle = sideB;
+  g.fill();
+  for (let wy = 470; wy < 610; wy += 19) {
+    for (let wx = 436; wx < 466; wx += 14) {
+      g.fillStyle = rnd() < 0.2 ? "#ffd48a" : "#2a1a18";
+      g.fillRect(X(wx), Y(wy), 1.4, 2.6);
     }
   }
-
-  // 0) 맨 왼쪽 뒤: 뾰족한 초록 지붕 둘과 그 아래 돌벽 (흐릿, 깊이)
-  g.save();
-  g.globalAlpha = 0.65;
-  wall(196, GROUND - 26, 22, 26, { lit: 0.2, stoneAll: true });
-  roof(196, GROUND - 26, 11, 20, 1, 0);
-  roof(207, GROUND - 26, 11, 16, 1, 0);
-  g.restore();
-
-  // 1) 가운데 높은 탑: 벽돌 몸통, 꺾인 짙은 지붕, 양 모서리 원뿔 망루, 굴뚝, 깃발
-  const tx = 270;
-  const tw = 46;
-  const tTop = GROUND - 106;
-  wall(tx, tTop, tw, 106, { lit: 0.7 });
-  mansard(tx - 1, tTop, tw + 2, 52);
-  for (const cx of [tx + 1, tx + tw - 1]) turret(cx, 6, 16, 16, tTop + 10);
+  wallP(470, 606, 456, 625, { lit: 0.7 });
+  // 탑 지붕: 왼쪽 면(그늘) 먼저, 앞면
+  P([[428, 456], [470, 463], [482, 410], [518, 345], [500, 350], [438, 414]]);
+  g.fillStyle = "#161c1b";
+  g.fill();
+  copperP([[470, 463], [606, 456], [598, 412], [552, 345], [518, 345], [482, 410]], 470, 606, true);
+  sunLine([[606, 456], [598, 412], [552, 345]]);
+  g.fillStyle = "#1c2a26";
+  g.fillRect(X(518), Y(345) - 0.8, (552 - 518) * S, 0.8);
+  for (let px = 518; px <= 552; px += 5) g.fillRect(X(px), Y(345) - 2.4, 0.4, 1.6);
+  g.fillStyle = "#d9c8a8";
+  g.fillRect(X(428), Y(458), (606 - 428) * S, 0.9);
+  for (const [y, x0, x1] of [[446, 484, 596], [414, 494, 576], [384, 506, 560], [360, 520, 548]]) {
+    for (let x = x0; x <= x1; x += 18) dormer(X(x), Y(y), 0.95);
+  }
   g.strokeStyle = "#1c2a26";
   g.lineWidth = 0.8;
   g.beginPath();
-  g.moveTo(tx + tw / 2, tTop - 53);
-  g.lineTo(tx + tw / 2, tTop - 66);
+  g.moveTo(X(535), Y(345));
+  g.lineTo(X(535), Y(300));
   g.stroke();
-  g.fillStyle = "#c8102e";
-  g.beginPath();
-  g.moveTo(tx + tw / 2, tTop - 66);
-  g.lineTo(tx + tw / 2 + 7, tTop - 63.5);
-  g.lineTo(tx + tw / 2, tTop - 61);
-  g.closePath();
+  coneP(428, 446, 458, 412, 470);
+  coneP(588, 608, 458, 400, 470);
+
+  // 4) 왼쪽 돌 박공 건물: 오른쪽 옆면, 돌벽, 가파른 초록 지붕, 가운데 돌 박공, 붉은 굴뚝
+  P([[398, 528], [414, 520], [414, 618], [398, 625]]);
+  g.fillStyle = "#5e5850";
   g.fill();
+  P([[402, 530], [346, 455], [360, 452], [416, 522]]);
+  g.fillStyle = "#1f342b";
+  g.fill();
+  wallP(285, 398, 528, 625, { lit: 0.4, stoneAll: true });
+  copperP([[280, 530], [402, 530], [346, 455], [326, 455]], 280, 402);
+  sunLine([[346, 455], [402, 530]]);
+  gable(X(335), Y(530), 60 * S, 60 * S, "#b2a894");
+  chimney(X(350), Y(528), (528 - 470) * S);
+  dormer(X(296), Y(520), 0.85);
+  dormer(X(384), Y(520), 0.85);
 
-  // 2) 왼쪽 돌 박공 건물: 회색 돌벽에 가파른 초록 지붕, 가운데 돌 박공, 붉은 굴뚝
-  wall(218, GROUND - 32, 40, 32, { lit: 0.35, stoneAll: true });
-  roof(216, GROUND - 32, 44, 30, 6, 1);
-  gable(237, GROUND - 32, 16, 28, "#b2a894");
-  chimney(246, GROUND - 46, 24);
+  // 5) 탑 오른쪽 아래 작은 원뿔과, 오른쪽 벽돌 건물 위 원뿔 망루 둘
+  coneP(548, 576, 560, 526, 600);
+  wallP(648, 742, 600, 640, { lit: 0.85, rows: 1 });
+  coneP(648, 692, 602, 552, 640);
+  coneP(694, 742, 610, 564, 640);
 
-  // 3) 탑 앞 낮은 초록 지붕 줄: 박공 지붕창이 줄지어 섬
-  wall(258, GROUND - 14, 70, 14, { lit: 0.6, rows: 1 });
-  roof(256, GROUND - 14, 74, 12, 64, 0);
-  for (let x = 264; x < 326; x += 9) dormer(x, GROUND - 16, 0.9);
-
-  // 4) 오른쪽 벽돌 날개: 박공 둘, 굴뚝
-  wall(328, GROUND - 30, 32, 30, { lit: 0.85 });
-  roof(327, GROUND - 30, 34, 20, 14, 1);
-  gable(338, GROUND - 30, 10, 18);
-  chimney(350, GROUND - 46, 16);
-
-  // 5) 망루: 오른쪽 끝 원뿔 둘(사진), 탑 아래 오른쪽 작은 원뿔, 왼쪽 끝
-  turret(218, 10, 40, 22);
-  turret(320, 9, 30, 18);
-  turret(346, 11, 38, 22);
-  turret(362, 11, 34, 20);
+  // 6) 앞을 가리는 나무: 성 아랫단을 둥근 잎 덩어리가 덮음 (해 쪽은 밝은 잎, 반대쪽은 그늘)
+  const tree = (cx, cy, rad) => {
+    for (let i = 0; i < 26; i++) {
+      const a = rnd() * Math.PI * 2;
+      const d = Math.sqrt(rnd()) * rad;
+      const x = cx + Math.cos(a) * d;
+      const y = cy + Math.sin(a) * d * 0.7;
+      const lit = (x - cx) / rad - (y - cy) / rad > 0.2;
+      g.fillStyle = lit ? ["#6e8a44", "#d8892e", "#e8a040"][Math.floor(rnd() * 3)] : ["#24381f", "#2e4a2c", "#8a4a22"][Math.floor(rnd() * 3)];
+      g.beginPath();
+      g.arc(X(x), Y(y), rad * S * 0.28 * (0.6 + rnd() * 0.6), 0, Math.PI * 2);
+      g.fill();
+    }
+  };
+  tree(410, 640, 70);
+  tree(300, 650, 60);
+  tree(680, 650, 55);
+  tree(540, 660, 50);
 }
 
 // 성 앞 강가 절벽 위 산책로(뒤프랭 테라스): 나무 데크와 녹색 지붕 정자, 가로등
