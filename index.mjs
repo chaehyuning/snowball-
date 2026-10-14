@@ -424,7 +424,9 @@ function* buildSteps(target, out, scale = LAYER_DPR) {
   out.scene = paintAs((g) => target.paint(g, globe, groundAt), true);
   yield;
   out.glass = paintAs(paintGlass, false);
+  reflectSource = out.scene;
   out.baseFront = paintAs(paintBaseFront, true);
+  reflectSource = null;
   yield;
   for (const key of ["baseBack", "scene", "baseFront"]) {
     const layer = out[key];
@@ -997,16 +999,49 @@ function paintGlass(g) {
   g.arc(x, y, r, 0, Math.PI * 2);
   g.fill();
 
-  // 넓고 부드러운 반사광
-  g.save();
-  g.translate(x - 62, y - 78);
-  g.rotate(-0.7);
-  const soft = g.createRadialGradient(0, 0, 0, 0, 0, 70);
-  soft.addColorStop(0, `rgba(255,255,255,${0.45 * scene.glare})`);
-  soft.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = soft;
+  // 창문 반사: 왼쪽 위 창(두 칸)이 둥근 유리 곡면을 따라 휘어 비침. 둥근 얼룩보다 유리답게 보임
+  const pane = (a0, a1, r0, r1, alpha) => {
+    const mid = (a0 + a1) / 2;
+    const fade = g.createLinearGradient(
+      x + Math.cos(mid) * r1 * r,
+      y + Math.sin(mid) * r1 * r,
+      x + Math.cos(mid) * r0 * r,
+      y + Math.sin(mid) * r0 * r,
+    );
+    fade.addColorStop(0, `rgba(255,255,255,${alpha * scene.glare})`);
+    fade.addColorStop(0.55, `rgba(255,255,255,${alpha * 0.45 * scene.glare})`);
+    fade.addColorStop(1, "rgba(255,255,255,0)");
+    g.save();
+    g.filter = "blur(1.5px)"; // 창 모서리가 칼로 자른 듯 보이지 않게 살짝 번짐
+    g.fillStyle = fade;
+    g.beginPath();
+    g.arc(x, y, r1 * r, a0, a1);
+    g.arc(x, y, r0 * r, a1, a0, true);
+    g.closePath();
+    g.fill();
+    g.restore();
+  };
+  const deg = Math.PI / 180;
+  pane(-163 * deg, -134 * deg, 0.6, 0.93, 0.3);
+  pane(-130 * deg, -104 * deg, 0.64, 0.93, 0.24);
+  // 창틀 사이로 보이는 가로 창살
+  g.strokeStyle = `rgba(255,255,255,${0.1 * scene.glare})`;
+  g.lineWidth = 1.2;
   g.beginPath();
-  g.ellipse(0, 0, 70, 38, 0, 0, Math.PI * 2);
+  g.arc(x, y, r * 0.78, -162 * deg, -105 * deg);
+  g.stroke();
+
+  // 왼쪽 위에서 든 빛이 유리구를 지나 오른쪽 아래 바닥 가까이에 모인 밝은 자리 (집광)
+  g.save();
+  g.translate(x + r * 0.5, y + r * 0.62);
+  g.rotate(-0.5);
+  const focus = g.createRadialGradient(0, 0, 0, 0, 0, 34);
+  focus.addColorStop(0, `rgba(255,250,235,${0.3 * scene.glare})`);
+  focus.addColorStop(1, "rgba(255,250,235,0)");
+  g.fillStyle = focus;
+  g.scale(1, 0.42);
+  g.beginPath();
+  g.arc(0, 0, 34, 0, Math.PI * 2);
   g.fill();
   g.restore();
 
@@ -1068,6 +1103,8 @@ const base = { top: 352, bottom: 452, topRx: 100, bottomRx: 128, ry: 14 };
 // 받침대 몸통은 모든 나라가 같은 짙은 호두나무. 나라별 색은 테두리와 이름판에만
 const BASE_BODY = ["#0f0a09", "#33241f", "#43302a", "#22171a", "#0a0606"];
 const BASE_COLLAR = "#1a1210";
+// 받침 옻칠에 비칠 장면 그림 (고정 층을 만드는 동안만 잠깐 가리킴)
+let reflectSource = null;
 
 function paintBaseBack(g) {
   g.fillStyle = BASE_COLLAR;
@@ -1098,6 +1135,53 @@ function paintBaseFront(g) {
   sheen.addColorStop(0.3, "rgba(255,255,255,0)");
   g.fillStyle = sheen;
   g.fill();
+
+  // 광택 옻칠에 유리구 속 아랫부분이 거꾸로 흐릿하게 비침 (나라마다 받침 색이 장면과 어울림)
+  if (reflectSource) {
+    // 거꾸로 눌러 담은 장면을 따로 그리고, 아래로 갈수록 투명해지게 지운 뒤 한 번에 얹음
+    const sy = globe.y + 40;
+    const sh = globe.r - 40;
+    const rh = sh * 0.42;
+    const m = g.getTransform().a;
+    const tmp = document.createElement("canvas");
+    tmp.width = Math.ceil(W * m);
+    tmp.height = Math.ceil(rh * m);
+    const tg = tmp.getContext("2d");
+    tg.scale(m, m);
+    tg.translate(0, rh);
+    tg.scale(1, -0.42);
+    tg.drawImage(reflectSource, 0, (sy / H) * reflectSource.height, reflectSource.width, (sh / H) * reflectSource.height, 0, 0, W, sh);
+    tg.setTransform(1, 0, 0, 1, 0, 0);
+    tg.globalCompositeOperation = "destination-in";
+    const fade = tg.createLinearGradient(0, 0, 0, tmp.height);
+    fade.addColorStop(0, "rgba(0,0,0,1)");
+    fade.addColorStop(1, "rgba(0,0,0,0)");
+    tg.fillStyle = fade;
+    tg.fillRect(0, 0, tmp.width, tmp.height);
+    g.save();
+    g.clip();
+    g.globalAlpha = 0.24;
+    g.filter = "blur(2px)";
+    g.drawImage(tmp, 0, top + 2, W, rh);
+    g.restore();
+  }
+
+  // 스튜디오 조명이 세로로 길게 비친 하이라이트: 왼쪽에 밝은 줄, 오른쪽에 은은한 줄
+  g.save();
+  g.clip();
+  for (const [fx, w, a] of [
+    [-0.42, 16, 0.13],
+    [0.5, 10, 0.06],
+  ]) {
+    const sx = cx + fx * topRx;
+    const strip = g.createLinearGradient(sx - w, 0, sx + w, 0);
+    strip.addColorStop(0, "rgba(255,255,255,0)");
+    strip.addColorStop(0.5, `rgba(255,248,236,${a})`);
+    strip.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = strip;
+    g.fillRect(sx - w - 20, top, w * 2 + 40, bottom - top + ry);
+  }
+  g.restore();
 
   // 금속 테두리 두 줄
   const gold = g.createLinearGradient(cx - bottomRx, 0, cx + bottomRx, 0);
@@ -1248,8 +1332,72 @@ function draw(t) {
   ctx.drawImage(layers.scene, 0, 0, W, H);
   drawWeather(ctx, t, globe, scene.id);
   drawParticles(t);
+  drawBokeh(t);
   ctx.drawImage(layers.glass, 0, 0, W, H);
+  drawGlint();
   ctx.drawImage(layers.baseFront, 0, 0, W, H);
+  ctx.restore();
+}
+
+// 유리 바로 안쪽, 초점이 안 맞은 가까운 입자처럼 크고 흐린 빛망울 몇 개. 흔들면 더 크게 출렁여 앞뒤 깊이가 생김
+const BOKEH = Array.from({ length: 5 }, (_, i) => ({
+  ax: Math.cos(i * 2.39) * 0.62,
+  ay: Math.sin(i * 2.39) * 0.5 - 0.15,
+  r: 9 + ((i * 37) % 13),
+  speed: 0.00011 + (i % 3) * 0.00005,
+  phase: i * 1.7,
+  alpha: 0.035 + ((i * 13) % 5) * 0.008,
+}));
+let bokehSprite = null;
+function drawBokeh(t) {
+  if (!bokehSprite) {
+    // 빛망울: 가장자리가 살짝 밝은 둥근 판 (렌즈 보케 모양)
+    bokehSprite = document.createElement("canvas");
+    bokehSprite.width = bokehSprite.height = 64;
+    const g = bokehSprite.getContext("2d");
+    const disc = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    disc.addColorStop(0, "rgba(255,255,255,0.55)");
+    disc.addColorStop(0.78, "rgba(255,255,255,0.7)");
+    disc.addColorStop(0.9, "rgba(255,255,255,0.9)");
+    disc.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = disc;
+    g.fillRect(0, 0, 64, 64);
+  }
+  const sway = offset * VISUAL_SHAKE * 0.5;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(globe.x, globe.y, globe.r - 4, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.globalCompositeOperation = "lighter";
+  for (const b of BOKEH) {
+    const a = t * b.speed + b.phase;
+    const x = globe.x + (b.ax + Math.sin(a) * 0.08) * globe.r;
+    const y = globe.y + (b.ay + Math.cos(a * 1.3) * 0.06) * globe.r - sway * (b.r / 14);
+    ctx.globalAlpha = b.alpha * (0.75 + 0.25 * Math.sin(a * 2.1));
+    ctx.drawImage(bokehSprite, x - b.r, y - b.r, b.r * 2, b.r * 2);
+  }
+  ctx.restore();
+}
+
+// 흔들 때 유리 테두리를 따라 미끄러지는 반짝임: 빛을 받는 각도가 바뀌는 것처럼
+function drawGlint() {
+  const k = Math.min(1, Math.abs(offset) / MAX_OFFSET);
+  if (k < 0.04) return;
+  const deg = Math.PI / 180;
+  const mid = (-118 + offset * 0.9) * deg;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.lineCap = "round";
+  for (const [w, a] of [
+    [7, 0.12],
+    [2, 0.55],
+  ]) {
+    ctx.strokeStyle = `rgba(255,255,255,${a * k * scene.glare})`;
+    ctx.lineWidth = w;
+    ctx.beginPath();
+    ctx.arc(globe.x, globe.y, globe.r - 5, mid - 0.22, mid + 0.22);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
