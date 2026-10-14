@@ -295,8 +295,8 @@ function paintChateau(g, r, rnd, cx, ground) {
   // 벽돌 면: 층 띠, 모서리 돌, 세로 열 창. shade: 0(앞면)~1(그늘진 옆면)
   function brickFace(w, h, shade) {
     const brick = g.createLinearGradient(0, 0, w, 0);
-    brick.addColorStop(0, shade ? "#4e1f15" : "#743020");
-    brick.addColorStop(1, shade ? "#5e2618" : "#a24a2a");
+    brick.addColorStop(0, shade ? "#6a2c1c" : "#a04a2c");
+    brick.addColorStop(1, shade ? "#7a3622" : "#cf7446");
     g.fillStyle = brick;
     g.fillRect(0, 0, w, h);
     const dusk = g.createLinearGradient(0, 0, 0, h);
@@ -326,7 +326,7 @@ function paintChateau(g, r, rnd, cx, ground) {
 
   // 상자 덩어리: 앞면 왼쪽 아래 (x, ground), 폭 w, 높이 h, 깊이 d, 지붕 높이 rh.
   // back: 앞줄에서 뒤로 물러난 깊이 (탑처럼 뒤에 선 덩어리)
-  function block(x0, w, h, d, rh, back = 0) {
+  function block(x0, w, h, d, rh, back = 0, opts = {}) {
     const x = x0 + back * DEPTH.x;
     const base = ground + back * DEPTH.y;
     const top = base - h;
@@ -353,100 +353,156 @@ function paintChateau(g, r, rnd, cx, ground) {
     g.stroke();
     g.strokeRect(x, top, w, h);
 
-    // 네 경사면 지붕: 처마는 앞으로만 살짝 내밀어, 옆 덩어리와는 벽 폭 그대로 맞닿음 (서로 파고들지 않게)
+    roofOn(x, top, w, d, rh, opts);
+    // 벽에서 솟아 지붕을 뚫고 올라가는 뾰족한 돌 박공 (이 성의 상징)
+    if (opts.gables) {
+      for (const gx of opts.gables) {
+        const px = x + gx;
+        const gh = Math.min(14, rh * 0.5);
+        g.fillStyle = "#c06a40";
+        g.beginPath();
+        g.moveTo(px - 5, top + 1);
+        g.lineTo(px - 5, top - gh * 0.45);
+        g.lineTo(px, top - gh);
+        g.lineTo(px + 5, top - gh * 0.45);
+        g.lineTo(px + 5, top + 1);
+        g.closePath();
+        g.fill();
+        g.strokeStyle = "#ecdcc0";
+        g.lineWidth = 0.8;
+        g.beginPath();
+        g.moveTo(px - 5.4, top - gh * 0.45);
+        g.lineTo(px, top - gh);
+        g.lineTo(px + 5.4, top - gh * 0.45);
+        g.stroke();
+        g.fillStyle = RIM;
+        g.fillRect(px + 4.4, top - gh * 0.45, 0.6, gh * 0.45);
+        archWindow(px - 1.1, top - gh * 0.5, rnd() < 0.5);
+        g.strokeStyle = "#1f2524";
+        g.lineWidth = 0.5;
+        g.beginPath();
+        g.moveTo(px, top - gh);
+        g.lineTo(px, top - gh - 3);
+        g.stroke();
+      }
+    }
+  }
+
+  // 네 경사면 지붕 (실제처럼 짙은 회녹색 슬레이트·구리).
+  // 폭이 깊이보다 길면 용마루가 좌우로, 깊이가 더 길면 앞뒤로 놓임 → 앞면·왼쪽 면 모양이 그에 맞게 바뀜
+  function roofOn(x, top, w, d, rh, opts) {
     const o = 1.2;
-    const inset = Math.min(w, d) / 2 - 1;
-    const X0 = x;
-    const W = w;
     const D = d + o;
     const T = top + o * 0.6;
-    const a = P(X0, T, 0, 0, 0);
-    const b = P(X0, T, W, 0, 0);
-    const c = P(X0, T, W - inset, D / 2, rh);
-    const e = P(X0, T, inset, D / 2, rh);
-    const f = P(X0, T, 0, D, 0);
-    // 왼쪽 경사면 (그늘)
-    g.fillStyle = "#1f463c";
-    g.beginPath();
-    g.moveTo(...a);
-    g.lineTo(...e);
-    g.lineTo(...f);
-    g.closePath();
+    const at = (u, v, z) => P(x, T, u, v, z);
+    let R1;
+    let R2;
+    if (w >= D) {
+      const k = D / 2;
+      R1 = [k, D / 2];
+      R2 = [w - k, D / 2];
+    } else {
+      const k = w / 2;
+      R1 = [w / 2, k];
+      R2 = [w / 2, D - k];
+    }
+    const a = at(0, 0, 0);
+    const b = at(w, 0, 0);
+    const f = at(0, D, 0);
+    const r1 = at(R1[0], R1[1], rh);
+    const r2 = at(R2[0], R2[1], rh);
+    const front = w >= D ? [a, b, r2, r1] : [a, b, r1];
+    const side = w >= D ? [a, r1, f] : [a, r1, r2, f];
+    const poly = (pts) => {
+      g.beginPath();
+      g.moveTo(...pts[0]);
+      for (const q of pts.slice(1)) g.lineTo(...q);
+      g.closePath();
+    };
+    // 왼쪽 면: 그늘
+    poly(side);
+    g.fillStyle = "#1b2322";
     g.fill();
-    // 앞 경사면: 왼쪽은 어둡고 해 쪽(오른쪽)으로 갈수록 밝은 녹청
-    const copper = g.createLinearGradient(a[0], 0, b[0], 0);
-    copper.addColorStop(0, "#2c5f50");
-    copper.addColorStop(0.6, "#438f78");
-    copper.addColorStop(1, "#86c9ad");
-    g.fillStyle = copper;
-    g.beginPath();
-    g.moveTo(...a);
-    g.lineTo(...b);
-    g.lineTo(...c);
-    g.lineTo(...e);
-    g.closePath();
+    // 앞면: 역광이라 짙고, 해 쪽 끝만 살짝 밝음
+    poly(front);
+    const slate = g.createLinearGradient(a[0], 0, b[0], 0);
+    slate.addColorStop(0, "#27302f");
+    slate.addColorStop(0.7, "#3a4a46");
+    slate.addColorStop(1, "#5e746c");
+    g.fillStyle = slate;
     g.fill();
-    // 구리판 이음매
+    // 판 이음매
     g.save();
     g.clip();
-    g.strokeStyle = "rgba(20,50,40,0.3)";
+    g.strokeStyle = "rgba(120,150,140,0.16)";
     g.lineWidth = 0.4;
-    for (let k = 0; k <= 1; k += 2.2 / W) {
+    for (let k = 0; k <= 1.001; k += 2.2 / w) {
       g.beginPath();
       g.moveTo(a[0] + (b[0] - a[0]) * k, a[1]);
-      g.lineTo(e[0] + (c[0] - e[0]) * k, e[1]);
+      const tx = front.length === 4 ? r1[0] + (r2[0] - r1[0]) * k : r1[0];
+      const ty = front.length === 4 ? r1[1] : r1[1];
+      g.lineTo(tx, ty);
       g.stroke();
     }
     g.restore();
-    // 능선: 왼쪽 모서리는 어둡게, 오른쪽 모서리와 용마루는 빛
+    // 능선: 해 쪽 모서리와 용마루에 금빛
     g.lineWidth = 0.7;
-    g.strokeStyle = "rgba(15,35,30,0.9)";
-    g.beginPath();
-    g.moveTo(...a);
-    g.lineTo(...e);
-    g.stroke();
     g.strokeStyle = RIM;
     g.beginPath();
     g.moveTo(...b);
-    g.lineTo(...c);
-    g.lineTo(...e);
+    g.lineTo(...(front.length === 4 ? r2 : r1));
+    if (front.length === 4) g.lineTo(...r1);
+    else g.lineTo(...r2);
     g.stroke();
-    // 지붕 윤곽
-    g.strokeStyle = "rgba(15,35,30,0.7)";
-    g.lineWidth = 0.5;
+    g.strokeStyle = "rgba(10,14,14,0.85)";
     g.beginPath();
     g.moveTo(...f);
     g.lineTo(...a);
     g.lineTo(...b);
+    g.moveTo(...a);
+    g.lineTo(...r1);
     g.stroke();
-    // 앞 경사면 지붕창: 박공을 쓴 작은 창이 경사면 위에 솟음
-    const rows = rh > 26 ? [0.25, 0.55] : [0.38];
-    for (const k of rows) {
-      const zz = rh * k;
-      const vv = (D / 2) * k;
-      const uFrom = inset * k + 4;
-      const uTo = W - inset * k - 4;
-      for (let u = uFrom; u <= uTo; u += 7) {
-        const [dx, dy] = P(X0, T, u, vv, zz);
-        g.fillStyle = "#e6d6bc";
-        g.fillRect(dx - 1.8, dy - 4.4, 3.6, 4.4);
-        g.fillStyle = "#2c6655";
-        g.beginPath();
-        g.moveTo(dx - 2.4, dy - 4.4);
-        g.lineTo(dx, dy - 7);
-        g.lineTo(dx + 2.4, dy - 4.4);
-        g.closePath();
-        g.fill();
-        g.fillStyle = rnd() < 0.45 ? "#ffcf7a" : "#203430";
-        g.fillRect(dx - 1, dy - 3.4, 2, 2.8);
+    // 지붕창: 크림색 틀에 뾰족한 박공 모자, 경사면을 따라 여러 줄
+    const dormer = (dx, dy, scale = 1, dim = false) => {
+      g.fillStyle = dim ? "#a89880" : "#efe3cc";
+      g.fillRect(dx - 1.8 * scale, dy - 4.6 * scale, 3.6 * scale, 4.6 * scale);
+      g.fillStyle = dim ? "#151b1a" : "#222a29";
+      g.beginPath();
+      g.moveTo(dx - 2.5 * scale, dy - 4.6 * scale);
+      g.lineTo(dx, dy - 7.6 * scale);
+      g.lineTo(dx + 2.5 * scale, dy - 4.6 * scale);
+      g.closePath();
+      g.fill();
+      g.fillStyle = rnd() < (dim ? 0.3 : 0.5) ? "#ffcf7a" : "#1a2120";
+      g.fillRect(dx - 1 * scale, dy - 3.6 * scale, 2 * scale, 2.8 * scale);
+    };
+    const rows = rh > 40 ? [0.18, 0.42, 0.66] : rh > 24 ? [0.25, 0.55] : [0.38];
+    for (const t of rows) {
+      // 앞면 줄
+      const vv = (front.length === 4 ? R1[1] : R1[1]) * t;
+      const half = (w / 2) * (1 - t * (front.length === 4 ? (w - (R2[0] - R1[0])) / w : 1));
+      for (let u = w / 2 - half + 4; u <= w / 2 + half - 4; u += 6.5) {
+        const [dx, dy] = at(u, vv, rh * t);
+        dormer(dx, dy, rh > 40 ? 1.1 : 1);
+      }
+      // 깊이가 긴 지붕은 왼쪽 면에도 지붕창이 줄지어 보임
+      if (front.length === 3) {
+        for (let v = R1[1] + 2; v < D - R1[1] - 1; v += 7) {
+          const [dx, dy] = at((w / 2) * t, v, rh * t);
+          dormer(dx, dy, 0.9, true);
+        }
       }
     }
-    // 용마루 장식 난간
-    g.fillStyle = "#1f3a33";
-    for (let k = 0; k <= 1; k += 0.08) {
-      const px = e[0] + (c[0] - e[0]) * k;
-      const py = e[1] + (c[1] - e[1]) * k;
-      g.fillRect(px, py - 1.6, 0.5, 1.6);
+    // 모서리와 용마루 끝의 가는 첨탑
+    if (opts.pinnacles) {
+      for (const q of [a, b, r1, r2]) {
+        g.strokeStyle = "#141a19";
+        g.lineWidth = 0.7;
+        g.beginPath();
+        g.moveTo(q[0], q[1]);
+        g.lineTo(q[0], q[1] - (q === a || q === b ? 7 : 9));
+        g.stroke();
+      }
     }
   }
 
@@ -465,9 +521,9 @@ function paintChateau(g, r, rnd, cx, ground) {
     g.fillStyle = round;
     g.fillRect(x - w / 2, top, w, h);
     const copper = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
-    copper.addColorStop(0, "#1f463c");
-    copper.addColorStop(0.65, "#4a9a80");
-    copper.addColorStop(1, "#9ad8bc");
+    copper.addColorStop(0, "#1b2322");
+    copper.addColorStop(0.65, "#34423f");
+    copper.addColorStop(1, "#6a8078");
     g.fillStyle = copper;
     g.beginPath();
     g.ellipse(x, top, w / 2 + 1.8, 1.6, 0, 0, Math.PI);
@@ -498,33 +554,30 @@ function paintChateau(g, r, rnd, cx, ground) {
   }
 
   // 먼 것부터 가까운 것 순서로 그림. 같은 줄에서는 오른쪽부터 (왼쪽 덩어리의 앞면이 오른쪽 덩어리의 옆면을 가림)
-  // 1) 뒤에 선 가운데 탑: 아래 넓은 단 위에 좁은 단
-  block(cx - 18, 36, 74, 26, 6, 16);
-  block(cx - 15, 30, 116, 22, 44, 18);
-  // 2) 앞줄 오른쪽 날개
-  block(cx + 66, 16, 42, 14, 22);
-  block(cx + 46, 20, 38, 18, 22);
-  block(cx + 18, 28, 46, 22, 27);
-  chimney(cx + 31, ground - 46 - 27 * 0.55);
-  chimney(cx + 55, ground - 38 - 22 * 0.55);
-  // 3) 앞줄 왼쪽 날개: 가장 왼쪽 덩어리는 뒤로 길게 뻗어 옆면 창들이 줄지어 보임
-  block(cx - 18, 36, 34, 12, 14);
-  block(cx - 40, 22, 46, 22, 26);
-  block(cx - 62, 22, 40, 22, 22);
-  block(cx - 86, 24, 50, 44, 30);
-  chimney(cx - 31, ground - 46 - 26 * 0.55);
-  chimney(cx - 52, ground - 40 - 22 * 0.55);
-  chimney(cx - 76, ground - 50 - 30 * 0.55);
+  // 1) 뒤에 선 가운데 탑: 성의 주인공. 굵은 몸통 위에 지붕창이 세 줄 박힌 가파른 지붕, 모서리마다 가는 첨탑
+  block(cx - 25, 50, 58, 36, 6, 14);
+  block(cx - 23, 46, 102, 34, 58, 16, { pinnacles: true });
+  // 2) 앞줄 오른쪽 날개: 강 쪽으로 계단처럼 낮아짐 (오른쪽부터)
+  block(cx + 66, 18, 38, 16, 22);
+  block(cx + 42, 24, 42, 18, 24, 0, { gables: [12] });
+  block(cx + 18, 24, 46, 20, 26, 0, { gables: [12] });
+  chimney(cx + 28, ground - 46 - 26 * 0.5);
+  chimney(cx + 56, ground - 42 - 24 * 0.5);
+  // 3) 앞줄 왼쪽 날개: 왼쪽 끝 덩어리는 뒤로 길게 뻗어, 옆 지붕에 지붕창이 줄지어 보임
+  block(cx - 42, 24, 46, 20, 26, 0, { gables: [12] });
+  block(cx - 86, 44, 52, 50, 32, 0, { gables: [11, 33] });
+  chimney(cx - 34, ground - 46 - 26 * 0.5);
+  chimney(cx - 64, ground - 52 - 32 * 0.45);
 
   // 4) 모서리 망루: 덩어리가 만나는 자리에 서서 이음매를 감춤 (오른쪽부터)
-  turret(cx + 82, 12, 50, 24);
-  turret(cx + 18, 10, 62, 22);
-  turret(cx - 18, 10, 64, 22);
-  turret(cx - 86, 12, 58, 26);
+  turret(cx + 86, 11, 46, 22);
+  turret(cx + 18, 10, 58, 22);
+  turret(cx - 18, 10, 58, 22);
+  turret(cx - 88, 12, 60, 26);
 
   // 탑 꼭대기 깃발
-  const flagX = cx + 18 * DEPTH.x;
-  const flagY = ground + 18 * DEPTH.y - 116 - 44 - 1;
+  const flagX = cx + 16 * DEPTH.x;
+  const flagY = ground + 16 * DEPTH.y - 102 - 58 + 3;
   g.strokeStyle = "#1c2a26";
   g.lineWidth = 1;
   g.beginPath();
