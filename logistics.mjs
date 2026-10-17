@@ -1,4 +1,4 @@
-// 스노우볼 배송 시뮬레이션 (PC 전용): 스노우볼 도시에서 출발해, 보내는 사람이 적은 받는 나라까지 항공 물류 경로를 만들고
+// 스노우볼 배송 시뮬레이션: 스노우볼 도시에서 출발해, 보내는 사람이 적은 받는 나라까지 항공 물류 경로를 만들고
 // 운송장(번호·경로·거리·리드타임)과 항로 지도를 그림.
 // 실제 항공사 운항표가 아니라 "가까운 공항 → 관문 허브 → 관문 허브 → 가까운 공항" 규칙과
 // 대권 거리로 계산한 시뮬레이션. 육지 윤곽은 지구본과 같은 land.json(Natural Earth 1:110m)
@@ -200,11 +200,6 @@ const ROAD_KMH = 50; // 첫·마지막 구간 육로
 const HUB_HANDLING_H = 3; // 큰 허브 환적 처리
 const LOCAL_HANDLING_H = 1.5; // 작은 공항 처리
 const CUSTOMS_H = 2; // 국경을 넘으면 도착국 통관
-
-export const isDesktop = () =>
-  typeof matchMedia === "function" &&
-  matchMedia("(min-width: 900px) and (hover: hover) and (pointer: fine)")
-    .matches;
 
 const RAD = Math.PI / 180;
 // 대권 거리 (km)
@@ -604,7 +599,7 @@ export function waybillHTML(route, id, cargo = "") {
       <span class="wb-id">${esc(id)}</span>
     </div>
     ${cargo ? `<p class="wb-cargo"><span>CARGO</span> 1 × snowball · ${esc(cargo)} <em>FRAGILE ❄</em></p>` : ""}
-    <canvas class="wb-map" aria-label="Simulated route map"></canvas>
+    <div class="wb-mapbox"><canvas class="wb-map" aria-label="Simulated route map"></canvas><span class="wb-stamp" aria-hidden="true"></span></div>
     <ol class="wb-stops">${stops}</ol>
     <dl class="wb-facts">
       <div><dt>Distance</dt><dd>${Math.round(route.km).toLocaleString("en-US")} km</dd></div>

@@ -5,7 +5,7 @@
 import { sceneInfo } from "./editorial.mjs";
 import { PLACES } from "./picker.mjs";
 import { sealCrack } from "./sound.mjs";
-import { CITIES, DESTINATIONS, findDestination, isDesktop, planRoute, trackingId, waybillHTML, drawRouteMap, progressAt, legSpans, formatHours } from "./logistics.mjs";
+import { CITIES, DESTINATIONS, findDestination, planRoute, trackingId, waybillHTML, drawRouteMap, progressAt, legSpans, formatHours } from "./logistics.mjs";
 
 // 편지에 쓰는 도시 이름 (예: Paris)과 우표 그림(나라 버튼의 아이콘)
 const cityName = (id) => sceneInfo(id).city || PLACES[id]?.landmark || "";
@@ -77,7 +77,7 @@ function openWriter(prefill = {}) {
         <label class="postcard-field"><span>To</span><input name="to" type="text" maxlength="20" placeholder="Jieun" /></label>
         <label class="postcard-field"><span>Your note</span><textarea name="message" rows="5" maxlength="${MAX_MESSAGE}" placeholder="Write something warm…"></textarea><small class="letter-count"></small></label>
         <label class="postcard-field"><span>From</span><input name="from" type="text" maxlength="20" placeholder="Minji" /></label>
-        <label class="postcard-field letter-dest" hidden><span>Ship to <em>(their country — the snowball ships from this city)</em></span><input name="dest" type="text" list="dest-countries" autocomplete="off" placeholder="South Korea" /><small class="letter-dest-hint"></small><datalist id="dest-countries"></datalist></label>
+        <label class="postcard-field letter-dest"><span>Ship to <em>(their country — the snowball ships from this city)</em></span><input name="dest" type="text" list="dest-countries" autocomplete="off" placeholder="South Korea" /><small class="letter-dest-hint"></small><datalist id="dest-countries"></datalist></label>
         <label class="postcard-field"><span>Nameplate <em>(optional — engraved on the snowball)</em></span><input name="plate" type="text" maxlength="20" placeholder="Our first trip" /></label>
         <p class="letter-done" hidden></p>
         <div class="waybill" hidden></div>
@@ -106,9 +106,9 @@ function openWriter(prefill = {}) {
         p: field("plate").value.trim(),
         d: new Date().toISOString().slice(0, 10),
       };
-      // PC에서는 받는 사람이 있는 도시를 골라 스노우볼이 거쳐 갈 물류 경로를 편지에 함께 담음
+      // 받는 나라를 적으면 스노우볼이 거쳐 갈 물류 경로를 편지에 함께 담음
       writer.querySelector(".letter-dest-hint").textContent = "";
-      if (isDesktop() && field("dest").value.trim()) {
+      if (field("dest").value.trim()) {
         const dest = findDestination(field("dest").value);
         if (!dest) {
           writer.querySelector(".letter-dest-hint").textContent = "We don't ship there yet — pick a country from the list.";
@@ -149,17 +149,13 @@ function openWriter(prefill = {}) {
       done.hidden = false;
     });
   }
-  // 받는 나라 적기 (PC에서만). 목록에서 고르거나 직접 적음. 비워 두면 운송장 없이 편지만
-  const dest = writer.querySelector(".letter-dest");
-  dest.hidden = !isDesktop();
-  if (!dest.hidden) {
-    const list = dest.querySelector("datalist");
-    if (!list.children.length)
-      list.innerHTML = Object.values(DESTINATIONS)
-        .map((d) => `<option value="${d.country}">${d.city}</option>`)
-        .join("");
-    writer.querySelector(".letter-dest-hint").textContent = "";
-  }
+  // 받는 나라 적기. 목록에서 고르거나 직접 적음. 비워 두면 운송장 없이 편지만
+  const list = writer.querySelector("#dest-countries");
+  if (!list.children.length)
+    list.innerHTML = Object.values(DESTINATIONS)
+      .map((d) => `<option value="${d.country}">${d.city}</option>`)
+      .join("");
+  writer.querySelector(".letter-dest-hint").textContent = "";
   const bill = writer.querySelector(".waybill");
   bill.hidden = true;
   bill.innerHTML = "";
@@ -171,16 +167,6 @@ function openWriter(prefill = {}) {
   writer.querySelector(prefill.to ? '[name="message"]' : '[name="to"]').focus();
 }
 
-// 보낸 뒤 편지 쓰기 창 아래에 운송장 카드를 펼침 (경로 지도는 전체 경로만)
-function showWaybill(route, id, cargo) {
-  if (!route) return;
-  const bill = writer.querySelector(".waybill");
-  bill.innerHTML = waybillHTML(route, id, cargo);
-  bill.hidden = false;
-  drawRouteMap(bill.querySelector(".wb-map"), route, null).catch(() => {});
-  bill.scrollIntoView({ block: "nearest", behavior: "smooth" });
-}
-
 // 공항마다 하는 일: 출발 공항 적재 → 수출 허브 분류 → 받는 나라 관문 공항 통관
 function hubTask(route, k) {
   const s = route.stops[k];
@@ -190,34 +176,13 @@ function hubTask(route, k) {
   return "Loading at origin airport";
 }
 
-// 받은 편지 (PC): 봉투를 열기 전에, 스노우볼이 화물로 허브를 거쳐 오는 배송 추적 화면.
-// 구간은 거리에 비례해 움직이고, 공항마다 잠깐 멈춰 분류·통관 고리가 퍼짐. 시계는 시뮬레이션 시간
-function showTracking(letter, id, next) {
-  const route = planRoute(id, letter.route);
-  if (!route) return next();
-  const el = document.createElement("div");
-  el.className = "tracking-view";
-  el.setAttribute("role", "dialog");
-  el.setAttribute("aria-modal", "true");
-  el.setAttribute("aria-label", "Tracking your snowball");
-  el.innerHTML = `
-    <p class="tracking-kicker">SNOWBALL LOGISTICS · TRACKING</p>
-    <p class="tracking-title">Your snowball is in transit</p>
-    <div class="waybill">${waybillHTML(route, trackingId(route, `${letter.date}|${letter.message}|${letter.from}`), cityName(id))}</div>
-    <p class="tracking-status" aria-live="polite"></p>
-    <div class="tracking-actions">
-      <button type="button" class="tracking-skip">Skip</button>
-      <button type="button" class="tracking-go" hidden>Open the mailbox ✉</button>
-    </div>`;
-  document.body.append(el);
-  document.body.classList.add("letter-open", "tracking-open");
-  const $ = (sel) => el.querySelector(sel);
-  const canvas = $(".wb-map");
-  const stops = [...el.querySelectorAll(".wb-stop")];
-  const status = $(".tracking-status");
+// 운송장(root) 위에서 스노우볼이 경로를 따라 이동하는 장면을 재생.
+// 구간은 거리에 비례해 움직이고, 공항마다 잠깐 멈춰 분류·통관 고리가 퍼짐. 시계는 시뮬레이션 시간.
+// 끝나면 지도 위에 도장(data-stamp)이 찍힘. 반환값 skip()은 바로 끝 장면으로
+function playRoute(root, route, { status, onDone } = {}) {
+  const canvas = root.querySelector(".wb-map");
+  const stops = [...root.querySelectorAll(".wb-stop")];
   const name = (s) => (s.kind === "airport" ? s.code : s.name);
-
-  // 시간표: 구간 이동(거리 비례, 최소 0.3초) + 공항마다 체류 0.75초
   const spans = legSpans(route);
   const DWELL = 750;
   const MOVE = 3600;
@@ -226,12 +191,14 @@ function showTracking(letter, id, next) {
     plan.push({ kind: "move", leg: i, a, b, ms: Math.max(300, (b - a) * MOVE) });
     if (route.stops[i + 1].kind === "airport") plan.push({ kind: "dwell", k: i + 1, at: b, ms: DWELL });
   });
-
+  const say = (text) => status && (status.textContent = text);
   const setStops = (k) =>
     stops.forEach((li, i) => {
       li.classList.toggle("passed", i < k);
       li.classList.toggle("current", i === k);
     });
+  root.classList.remove("stamped");
+  root.querySelector(".wb-stamp").textContent = root.dataset.stamp || "";
   let done = false;
   let raf = 0;
   let t0 = null;
@@ -242,15 +209,12 @@ function showTracking(letter, id, next) {
     drawRouteMap(canvas, route, 1).catch(() => {});
     setStops(route.stops.length - 1);
     stops.forEach((li) => li.classList.add("passed"));
-    status.textContent = `Delivered · ${route.stops.at(-1).name} — lead time ${formatHours(route.hours)}`;
-    el.classList.add("arrived");
-    $(".tracking-skip").hidden = true;
-    $(".tracking-go").hidden = false;
-    $(".tracking-go").focus();
-    navigator.vibrate?.(12);
+    say(`Delivered · ${route.stops.at(-1).name} — lead time ${formatHours(route.hours)}`);
+    root.classList.add("stamped");
+    onDone?.();
   };
   const frame = (now) => {
-    if (done) return;
+    if (done || !root.isConnected) return;
     if (t0 == null) t0 = now;
     let left = now - t0;
     const step = plan.find((p) => (left < p.ms ? true : ((left -= p.ms), false)));
@@ -262,32 +226,87 @@ function showTracking(letter, id, next) {
       const leg = route.legs[step.leg];
       drawRouteMap(canvas, route, t).catch(() => {});
       setStops(step.leg);
-      const { hours } = progressAt(route, t);
-      status.textContent = `${leg.mode === "air" ? "In flight" : "On the road"} · ${name(leg.from)} → ${name(leg.to)} — T+${formatHours(hours)}`;
+      say(`${leg.mode === "air" ? "In flight" : "On the road"} · ${name(leg.from)} → ${name(leg.to)} — T+${formatHours(progressAt(route, t).hours)}`);
     } else {
       const s = route.stops[step.k];
       drawRouteMap(canvas, route, step.at, { pulse: { k: step.k, phase: (f * 2) % 1 } }).catch(() => {});
       setStops(step.k);
-      status.textContent = `${hubTask(route, step.k)} · ${s.code} ${s.name} — T+${formatHours(s.at + f * (s.out - s.at))}`;
+      say(`${hubTask(route, step.k)} · ${s.code} ${s.name} — T+${formatHours(s.at + f * (s.out - s.at))}`);
     }
     raf = requestAnimationFrame(frame);
   };
-  const leave = () => {
-    finish();
-    el.remove();
-    document.body.classList.remove("tracking-open");
-    next();
-  };
-  $(".tracking-skip").addEventListener("click", finish);
-  $(".tracking-go").addEventListener("click", leave);
-  el.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") (done ? leave : finish)();
-  });
-  // 육지 윤곽을 먼저 받아 둔 뒤 출발 (움직임을 줄인 설정이면 바로 도착 화면)
+  // 육지 윤곽을 먼저 받아 둔 뒤 출발 (움직임을 줄인 설정이면 바로 끝 장면)
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   drawRouteMap(canvas, route, 0)
     .catch(() => {})
     .then(() => (reduce ? finish() : (raf = requestAnimationFrame(frame))));
+  return { skip: finish };
+}
+
+// 보낸 뒤 편지 쓰기 창 아래에 운송장을 펼치고, 스노우볼이 허브를 거쳐 가는 장면을 재생
+function showWaybill(route, id, cargo) {
+  if (!route) return;
+  const bill = writer.querySelector(".waybill");
+  bill.dataset.stamp = "SHIPPED";
+  bill.innerHTML = `${waybillHTML(route, id, cargo)}
+    <div class="wb-play"><p class="tracking-status" aria-live="polite"></p><button type="button" class="wb-replay">Replay ↻</button></div>`;
+  bill.hidden = false;
+  const status = bill.querySelector(".tracking-status");
+  const play = () => playRoute(bill, route, { status });
+  bill.querySelector(".wb-replay").addEventListener("click", play);
+  bill.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  play();
+}
+
+// 받은 편지: 편지를 다 읽은 뒤 "어떻게 왔는지" 배송 추적 화면. 닫으면 편지로 돌아감
+function showTracking(letter, id, onClose) {
+  const route = planRoute(id, letter.route);
+  if (!route) return;
+  const el = document.createElement("div");
+  el.className = "tracking-view";
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-modal", "true");
+  el.setAttribute("aria-label", "How your snowball got here");
+  el.innerHTML = `
+    <p class="tracking-kicker">SNOWBALL LOGISTICS · TRACKING</p>
+    <p class="tracking-title">How your snowball got here</p>
+    <div class="waybill" data-stamp="DELIVERED">${waybillHTML(route, trackingId(route, `${letter.date}|${letter.message}|${letter.from}`), cityName(id))}</div>
+    <p class="tracking-status" aria-live="polite"></p>
+    <div class="tracking-actions">
+      <button type="button" class="tracking-skip">Skip</button>
+      <button type="button" class="tracking-replay" hidden>Replay ↻</button>
+      <button type="button" class="tracking-go" hidden>Back to the letter ✉</button>
+    </div>`;
+  document.body.append(el);
+  document.body.classList.add("tracking-open");
+  const $ = (sel) => el.querySelector(sel);
+  const arrived = () => {
+    $(".tracking-skip").hidden = true;
+    $(".tracking-replay").hidden = false;
+    $(".tracking-go").hidden = false;
+    $(".tracking-go").focus();
+    navigator.vibrate?.(12);
+  };
+  const run = () => {
+    $(".tracking-skip").hidden = false;
+    $(".tracking-replay").hidden = true;
+    $(".tracking-go").hidden = true;
+    return playRoute($(".waybill"), route, { status: $(".tracking-status"), onDone: arrived });
+  };
+  let player = run();
+  const close = () => {
+    player.skip();
+    el.remove();
+    document.body.classList.remove("tracking-open");
+    onClose?.();
+  };
+  $(".tracking-skip").addEventListener("click", () => player.skip());
+  $(".tracking-replay").addEventListener("click", () => (player = run()));
+  $(".tracking-go").addEventListener("click", close);
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+    e.stopPropagation();
+  });
 }
 
 // 밀랍 도장 SVG: 녹아 퍼진 울퉁불퉁한 가장자리(각도마다 반지름을 조금씩 달리한 매끈한 곡선),
@@ -371,12 +390,7 @@ function waxSealSVG() {
 
 // ── 받은 편지: 봉투 → 편지 → 스노우볼 ─────────────────────────
 
-export function showLetter(letter, id, onDone, options = {}) {
-  if (letter.route && isDesktop()) showTracking(letter, id, () => openEnvelope(letter, id, onDone, options));
-  else openEnvelope(letter, id, onDone, options);
-}
-
-function openEnvelope(letter, id, onDone, { snapshot } = {}) {
+export function showLetter(letter, id, onDone, { snapshot } = {}) {
   const info = sceneInfo(id);
   const color = info.color || "#c8343a";
   const city = cityName(id);
@@ -423,6 +437,7 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
       <p class="paper-from"></p>
     </div>
     <div class="letter-actions" hidden>
+      <button type="button" class="letter-track" hidden>How it got here ✈</button>
       <button type="button" class="letter-go">Shake the snowball ❄</button>
       <button type="button" class="letter-reply">Write back ✉</button>
     </div>`;
@@ -524,6 +539,11 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
     onDone?.();
   };
   $(".letter-go").addEventListener("click", finish);
+  // 배송 경로가 담긴 편지면, 다 읽은 뒤 어떻게 왔는지 볼 수 있음
+  if (letter.route && planRoute(id, letter.route)) {
+    $(".letter-track").hidden = false;
+    $(".letter-track").addEventListener("click", () => showTracking(letter, id, () => $(".letter-track").focus()));
+  }
   $(".letter-reply").addEventListener("click", () => {
     finish();
     openWriter({ to: letter.from || "" });

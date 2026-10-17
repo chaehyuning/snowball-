@@ -1378,7 +1378,11 @@ body.picker-open .meta {
   }
 }
 
-/* 엽서 창: 도움말 창 모양을 밝은 종이 톤으로 */
+/* 엽서 창: 도움말 창 모양을 밝은 종이 톤으로. 아래 도시 띠(z 25)보다 위에 */
+.keep-modal {
+  z-index: 30;
+}
+
 .keep-modal .help-card {
   width: min(420px, 100%);
   max-height: calc(100vh - 32px);
@@ -1472,7 +1476,7 @@ body.picker-open .meta {
   font-size: 12px;
   line-height: 1.5;
   color: #2f7a4f;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 /* 받은 편지: 밝은 종이 배경 위 진한 단색 봉투(나라 색), 접힌 결과 그늘, 가운데 금빛 밀랍 도장.
@@ -1978,6 +1982,8 @@ body.picker-open .meta {
 
 .letter-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
 }
 
@@ -2246,6 +2252,7 @@ html[data-daypart="night"] .daylight {
 }
 
 .waybill {
+  position: relative;
   margin-top: 14px;
   padding: 12px;
   border: 1px dashed #c9b994;
@@ -2276,11 +2283,14 @@ html[data-daypart="night"] .daylight {
   letter-spacing: 0.04em;
 }
 
+.wb-mapbox {
+  margin-top: 8px;
+}
+
 .wb-map {
   display: block;
   width: 100%;
   aspect-ratio: 2.2 / 1;
-  margin-top: 8px;
   border-radius: 8px;
   background: #0d1626;
 }
@@ -2405,7 +2415,6 @@ body.tracking-open > *:not(.tracking-view) {
 }
 
 .tracking-view .waybill {
-  position: relative;
   width: min(560px, 100%);
   border: 1px solid rgba(201, 162, 78, 0.35);
   background: rgba(255, 255, 255, 0.04);
@@ -2446,11 +2455,15 @@ body.tracking-open > *:not(.tracking-view) {
 }
 
 /* 도착하면 운송장에 "DELIVERED" 도장이 찍힘 */
-.tracking-view .waybill::after {
-  content: "DELIVERED";
+/* 재생이 끝나면 지도 아래쪽에 도장이 찍힘: 보낼 때 SHIPPED, 받을 때 DELIVERED */
+.wb-mapbox {
+  position: relative;
+}
+
+.wb-stamp {
   position: absolute;
-  right: 6%;
-  bottom: 9%;
+  left: 50%;
+  bottom: 12%;
   padding: 4px 12px;
   border: 3px solid #e0574f;
   border-radius: 6px;
@@ -2458,15 +2471,42 @@ body.tracking-open > *:not(.tracking-view) {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: 0.12em;
+  background: rgba(13, 22, 38, 0.35);
   opacity: 0;
-  transform: rotate(-12deg) scale(1.8);
+  transform: translateX(-50%) rotate(-10deg) scale(1.8);
   pointer-events: none;
 }
 
-.tracking-view.arrived .waybill::after {
-  opacity: 0.92;
-  transform: rotate(-12deg) scale(1);
+.waybill.stamped .wb-stamp {
+  opacity: 0.95;
+  transform: translateX(-50%) rotate(-10deg) scale(1);
   transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.wb-play {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.wb-play .tracking-status {
+  min-width: 0;
+  font-size: 12px;
+  color: #5a4e5c;
+}
+
+.wb-replay {
+  flex: none;
+  padding: 5px 12px;
+  border: 1px solid #d8ccb8;
+  border-radius: 999px;
+  background: #fff;
+  color: #2a2130;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .tracking-status {
@@ -2504,8 +2544,35 @@ body.tracking-open > *:not(.tracking-view) {
   outline-offset: 2px;
 }
 
+/* 휴대폰: 사실 칸은 두 줄, 추적 화면은 위에서부터 스크롤 */
+@media (max-width: 520px) {
+  .wb-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tracking-view {
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding-top: calc(28px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tracking-title {
+    font-size: 21px;
+    text-align: center;
+  }
+
+  .tracking-status {
+    text-align: center;
+  }
+
+  .wb-stamp {
+    font-size: 17px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tracking-view.arrived .waybill::after {
+  .waybill.stamped .wb-stamp {
     transition: none;
   }
 }
