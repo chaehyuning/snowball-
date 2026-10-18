@@ -2230,6 +2230,15 @@ html[data-daypart="night"] .daylight {
 
 /* ── 편지 배송 시뮬레이션 (PC 전용) ─────────────────────────
    운송장: 항공 화물 운송장처럼 번호·항로 지도·경유 공항·거리·리드타임 */
+/* 봉한 뒤: 편지 칸을 접고 운송장과 링크 보내기만 남김 */
+.letter-card.sealed .postcard-field {
+  display: none;
+}
+
+.help-actions button[hidden] {
+  display: none;
+}
+
 .letter-dest-hint {
   font-weight: 400;
   color: #b0463a;
