@@ -84,6 +84,7 @@ function openWriter(prefill = {}) {
         <div class="help-actions">
           <button type="button" class="help-replay letter-cancel">Close</button>
           <button type="button" class="help-close letter-send">Seal &amp; send ✉</button>
+          <button type="button" class="help-close letter-share" hidden>Send the link ✉</button>
         </div>
       </div>`;
     document.body.append(writer);
@@ -126,27 +127,39 @@ function openWriter(prefill = {}) {
       // 메신저는 제목·문장·주소를 이어 붙여 보여 주므로 문장은 짧게 한 줄만 (자세한 건 미리보기 카드가 보여 줌)
       const text = `✉️ A snowball letter from ${data.f || "a friend"}`;
       const done = writer.querySelector(".letter-done");
-      if (data.r) {
-        const route = planRoute(id, data.r);
-        showWaybill(route, trackingId(route, `${data.d}|${data.m}|${data.f}`), cityName(id));
-      }
-      if (navigator.share) {
-        try {
-          await navigator.share({ text, url });
-          done.textContent = "Your letter is on its way ✈";
-          done.hidden = false;
-          return;
-        } catch (e) {
-          if (e.name === "AbortError") return;
+      const share = async () => {
+        if (navigator.share) {
+          try {
+            await navigator.share({ text, url });
+            done.textContent = "Your letter is on its way ✈";
+            done.hidden = false;
+            return;
+          } catch (e) {
+            if (e.name === "AbortError") return;
+          }
         }
-      }
-      try {
-        await navigator.clipboard.writeText(`${text}\n${url}`);
-        done.textContent = "Letter link copied — paste it into an Instagram DM or KakaoTalk.";
-      } catch {
-        done.textContent = url;
-      }
-      done.hidden = false;
+        try {
+          await navigator.clipboard.writeText(`${text}\n${url}`);
+          done.textContent = "Letter link copied — paste it into an Instagram DM or KakaoTalk.";
+        } catch {
+          done.textContent = url;
+        }
+        done.hidden = false;
+      };
+      const route = data.r && planRoute(id, data.r);
+      if (!route) return share();
+      // 받는 나라가 있으면: 편지 칸을 접고 운송장에서 스노우볼이 출발하는 장면을 먼저 보여 준 뒤,
+      // 도장이 찍히면 링크 보내기 버튼을 띄움 (휴대폰 공유 창이 운송장을 가리지 않게)
+      writer.querySelector(".letter-card").classList.add("sealed");
+      writer.querySelector(".letter-where").textContent = `Sealed. Your ${cityName(id)} snowball is leaving for ${DESTINATIONS[data.r].city} — send the link when it ships.`;
+      const sendBtn = writer.querySelector(".letter-send");
+      const shareBtn = writer.querySelector(".letter-share");
+      sendBtn.hidden = true;
+      shareBtn.onclick = share;
+      showWaybill(route, trackingId(route, `${data.d}|${data.m}|${data.f}`), cityName(id), () => {
+        shareBtn.hidden = false;
+        shareBtn.focus({ preventScroll: true });
+      });
     });
   }
   // 받는 나라 적기. 목록에서 고르거나 직접 적음. 비워 두면 운송장 없이 편지만
@@ -159,6 +172,9 @@ function openWriter(prefill = {}) {
   const bill = writer.querySelector(".waybill");
   bill.hidden = true;
   bill.innerHTML = "";
+  writer.querySelector(".letter-card").classList.remove("sealed");
+  writer.querySelector(".letter-send").hidden = false;
+  writer.querySelector(".letter-share").hidden = true;
   writer.querySelector(".letter-where").textContent = `Tuck a note into this ${cityName(opts.currentId())} snowball. They'll peel the wax seal before they read it.`;
   for (const [name, value] of Object.entries(prefill)) writer.querySelector(`[name="${name}"]`).value = value;
   writer.querySelector(".letter-count").textContent = `${writer.querySelector('[name="message"]').value.length} / ${MAX_MESSAGE}`;
@@ -179,7 +195,7 @@ function hubTask(route, k) {
 // 운송장(root) 위에서 스노우볼이 경로를 따라 이동하는 장면을 재생.
 // 구간은 거리에 비례해 움직이고, 공항마다 잠깐 멈춰 분류·통관 고리가 퍼짐. 시계는 시뮬레이션 시간.
 // 끝나면 지도 위에 도장(data-stamp)이 찍힘. 반환값 skip()은 바로 끝 장면으로
-function playRoute(root, route, { status, onDone } = {}) {
+function playRoute(root, route, { status, onDone, endText } = {}) {
   const canvas = root.querySelector(".wb-map");
   const stops = [...root.querySelectorAll(".wb-stop")];
   const name = (s) => (s.kind === "airport" ? s.code : s.name);
@@ -209,7 +225,7 @@ function playRoute(root, route, { status, onDone } = {}) {
     drawRouteMap(canvas, route, 1).catch(() => {});
     setStops(route.stops.length - 1);
     stops.forEach((li) => li.classList.add("passed"));
-    say(`Delivered · ${route.stops.at(-1).name} — lead time ${formatHours(route.hours)}`);
+    say(endText || `Delivered · ${route.stops.at(-1).name} — lead time ${formatHours(route.hours)}`);
     root.classList.add("stamped");
     onDone?.();
   };
@@ -243,8 +259,8 @@ function playRoute(root, route, { status, onDone } = {}) {
   return { skip: finish };
 }
 
-// 보낸 뒤 편지 쓰기 창 아래에 운송장을 펼치고, 스노우볼이 허브를 거쳐 가는 장면을 재생
-function showWaybill(route, id, cargo) {
+// 봉한 뒤 편지 쓰기 창에 운송장을 펼치고, 스노우볼이 허브를 거쳐 가는 장면을 재생. 끝나면 onShipped
+function showWaybill(route, id, cargo, onShipped) {
   if (!route) return;
   const bill = writer.querySelector(".waybill");
   bill.dataset.stamp = "SHIPPED";
@@ -252,14 +268,16 @@ function showWaybill(route, id, cargo) {
     <div class="wb-play"><p class="tracking-status" aria-live="polite"></p><button type="button" class="wb-replay">Replay ↻</button></div>`;
   bill.hidden = false;
   const status = bill.querySelector(".tracking-status");
-  const play = () => playRoute(bill, route, { status });
+  const endText = `Est. delivery · ${route.stops.at(-1).name} — lead time ${formatHours(route.hours)}`;
+  const play = () => playRoute(bill, route, { status, onDone: onShipped, endText });
   bill.querySelector(".wb-replay").addEventListener("click", play);
   bill.scrollIntoView({ block: "nearest", behavior: "smooth" });
   play();
 }
 
-// 받은 편지: 편지를 다 읽은 뒤 "어떻게 왔는지" 배송 추적 화면. 닫으면 편지로 돌아감
-function showTracking(letter, id, onClose) {
+// 받은 편지의 "어떻게 왔는지" 배송 추적 화면. first: 편지를 받자마자 봉투보다 먼저 (닫으면 우편함으로),
+// 아니면 편지를 읽은 뒤 다시 보기 (닫으면 편지로 돌아감)
+function showTracking(letter, id, onClose, { first = false } = {}) {
   const route = planRoute(id, letter.route);
   if (!route) return;
   const el = document.createElement("div");
@@ -269,16 +287,17 @@ function showTracking(letter, id, onClose) {
   el.setAttribute("aria-label", "How your snowball got here");
   el.innerHTML = `
     <p class="tracking-kicker">SNOWBALL LOGISTICS · TRACKING</p>
-    <p class="tracking-title">How your snowball got here</p>
+    <p class="tracking-title">${first ? "A snowball is on its way to you" : "How your snowball got here"}</p>
     <div class="waybill" data-stamp="DELIVERED">${waybillHTML(route, trackingId(route, `${letter.date}|${letter.message}|${letter.from}`), cityName(id))}</div>
     <p class="tracking-status" aria-live="polite"></p>
     <div class="tracking-actions">
       <button type="button" class="tracking-skip">Skip</button>
       <button type="button" class="tracking-replay" hidden>Replay ↻</button>
-      <button type="button" class="tracking-go" hidden>Back to the letter ✉</button>
+      <button type="button" class="tracking-go" hidden>${first ? "Open the mailbox ✉" : "Back to the letter ✉"}</button>
     </div>`;
   document.body.append(el);
   document.body.classList.add("tracking-open");
+  if (first) document.body.classList.add("letter-open");
   const $ = (sel) => el.querySelector(sel);
   const arrived = () => {
     $(".tracking-skip").hidden = true;
@@ -390,7 +409,13 @@ function waxSealSVG() {
 
 // ── 받은 편지: 봉투 → 편지 → 스노우볼 ─────────────────────────
 
-export function showLetter(letter, id, onDone, { snapshot } = {}) {
+// 받은 편지: 배송 경로가 담겨 있으면 추적 화면 먼저, 그다음 봉투 → 편지 → 스노우볼
+export function showLetter(letter, id, onDone, options = {}) {
+  if (letter.route && planRoute(id, letter.route)) showTracking(letter, id, () => openEnvelope(letter, id, onDone, options), { first: true });
+  else openEnvelope(letter, id, onDone, options);
+}
+
+function openEnvelope(letter, id, onDone, { snapshot } = {}) {
   const info = sceneInfo(id);
   const color = info.color || "#c8343a";
   const city = cityName(id);
@@ -539,7 +564,7 @@ export function showLetter(letter, id, onDone, { snapshot } = {}) {
     onDone?.();
   };
   $(".letter-go").addEventListener("click", finish);
-  // 배송 경로가 담긴 편지면, 다 읽은 뒤 어떻게 왔는지 볼 수 있음
+  // 배송 경로가 담긴 편지면, 다 읽은 뒤에도 어떻게 왔는지 다시 볼 수 있음
   if (letter.route && planRoute(id, letter.route)) {
     $(".letter-track").hidden = false;
     $(".letter-track").addEventListener("click", () => showTracking(letter, id, () => $(".letter-track").focus()));
