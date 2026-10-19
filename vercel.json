@@ -1,9 +1,10 @@
 {
   "routes": [
     { "src": "/", "has": [{ "type": "query", "key": "letter" }], "dest": "/api/letter" },
+    { "src": "/", "has": [{ "type": "query", "key": "landmark" }], "dest": "/api/letter" },
     { "handle": "filesystem" }
   ],
   "functions": {
-    "api/letter.js": { "includeFiles": "index.html" }
+    "api/letter.js": { "includeFiles": "{index.html,logistics.mjs}" }
   }
 }
