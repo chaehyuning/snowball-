@@ -2475,6 +2475,187 @@ html[data-daypart="night"] .daylight {
   color: #c8343a;
 }
 
+/* 배송 방식 고르기: 세 장의 카드, 지표마다 막대. 고르면 막대와 비교 문구가 바로 바뀜 */
+.ship {
+  margin-top: 12px;
+}
+
+.ship[hidden],
+.letter-card.sealed .ship {
+  display: none;
+}
+
+.ship-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2a2130;
+}
+
+.ship-title em {
+  font-style: normal;
+  font-weight: 400;
+  color: #7a6e7c;
+}
+
+.ship-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.ship-card {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px 8px;
+  border: 1.5px solid #e3d8c3;
+  border-radius: 12px;
+  background: #fff;
+  color: #2a2130;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.ship-card:hover {
+  transform: translateY(-1px);
+}
+
+.ship-card[aria-checked="true"] {
+  border-color: #2a2130;
+  box-shadow: 0 6px 16px -10px rgba(42, 33, 48, 0.6);
+}
+
+.ship-card:focus-visible {
+  outline: 2px solid #b0763a;
+  outline-offset: 2px;
+}
+
+.ship-name {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ship-card[data-service="x"] .ship-name {
+  color: #b0463a;
+}
+
+.ship-card[data-service="e"] .ship-name {
+  color: #2f7a4f;
+}
+
+.ship-desc {
+  min-height: 2.6em;
+  font-size: 10px;
+  line-height: 1.3;
+  color: #7a6e7c;
+}
+
+.ship-kpi {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ship-kpi i {
+  font-style: normal;
+  color: #7a6e7c;
+}
+
+.ship-kpi b {
+  font-weight: 700;
+}
+
+.ship-bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 2px;
+  background: #efe7d7;
+  overflow: hidden;
+}
+
+.ship-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: #b0763a;
+  transition: width 0.3s ease;
+}
+
+.ship-card[aria-checked="true"] .ship-bar span {
+  background: #2a2130;
+}
+
+@media (max-width: 420px) {
+  .ship-kpi {
+    font-size: 10px;
+  }
+
+  .ship-card {
+    padding: 8px 6px;
+  }
+}
+
+.ship-compare {
+  min-height: 1.4em;
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #5a4e5c;
+}
+
+.wb-service {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wb-service span {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: #7a6e7c;
+}
+
+.wb-service small {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: #7a6e7c;
+}
+
+.wb-service[data-service="x"] {
+  color: #b0463a;
+}
+
+.wb-service[data-service="e"] {
+  color: #2f7a4f;
+}
+
+.tracking-view .wb-service span,
+.tracking-view .wb-service small {
+  color: var(--ink-faint);
+}
+
+.tracking-view .wb-service {
+  color: var(--ink);
+}
+
+.tracking-view .wb-service[data-service="x"] {
+  color: #ff9a8a;
+}
+
+.tracking-view .wb-service[data-service="e"] {
+  color: #5fd3c6;
+}
+
 /* 펜팔 기록 줄: 몇 번째 편지인지, 함께 오간 거리 */
 .wb-log {
   display: flex;

@@ -5,7 +5,7 @@
 import { sceneInfo } from "./editorial.mjs";
 import { PLACES } from "./picker.mjs";
 import { sealCrack } from "./sound.mjs";
-import { CITIES, DESTINATIONS, findDestination, logText, planRoute, trackingId, waybillHTML, drawRouteMap, progressAt, legSpans, formatHours } from "./logistics.mjs";
+import { CITIES, DESTINATIONS, SERVICES, compareServices, findDestination, logText, planRoute, trackingId, waybillHTML, drawRouteMap, progressAt, legSpans, formatHours } from "./logistics.mjs";
 
 // 편지에 쓰는 도시 이름 (예: Paris)과 우표 그림(나라 버튼의 아이콘)
 const cityName = (id) => sceneInfo(id).city || PLACES[id]?.landmark || "";
@@ -21,13 +21,16 @@ const MAX_HOPS = 10; // 링크가 너무 길어지지 않게 지난 구간은 �
 
 // 받은 편지에 답장할 때 이어 갈 펜팔 기록: 받은 편지의 구간을 기록 끝에 붙이고 거리·편지 수를 더함
 function threadAfter(letter, id) {
-  const hop = letter.route && planRoute(id, letter.route);
+  const hop = letter.route && routeOf(letter, id);
   return {
     h: hop ? [...letter.history, [id, letter.route]].slice(-MAX_HOPS) : letter.history,
     k: Math.round(letter.km + (hop ? hop.km : 0)),
+    c: Math.round((letter.co2 + (hop ? hop.co2 : 0)) * 100) / 100,
     n: letter.count + 1,
   };
 }
+// 받은 편지의 경로: 보낸 사람이 고른 방식과 그때 본 출고 대기 시간 그대로
+const routeOf = (letter, id) => planRoute(id, letter.route, letter.service, { wait: letter.wait });
 // 기록 구간들을 경로로 (지도에 옅게 그림)
 const trailRoutes = (h) => h.map(([a, b]) => planRoute(a, b)).filter(Boolean);
 
@@ -59,6 +62,10 @@ function decode(code) {
         .map(([a, b]) => [a, b]),
       km: Number.isFinite(data.k) ? Math.min(Math.max(data.k, 0), 1e7) : 0,
       count: Number.isInteger(data.n) ? Math.min(Math.max(data.n, 1), 9999) : 1,
+      co2: Number.isFinite(data.c) ? Math.min(Math.max(data.c, 0), 1e5) : 0,
+      // 배송 방식(x 특급 / s 일반 / e 친환경)과 보낼 때 본 출고 대기 시간
+      service: SERVICES[data.s] ? data.s : "s",
+      wait: Number.isFinite(data.w) ? Math.min(Math.max(data.w, 0), 168) : null,
     };
   } catch {
     return null;
@@ -81,6 +88,48 @@ export function setupLetters(options) {
 
 let writer = null;
 let thread = null; // 답장 중이면 이어 갈 펜팔 기록
+let service = "s"; // 고른 배송 방식
+let shownDest = null; // 카드에 지금 그려 둔 받는 나라
+
+// 세 방식 카드를 그리고, 고른 방식을 일반(Standard)과 비교한 한 줄을 적음.
+// 막대는 세 방식 중 가장 큰 값을 꽉 찬 길이로 (리드타임·운임·CO₂ 모두 짧을수록 좋음)
+function renderShipping() {
+  const box = writer.querySelector(".ship");
+  const dest = findDestination(writer.querySelector('[name="dest"]').value);
+  const id = opts.currentId();
+  shownDest = dest;
+  const all = dest ? compareServices(id, dest) : null;
+  box.hidden = !all || !all.s || !all.s.legs.some((leg) => leg.mode !== "road");
+  if (box.hidden) return;
+  const max = (key) => Math.max(...Object.values(all).map((r) => r[key]));
+  const bar = (v, m) => `<span class="ship-bar"><span style="width:${Math.max(6, (v / m) * 100).toFixed(1)}%"></span></span>`;
+  const kg = (v) => (v < 0.1 ? v.toFixed(2) : v.toFixed(1));
+  writer.querySelector(".ship-cards").innerHTML = Object.entries(all)
+    .map(
+      ([k, r]) => `
+      <button type="button" role="radio" class="ship-card" data-service="${k}" aria-checked="${k === service}">
+        <span class="ship-name">${SERVICES[k].name}</span>
+        <span class="ship-desc">${SERVICES[k].desc}</span>
+        <span class="ship-kpi"><i>Lead time</i><b>${formatHours(r.hours)}</b>${bar(r.hours, max("hours"))}</span>
+        <span class="ship-kpi"><i>Freight</i><b>$${r.cost.toFixed(2)}</b>${bar(r.cost, max("cost"))}</span>
+        <span class="ship-kpi"><i>CO₂</i><b>${kg(r.co2)} kg</b>${bar(r.co2, max("co2"))}</span>
+      </button>`,
+    )
+    .join("");
+  const r = all[service];
+  const base = all.s;
+  const wait = r.departure && (r.departure.wait < 1 ? `${Math.max(1, Math.round(r.departure.wait * 60))} min` : formatHours(r.departure.wait));
+  const dep = r.departure ? `Next departure: ${r.departure.label}, in ${wait} (${cityName(id)} time).` : "";
+  if (service === "s") {
+    writer.querySelector(".ship-compare").textContent = dep;
+    return;
+  }
+  const dh = base.hours - r.hours;
+  const time = dh >= 0 ? `${formatHours(dh)} faster` : `${formatHours(-dh)} slower`;
+  const cost = r.cost >= base.cost ? `${(r.cost / base.cost).toFixed(1)}× the freight` : `${Math.round((1 - r.cost / base.cost) * 100)}% cheaper`;
+  const co2 = r.co2 >= base.co2 ? `+${kg(r.co2 - base.co2)} kg CO₂` : `${Math.round((1 - r.co2 / base.co2) * 100)}% less CO₂`;
+  writer.querySelector(".ship-compare").textContent = `vs Standard: ${time} · ${cost} · ${co2}. ${dep}`;
+}
 function openWriter(prefill = {}, chain = null) {
   thread = chain;
   if (!writer) {
@@ -101,6 +150,11 @@ function openWriter(prefill = {}, chain = null) {
         <label class="postcard-field"><span>Your note</span><textarea name="message" rows="5" maxlength="${MAX_MESSAGE}" placeholder="Write something warm…"></textarea><small class="letter-count"></small></label>
         <label class="postcard-field"><span>From</span><input name="from" type="text" maxlength="20" placeholder="Minji" /></label>
         <label class="postcard-field letter-dest"><span>Ship to <em>(their country — the snowball ships from this city)</em></span><input name="dest" type="text" list="dest-countries" autocomplete="off" placeholder="South Korea" /><small class="letter-dest-hint"></small><datalist id="dest-countries"></datalist></label>
+        <div class="ship" hidden>
+          <p class="ship-title">Shipping <em>— pick a service level. Time, cost and CO₂ trade off.</em></p>
+          <div class="ship-cards" role="radiogroup" aria-label="Shipping service"></div>
+          <p class="ship-compare" aria-live="polite"></p>
+        </div>
         <label class="postcard-field"><span>Nameplate <em>(optional — engraved on the snowball)</em></span><input name="plate" type="text" maxlength="20" placeholder="Our first trip" /></label>
         <p class="letter-done" hidden></p>
         <div class="waybill" hidden></div>
@@ -147,6 +201,12 @@ function openWriter(prefill = {}, chain = null) {
       }
       const id = opts.currentId();
       if (thread) Object.assign(data, thread); // 답장이면 펜팔 기록을 이어 담음
+      // 받는 나라가 있으면 고른 배송 방식으로 지금 시각 기준 경로를 계산하고, 방식과 출고 대기 시간을 편지에 담음
+      const route = data.r && planRoute(id, data.r, service);
+      if (route) {
+        data.s = service;
+        if (route.departure) data.w = Math.round(route.departure.wait * 100) / 100;
+      }
       const url = `${location.origin}${location.pathname}?landmark=${opts.slugOf(id)}&letter=${encode(data)}`;
       // 메신저는 제목·문장·주소를 이어 붙여 보여 주므로 문장은 짧게 한 줄만 (자세한 건 미리보기 카드가 보여 줌)
       const text = `✉️ A snowball letter from ${data.f || "a friend"}`;
@@ -170,7 +230,6 @@ function openWriter(prefill = {}, chain = null) {
         }
         done.hidden = false;
       };
-      const route = data.r && planRoute(id, data.r);
       if (!route) return share();
       if (thread) route.trail = trailRoutes(thread.h);
       // 받는 나라가 있으면: 편지 칸을 접고 운송장에서 스노우볼이 출발하는 장면을 먼저 보여 준 뒤,
@@ -181,13 +240,29 @@ function openWriter(prefill = {}, chain = null) {
       const shareBtn = writer.querySelector(".letter-share");
       sendBtn.hidden = true;
       shareBtn.onclick = share;
-      const log = thread ? { n: thread.n, km: thread.k + route.km } : null;
+      const log = thread ? { n: thread.n, km: thread.k + route.km, co2: (thread.c || 0) + route.co2 } : null;
       showWaybill(route, trackingId(route, `${data.d}|${data.m}|${data.f}`), cityName(id), log, () => {
         shareBtn.hidden = false;
         shareBtn.focus({ preventScroll: true });
       });
     });
   }
+  // 배송 방식 카드: 받는 나라를 알아들으면 세 방식을 같은 시각 기준으로 계산해 보여 줌
+  if (!writer.dataset.ship) {
+    writer.dataset.ship = "1";
+    const destInput = writer.querySelector('[name="dest"]');
+    // 나라가 바뀔 때만 다시 그림 (입력칸을 떠나며 생기는 change가 카드 클릭 도중 카드를 바꿔 치우지 않게)
+    const onDest = () => findDestination(destInput.value) !== shownDest && renderShipping();
+    destInput.addEventListener("input", onDest);
+    destInput.addEventListener("change", onDest);
+    writer.querySelector(".ship-cards").addEventListener("click", (e) => {
+      const card = e.target.closest(".ship-card");
+      if (!card) return;
+      service = card.dataset.service;
+      renderShipping();
+    });
+  }
+  service = "s";
   // 받는 나라 적기. 목록에서 고르거나 직접 적음. 비워 두면 운송장 없이 편지만
   const list = writer.querySelector("#dest-countries");
   if (!list.children.length)
@@ -195,6 +270,7 @@ function openWriter(prefill = {}, chain = null) {
       .map((d) => `<option value="${d.country}">${d.city}</option>`)
       .join("");
   writer.querySelector(".letter-dest-hint").textContent = "";
+  renderShipping();
   const bill = writer.querySelector(".waybill");
   bill.hidden = true;
   bill.innerHTML = "";
@@ -273,12 +349,16 @@ function playRoute(root, route, { status, onDone, endText } = {}) {
       const leg = route.legs[step.leg];
       drawRouteMap(canvas, route, t).catch(() => {});
       setStops(step.leg);
-      say(`${leg.mode === "air" ? "In flight" : "On the road"} · ${name(leg.from)} → ${name(leg.to)} — T+${formatHours(progressAt(route, t).hours)}`);
+      const how = { air: "In flight", surface: "By sea / rail", road: "On the road" }[leg.mode];
+      say(`${how} · ${name(leg.from)} → ${name(leg.to)} — T+${formatHours(progressAt(route, t).hours)}`);
     } else {
       const s = route.stops[step.k];
       drawRouteMap(canvas, route, step.at, { pulse: { k: step.k, phase: (f * 2) % 1 } }).catch(() => {});
       setStops(step.k);
-      say(`${hubTask(route, step.k)} · ${s.code} ${s.name} — T+${formatHours(s.at + f * (s.out - s.at))}`);
+      // 첫 공항: 처리 뒤 출고 차수를 기다리는 시간이 길면 그걸 보여 줌
+      const waiting = step.k === 1 && route.departure && route.departure.wait > 0.25 && f > 0.4;
+      const task = waiting ? `Waiting for the ${route.departure.label}` : hubTask(route, step.k);
+      say(`${task} · ${s.code} ${s.name} — T+${formatHours(s.at + f * (s.out - s.at))}`);
     }
     raf = requestAnimationFrame(frame);
   };
@@ -309,10 +389,10 @@ function showWaybill(route, id, cargo, log, onShipped) {
 // 받은 편지의 "어떻게 왔는지" 배송 추적 화면. first: 편지를 받자마자 봉투보다 먼저 (닫으면 우편함으로),
 // 아니면 편지를 읽은 뒤 다시 보기 (닫으면 편지로 돌아감)
 function showTracking(letter, id, onClose, { first = false } = {}) {
-  const route = planRoute(id, letter.route);
+  const route = routeOf(letter, id);
   if (!route) return;
   route.trail = trailRoutes(letter.history);
-  const log = letter.count > 1 ? { n: letter.count, km: letter.km + route.km } : null;
+  const log = letter.count > 1 ? { n: letter.count, km: letter.km + route.km, co2: letter.co2 + route.co2 } : null;
   const el = document.createElement("div");
   el.className = "tracking-view";
   el.setAttribute("role", "dialog");
@@ -444,7 +524,7 @@ function waxSealSVG() {
 
 // 받은 편지: 배송 경로가 담겨 있으면 추적 화면 먼저, 그다음 봉투 → 편지 → 스노우볼
 export function showLetter(letter, id, onDone, options = {}) {
-  if (letter.route && planRoute(id, letter.route)) showTracking(letter, id, () => openEnvelope(letter, id, onDone, options), { first: true });
+  if (letter.route && routeOf(letter, id)) showTracking(letter, id, () => openEnvelope(letter, id, onDone, options), { first: true });
   else openEnvelope(letter, id, onDone, options);
 }
 
@@ -598,7 +678,7 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
   };
   $(".letter-go").addEventListener("click", finish);
   // 배송 경로가 담긴 편지면, 다 읽은 뒤에도 어떻게 왔는지 다시 볼 수 있음
-  if (letter.route && planRoute(id, letter.route)) {
+  if (letter.route && routeOf(letter, id)) {
     $(".letter-track").hidden = false;
     $(".letter-track").addEventListener("click", () => showTracking(letter, id, () => $(".letter-track").focus()));
   }

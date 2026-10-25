@@ -34,7 +34,15 @@ function readLetter(code) {
     const d = JSON.parse(json);
     const clip = (v, n) => (typeof v === "string" ? v.slice(0, n) : "");
     const num = (v, max) => (Number.isFinite(v) ? Math.min(Math.max(v, 0), max) : 0);
-    return { from: clip(d.f, 20), to: clip(d.t, 20), route: clip(d.r, 2), km: num(d.k, 1e7), count: Math.round(num(d.n, 9999)) || 1 };
+    return {
+      from: clip(d.f, 20),
+      to: clip(d.t, 20),
+      route: clip(d.r, 2),
+      service: ["x", "s", "e"].includes(d.s) ? d.s : "s",
+      wait: Number.isFinite(d.w) ? num(d.w, 168) : null,
+      km: num(d.k, 1e7),
+      count: Math.round(num(d.n, 9999)) || 1,
+    };
   } catch {
     return {};
   }
@@ -42,13 +50,13 @@ function readLetter(code) {
 
 // 배송 경로: 거리와 한 줄 "✈ Paris → Seoul · 9,001km · 20h" (못 만들면 null)
 let logistics = null;
-async function routeLine(slug, dest) {
+async function routeLine(slug, dest, service, wait) {
   if (!dest || !SCENE[slug]) return null;
   try {
     logistics ??= await import("../logistics.mjs");
-    const r = logistics.planRoute(SCENE[slug], dest);
+    const r = logistics.planRoute(SCENE[slug], dest, service, { wait });
     if (!r) return null;
-    return { km: r.km, text: `✈ ${r.stops[0].name} → ${r.stops.at(-1).name} · ${Math.round(r.km).toLocaleString("en-US")}km · ${logistics.formatHours(r.hours)}` };
+    return { km: r.km, text: `${service === "e" ? "🚢" : "✈"} ${r.stops[0].name} → ${r.stops.at(-1).name} · ${logistics.SERVICES[service].name} · ${Math.round(r.km).toLocaleString("en-US")}km · ${logistics.formatHours(r.hours)}` };
   } catch {
     return null;
   }
@@ -76,7 +84,7 @@ module.exports = async (req, res) => {
     const letter = readLetter(code);
     const from = q.get("from") || letter.from;
     const to = q.get("to") || letter.to;
-    const route = await routeLine(slug, letter.route);
+    const route = await routeLine(slug, letter.route, letter.service, letter.wait);
     const title = `📬 ${from ? `${from}님이 보낸 ` : ""}${place ? `${place} ` : ""}스노우볼 편지가 도착했어요`;
     // 답장이 이어진 편지면 몇 번째 편지인지, 둘이 함께 오간 거리
     const total = letter.km + (route ? route.km : 0);
