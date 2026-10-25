@@ -312,7 +312,7 @@ body {
   display: none;
 }
 
-/* PC는 자리가 넓어 접지 않고 이야기와 랜드마크 정보를 모두 늘어놓음.
+/* PC도 처음엔 도시·한 줄 카피·현지 시각만. '자세히 보기'를 누르면 그 자리에서 이야기와 정보가 펼쳐짐.
    위쪽 Let it snow 글씨와 겹치지 않게 제목은 조금 줄이고, 이야기는 화면 높이에 맞춰 스크롤 */
 @media (min-width: 1181px) {
   /* 왼쪽 소개(폭 270px)와 도구 버튼이 겹치지 않도록, 화면이 좁으면 가운데 묶음(도구·스노우볼·나라)을
@@ -320,14 +320,6 @@ body {
   #app {
     position: relative;
     left: max(0px, calc(clamp(16px, 4vw, 72px) + 294px - (100vw - 798px) / 2));
-  }
-
-  .meta-toggle {
-    display: none;
-  }
-
-  .meta[data-open] .meta-more {
-    display: block;
   }
 
   .meta-thisis {
@@ -746,10 +738,21 @@ body {
   gap: 18px;
 }
 
+/* 지구본 버튼 + 나라 12개 = 13칸을 7열로 (열 폭 합은 예전 6열과 같은 316px) */
 .scene-grid {
   display: grid;
-  grid-template-columns: repeat(6, 46px);
-  gap: 8px;
+  grid-template-columns: repeat(7, 40px);
+  gap: 6px;
+}
+
+.scene-grid button {
+  width: 40px;
+  height: 40px;
+}
+
+.scene-grid button svg {
+  width: 22px;
+  height: 22px;
 }
 
 .scenes-or {
@@ -770,20 +773,10 @@ body {
   background: var(--line);
 }
 
-.scenes .globe-open {
-  width: auto;
-  height: 40px;
-  padding: 0 14px 0 8px;
-  border-radius: 999px;
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  align-items: center;
-  color: var(--ink);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+/* 지구본 버튼은 나라 기호 줄의 맨 앞 칸. 글자는 숨기고 기호만 */
+.globe-label,
+.scenes-or {
+  display: none;
 }
 
 .scenes button,
@@ -1183,20 +1176,8 @@ body.picker-open .meta {
     gap: 6px;
   }
 
-  .scenes-or {
-    order: -1;
-    width: 180px;
-  }
-
   .deco-left {
     display: none;
-  }
-
-  /* 폰에서는 지구본 버튼이 먼저, 그 아래 or, 나라 격자 */
-  .scenes .globe-open {
-    order: -2;
-    width: auto;
-    height: 36px;
   }
 
   .scenes button,
@@ -2061,6 +2042,110 @@ body.tour-open .meta {
   .scene-grid button {
     flex: 0 0 auto;
     scroll-snap-align: center;
+  }
+}
+
+/* ── 화면 정리 ───────────────────────────────────────────
+   스노우볼에 눈이 가도록 장식 글자·흐르는 띠·좌표·저작권 줄은 숨김 */
+.ghost,
+.ticker,
+.colophon,
+.edition-coord,
+.brand em,
+.deco-sub,
+.deco-right {
+  display: none;
+}
+
+/* PC·태블릿은 왼쪽 소개에 번호가 있으므로 위쪽 번호는 폰에서만 */
+@media (min-width: 641px) {
+  .edition {
+    display: none;
+  }
+}
+
+/* 도구: 편지 보내기만 밖에 두고 나머지는 ··· 메뉴 */
+.tools {
+  position: relative;
+  align-items: center;
+}
+
+.tools .tool-label {
+  display: none;
+}
+
+.tools .tool-primary {
+  border-color: rgba(201, 162, 78, 0.6);
+  background: rgba(201, 162, 78, 0.16);
+}
+
+.tools-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 15;
+  display: grid;
+  gap: 2px;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(18, 18, 24, 0.94);
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.8);
+}
+
+.tools-menu[hidden] {
+  display: none;
+}
+
+.tools .tools-menu button {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.tools .tools-menu button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: none;
+}
+
+.tools .tools-menu button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.tools .tools-menu .tool-label {
+  display: inline;
+}
+
+/* 폰: 편지 보내기는 글자가 붙은 알약 버튼 */
+@media (max-width: 640px) {
+  .tools .tool-primary {
+    display: flex;
+    gap: 6px;
+    width: auto;
+    padding: 0 14px 0 10px;
+    border-radius: 999px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .tools .tool-primary .tool-label {
+    display: inline;
   }
 }
 
