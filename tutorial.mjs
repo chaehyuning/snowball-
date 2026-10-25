@@ -24,9 +24,9 @@ const STEPS = [
     text: "기호를 누르면 바로, 지구본을 누르면 돌려 가며 고를 수 있어요.",
   },
   {
-    target: ".help-toggle",
+    target: ".tools-more-toggle",
     title: "설명은 언제든 여기서",
-    text: "?를 누르면 조작법을 다시 볼 수 있어요.",
+    text: "···를 누르면 소리, 엽서, 조작법이 있어요.",
   },
 ];
 

@@ -631,6 +631,20 @@ for (const button of document.querySelectorAll("[data-scene]")) {
 // 지구본 선택창
 document.querySelector(".globe-open").addEventListener("click", () => openPicker(SCENES, scene.id, pickFromGlobe));
 
+// ··· 메뉴: 소리·음악·엽서·도움말. 바깥을 누르거나 Esc면 닫힘. 엽서·도움말은 창이 열리면서 닫힘
+{
+  const toggle = document.querySelector(".tools-more-toggle");
+  const menu = document.querySelector(".tools-menu");
+  const setOpen = (open) => {
+    menu.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+  };
+  toggle.addEventListener("click", () => setOpen(menu.hidden));
+  document.addEventListener("pointerdown", (e) => !menu.hidden && !e.target.closest(".tools") && setOpen(false));
+  document.addEventListener("keydown", (e) => e.key === "Escape" && !menu.hidden && setOpen(false));
+  for (const sel of [".postcard-toggle", ".help-toggle"]) menu.querySelector(sel).addEventListener("click", () => setOpen(false));
+}
+
 // 처음 방문이면 튜토리얼 (지구본 선택창이 떠 있으면 닫힌 뒤에)
 function maybeTutorial() {
   if (!tutorialDone()) setTimeout(startTutorial, 300);
