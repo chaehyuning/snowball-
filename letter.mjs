@@ -5,7 +5,7 @@
 import { sceneInfo } from "./editorial.mjs";
 import { PLACES } from "./picker.mjs";
 import { sealCrack } from "./sound.mjs";
-import { CITIES, DESTINATIONS, findDestination, planRoute, trackingId, waybillHTML, drawRouteMap, progressAt, legSpans, formatHours } from "./logistics.mjs";
+import { CITIES, DESTINATIONS, findDestination, logText, planRoute, trackingId, waybillHTML, drawRouteMap, progressAt, legSpans, formatHours } from "./logistics.mjs";
 
 // 편지에 쓰는 도시 이름 (예: Paris)과 우표 그림(나라 버튼의 아이콘)
 const cityName = (id) => sceneInfo(id).city || PLACES[id]?.landmark || "";
@@ -17,6 +17,19 @@ const postDate = (iso) => {
 };
 
 const MAX_MESSAGE = 200;
+const MAX_HOPS = 10; // 링크가 너무 길어지지 않게 지난 구간은 최근 10개만 들고 감
+
+// 받은 편지에 답장할 때 이어 갈 펜팔 기록: 받은 편지의 구간을 기록 끝에 붙이고 거리·편지 수를 더함
+function threadAfter(letter, id) {
+  const hop = letter.route && planRoute(id, letter.route);
+  return {
+    h: hop ? [...letter.history, [id, letter.route]].slice(-MAX_HOPS) : letter.history,
+    k: Math.round(letter.km + (hop ? hop.km : 0)),
+    n: letter.count + 1,
+  };
+}
+// 기록 구간들을 경로로 (지도에 옅게 그림)
+const trailRoutes = (h) => h.map(([a, b]) => planRoute(a, b)).filter(Boolean);
 
 function encode(data) {
   const bytes = new TextEncoder().encode(JSON.stringify(data));
@@ -39,6 +52,13 @@ function decode(code) {
       plate: clip(data.p, 20),
       date: /^\d{4}-\d{2}-\d{2}$/.test(data.d) ? data.d : "",
       route: typeof data.r === "string" && DESTINATIONS[data.r] ? data.r : "",
+      // 펜팔 기록: 지난 구간들 [스노우볼 장면, 받는 나라], 지난 구간 누적 거리(km), 몇 번째 편지인지
+      history: (Array.isArray(data.h) ? data.h : [])
+        .filter((hop) => Array.isArray(hop) && CITIES[hop[0]] && DESTINATIONS[hop[1]])
+        .slice(-MAX_HOPS)
+        .map(([a, b]) => [a, b]),
+      km: Number.isFinite(data.k) ? Math.min(Math.max(data.k, 0), 1e7) : 0,
+      count: Number.isInteger(data.n) ? Math.min(Math.max(data.n, 1), 9999) : 1,
     };
   } catch {
     return null;
@@ -60,7 +80,9 @@ export function setupLetters(options) {
 // ── 편지 쓰기 ────────────────────────────────────────────────
 
 let writer = null;
-function openWriter(prefill = {}) {
+let thread = null; // 답장 중이면 이어 갈 펜팔 기록
+function openWriter(prefill = {}, chain = null) {
+  thread = chain;
   if (!writer) {
     writer = document.createElement("div");
     writer.className = "help keep-modal";
@@ -74,6 +96,7 @@ function openWriter(prefill = {}) {
         <p class="postcard-kicker">A LETTER FOR YOU</p>
         <p class="help-title">Send a snowball letter</p>
         <p class="postcard-sub letter-where"></p>
+        <p class="letter-thread" hidden></p>
         <label class="postcard-field"><span>To</span><input name="to" type="text" maxlength="20" placeholder="Jieun" /></label>
         <label class="postcard-field"><span>Your note</span><textarea name="message" rows="5" maxlength="${MAX_MESSAGE}" placeholder="Write something warm…"></textarea><small class="letter-count"></small></label>
         <label class="postcard-field"><span>From</span><input name="from" type="text" maxlength="20" placeholder="Minji" /></label>
@@ -123,6 +146,7 @@ function openWriter(prefill = {}) {
         return;
       }
       const id = opts.currentId();
+      if (thread) Object.assign(data, thread); // 답장이면 펜팔 기록을 이어 담음
       const url = `${location.origin}${location.pathname}?landmark=${opts.slugOf(id)}&letter=${encode(data)}`;
       // 메신저는 제목·문장·주소를 이어 붙여 보여 주므로 문장은 짧게 한 줄만 (자세한 건 미리보기 카드가 보여 줌)
       const text = `✉️ A snowball letter from ${data.f || "a friend"}`;
@@ -148,6 +172,7 @@ function openWriter(prefill = {}) {
       };
       const route = data.r && planRoute(id, data.r);
       if (!route) return share();
+      if (thread) route.trail = trailRoutes(thread.h);
       // 받는 나라가 있으면: 편지 칸을 접고 운송장에서 스노우볼이 출발하는 장면을 먼저 보여 준 뒤,
       // 도장이 찍히면 링크 보내기 버튼을 띄움 (휴대폰 공유 창이 운송장을 가리지 않게)
       writer.querySelector(".letter-card").classList.add("sealed");
@@ -156,7 +181,8 @@ function openWriter(prefill = {}) {
       const shareBtn = writer.querySelector(".letter-share");
       sendBtn.hidden = true;
       shareBtn.onclick = share;
-      showWaybill(route, trackingId(route, `${data.d}|${data.m}|${data.f}`), cityName(id), () => {
+      const log = thread ? { n: thread.n, km: thread.k + route.km } : null;
+      showWaybill(route, trackingId(route, `${data.d}|${data.m}|${data.f}`), cityName(id), log, () => {
         shareBtn.hidden = false;
         shareBtn.focus({ preventScroll: true });
       });
@@ -176,6 +202,11 @@ function openWriter(prefill = {}) {
   writer.querySelector(".letter-send").hidden = false;
   writer.querySelector(".letter-share").hidden = true;
   writer.querySelector(".letter-where").textContent = `Tuck a note into this ${cityName(opts.currentId())} snowball. They'll peel the wax seal before they read it.`;
+  // 답장이면 지금까지의 펜팔 기록을 보여 주고, 받는 나라를 적으면 그 항로가 기록에 이어짐
+  const threadLine = writer.querySelector(".letter-thread");
+  threadLine.hidden = !thread;
+  if (thread)
+    threadLine.textContent = `Reply · letter #${thread.n} between you two · ${thread.k.toLocaleString("en-US")} km so far. Add "Ship to" to extend your route.`;
   for (const [name, value] of Object.entries(prefill)) writer.querySelector(`[name="${name}"]`).value = value;
   writer.querySelector(".letter-count").textContent = `${writer.querySelector('[name="message"]').value.length} / ${MAX_MESSAGE}`;
   writer.querySelector(".letter-done").hidden = true;
@@ -260,11 +291,11 @@ function playRoute(root, route, { status, onDone, endText } = {}) {
 }
 
 // 봉한 뒤 편지 쓰기 창에 운송장을 펼치고, 스노우볼이 허브를 거쳐 가는 장면을 재생. 끝나면 onShipped
-function showWaybill(route, id, cargo, onShipped) {
+function showWaybill(route, id, cargo, log, onShipped) {
   if (!route) return;
   const bill = writer.querySelector(".waybill");
   bill.dataset.stamp = "SHIPPED";
-  bill.innerHTML = `${waybillHTML(route, id, cargo)}
+  bill.innerHTML = `${waybillHTML(route, id, cargo, log)}
     <div class="wb-play"><p class="tracking-status" aria-live="polite"></p><button type="button" class="wb-replay">Replay ↻</button></div>`;
   bill.hidden = false;
   const status = bill.querySelector(".tracking-status");
@@ -280,6 +311,8 @@ function showWaybill(route, id, cargo, onShipped) {
 function showTracking(letter, id, onClose, { first = false } = {}) {
   const route = planRoute(id, letter.route);
   if (!route) return;
+  route.trail = trailRoutes(letter.history);
+  const log = letter.count > 1 ? { n: letter.count, km: letter.km + route.km } : null;
   const el = document.createElement("div");
   el.className = "tracking-view";
   el.setAttribute("role", "dialog");
@@ -288,7 +321,7 @@ function showTracking(letter, id, onClose, { first = false } = {}) {
   el.innerHTML = `
     <p class="tracking-kicker">SNOWBALL LOGISTICS · TRACKING</p>
     <p class="tracking-title">${first ? "A snowball is on its way to you" : "How your snowball got here"}</p>
-    <div class="waybill" data-stamp="DELIVERED">${waybillHTML(route, trackingId(route, `${letter.date}|${letter.message}|${letter.from}`), cityName(id))}</div>
+    <div class="waybill" data-stamp="DELIVERED">${waybillHTML(route, trackingId(route, `${letter.date}|${letter.message}|${letter.from}`), cityName(id), log)}</div>
     <p class="tracking-status" aria-live="polite"></p>
     <div class="tracking-actions">
       <button type="button" class="tracking-skip">Skip</button>
@@ -560,7 +593,7 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
   const finish = () => {
     el.remove();
     document.body.classList.remove("letter-open");
-    showReplyFloat(letter.from);
+    showReplyFloat(letter.from, threadAfter(letter, id));
     onDone?.();
   };
   $(".letter-go").addEventListener("click", finish);
@@ -571,12 +604,12 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
   }
   $(".letter-reply").addEventListener("click", () => {
     finish();
-    openWriter({ to: letter.from || "" });
+    openWriter({ to: letter.from || "" }, threadAfter(letter, id));
   });
 }
 
 // 편지를 받은 사람의 스노우볼 화면에 계속 떠 있는 답장 버튼 → 자기가 고른 나라로 답장 스노우볼을 보내는 펜팔 루프
-function showReplyFloat(from) {
+function showReplyFloat(from, chain) {
   if (document.querySelector(".reply-float")) return;
   const btn = document.createElement("button");
   btn.type = "button";
@@ -585,7 +618,7 @@ function showReplyFloat(from) {
   // 한 번 누르면 사라짐 (편지 쓰기 창의 보내기 버튼을 가리지 않게)
   btn.addEventListener("click", () => {
     btn.remove();
-    openWriter({ to: from || "" });
+    openWriter({ to: from || "" }, chain);
   });
   document.body.append(btn);
 }

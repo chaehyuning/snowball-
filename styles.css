@@ -2390,6 +2390,51 @@ html[data-daypart="night"] .daylight {
   color: #c8343a;
 }
 
+/* 펜팔 기록 줄: 몇 번째 편지인지, 함께 오간 거리 */
+.wb-log {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b0763a;
+}
+
+.wb-log span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #7a6e7c;
+}
+
+.tracking-view .wb-log {
+  color: #ffd27a;
+}
+
+.tracking-view .wb-log span {
+  color: var(--ink-faint);
+}
+
+.letter-thread {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f1e6cf;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6b4a1e;
+}
+
+.letter-thread[hidden] {
+  display: none;
+}
+
+.letter-card.sealed .letter-thread {
+  display: none;
+}
+
 /* 추적 화면이 덮는 동안 뒤 화면(흐르는 띠·흐림 필터)은 그리지 않음 */
 body.tracking-open > *:not(.tracking-view) {
   visibility: hidden;
