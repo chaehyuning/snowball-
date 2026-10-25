@@ -3319,7 +3319,6 @@ body.tracking-open > *:not(.tracking-view) {
 
 .turn-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.3fr;
   gap: 6px;
 }
 
@@ -3429,4 +3428,85 @@ body.tracking-open > *:not(.tracking-view) {
 
 .board-report time {
   min-width: 92px;
+}
+
+/* 목표 카드: 지금 목표 하나, 진행 막대, 힌트. 달성하면 위에 축하 줄 */
+.goal {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(143, 224, 166, 0.4);
+  border-radius: 16px;
+  background: rgba(143, 224, 166, 0.06);
+}
+
+.goal-done {
+  justify-self: start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #8fe0a6;
+  color: #10241a;
+  font-size: 12px;
+  font-weight: 800;
+  animation: report-in 0.35s ease;
+}
+
+.goal-step {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8fe0a6;
+}
+
+.goal-title {
+  font-size: 17px;
+  font-weight: 800;
+  word-break: keep-all;
+}
+
+.goal-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(236, 235, 232, 0.1);
+  overflow: hidden;
+}
+
+.goal-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #8fe0a6;
+  transition: width 0.5s ease;
+}
+
+.goal-meta {
+  font-size: 12px;
+  color: var(--ink-dim);
+  word-break: keep-all;
+}
+
+.goal-meta b {
+  margin-right: 6px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 편지 쓰기 창의 목표 한 줄 */
+.letter-goal {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #e5f3e8;
+  color: #24553a;
+  font-size: 12px;
+  font-weight: 600;
+  word-break: keep-all;
+}
+
+.letter-goal[hidden] {
+  display: none;
+}
+
+.letter-goal.won {
+  background: #2f7a4f;
+  color: #fff;
 }

@@ -5,7 +5,7 @@
 import { sceneInfo } from "./editorial.mjs";
 import { PLACES } from "./picker.mjs";
 import { sealCrack } from "./sound.mjs";
-import { openShipments, recordShipment, simNow } from "./shipments.mjs";
+import { goalProgressText, goalStatus, openShipments, recordShipment, simNow } from "./shipments.mjs";
 import { CITIES, DESTINATIONS, SERVICES, compareServices, findDestination, logText, planRoute, trackingId, waybillHTML, drawRouteMap, progressAt, legSpans, formatHours, phaseAt, MOVING } from "./logistics.mjs";
 
 // 편지에 쓰는 도시 이름 (예: Paris)과 우표 그림(나라 버튼의 아이콘)
@@ -109,6 +109,16 @@ function destError(text) {
   return "";
 }
 
+// 편지 쓰기 창의 목표 한 줄. 방금 달성했으면 축하하고 다음 목표를 보여 줌
+function showGoal() {
+  const line = writer.querySelector(".letter-goal");
+  const st = goalStatus();
+  line.hidden = false;
+  line.classList.toggle("won", st.done.length > 0);
+  const next = st.goal ? `목표 ${st.level + 1}/${st.total} · ${st.goal.title} (${goalProgressText(st)})` : "모든 목표 달성! 🎉";
+  line.textContent = st.done.length ? `달성! ${st.done.join(" · ")} 🎉  다음: ${st.goal ? st.goal.title : "없음"}` : `🎯 ${next}`;
+}
+
 // 세 방식 카드를 그리고, 고른 방식을 일반(Standard)과 비교한 한 줄을 적음.
 // 막대는 세 방식 중 가장 큰 값을 꽉 찬 길이로 (리드타임·운임·CO₂ 모두 짧을수록 좋음)
 function renderShipping() {
@@ -166,6 +176,7 @@ function openWriter(prefill = {}, chain = null) {
         <p class="help-title">스노우볼 편지 보내기</p>
         <p class="postcard-sub letter-where"></p>
         <p class="letter-thread" hidden></p>
+        <p class="letter-goal" hidden></p>
         <label class="postcard-field"><span>받는 사람</span><input name="to" type="text" maxlength="20" placeholder="지은" /></label>
         <label class="postcard-field"><span>편지</span><textarea name="message" rows="5" maxlength="${MAX_MESSAGE}" placeholder="따뜻한 한마디를 적어 보세요"></textarea><small class="letter-count"></small></label>
         <label class="postcard-field"><span>보내는 사람</span><input name="from" type="text" maxlength="20" placeholder="민지" /></label>
@@ -263,6 +274,7 @@ function openWriter(prefill = {}, chain = null) {
       const trackId = trackingId(route, `${data.d}|${data.m}|${data.f}`);
       // 내 배송 화면에 기록: 지금부터 리드타임만큼 시뮬레이션 시계가 흐름
       recordShipment({ id: trackId, dir: "sent", from: id, to: data.r, s: service, w: data.w ?? 0, at: simNow(), who: data.t });
+      showGoal();
       showWaybill(route, trackId, cityName(id), log, () => {
         shareBtn.hidden = false;
         shareBtn.focus({ preventScroll: true });
@@ -300,6 +312,7 @@ function openWriter(prefill = {}, chain = null) {
   writer.querySelector(".letter-send").hidden = false;
   writer.querySelector(".letter-share").hidden = true;
   writer.querySelector(".letter-where").textContent = `${cityName(opts.currentId())} 스노우볼에 편지를 담아 보내요.`;
+  showGoal();
   // 답장이면 지금까지의 펜팔 기록을 보여 주고, 받는 나라를 적으면 그 항로가 기록에 이어짐
   const threadLine = writer.querySelector(".letter-thread");
   threadLine.hidden = !thread;
