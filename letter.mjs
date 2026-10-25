@@ -5,7 +5,7 @@
 import { sceneInfo } from "./editorial.mjs";
 import { PLACES } from "./picker.mjs";
 import { sealCrack } from "./sound.mjs";
-import { openShipments, recordShipment } from "./shipments.mjs";
+import { openShipments, recordShipment, simNow } from "./shipments.mjs";
 import { CITIES, DESTINATIONS, SERVICES, compareServices, findDestination, logText, planRoute, trackingId, waybillHTML, drawRouteMap, progressAt, legSpans, formatHours, phaseAt } from "./logistics.mjs";
 
 // 편지에 쓰는 도시 이름 (예: Paris)과 우표 그림(나라 버튼의 아이콘)
@@ -119,7 +119,7 @@ function renderShipping() {
   // 같은 나라를 적으면 카드 대신 바로 안내
   const value = writer.querySelector('[name="dest"]').value;
   writer.querySelector(".letter-dest-hint").textContent = dest ? destError(value) : "";
-  const all = dest && !destError(value) ? compareServices(id, dest) : null;
+  const all = dest && !destError(value) ? compareServices(id, dest, simNow()) : null;
   box.hidden = !all || !all.s || !all.s.legs.some((leg) => leg.mode !== "road");
   if (box.hidden) return;
   const max = (key) => Math.max(...Object.values(all).map((r) => r[key]));
@@ -221,7 +221,8 @@ function openWriter(prefill = {}, chain = null) {
       const id = opts.currentId();
       if (thread) Object.assign(data, thread); // 답장이면 펜팔 기록을 이어 담음
       // 받는 나라가 있으면 고른 배송 방식으로 지금 시각 기준 경로를 계산하고, 방식과 출고 대기 시간을 편지에 담음
-      const route = data.r && planRoute(id, data.r, service);
+      // 출고 차수는 시뮬레이션 시계 기준 (턴을 넘겨 시간을 돌리면 다음 차수도 바뀜)
+      const route = data.r && planRoute(id, data.r, service, { now: simNow() });
       if (route) {
         data.s = service;
         if (route.departure) data.w = Math.round(route.departure.wait * 100) / 100;
@@ -262,7 +263,7 @@ function openWriter(prefill = {}, chain = null) {
       const log = thread ? { n: thread.n, km: thread.k + route.km, co2: (thread.c || 0) + route.co2 } : null;
       const trackId = trackingId(route, `${data.d}|${data.m}|${data.f}`);
       // 내 배송 화면에 기록: 지금부터 리드타임만큼 시뮬레이션 시계가 흐름
-      recordShipment({ id: trackId, dir: "sent", from: id, to: data.r, s: service, w: data.w ?? 0, at: Date.now(), who: data.t });
+      recordShipment({ id: trackId, dir: "sent", from: id, to: data.r, s: service, w: data.w ?? 0, at: simNow(), who: data.t });
       showWaybill(route, trackId, cityName(id), log, () => {
         shareBtn.hidden = false;
         shareBtn.focus({ preventScroll: true });
@@ -459,7 +460,7 @@ function showTracking(letter, id, onClose, { first = false } = {}) {
 export function showShipment(rec, onClose) {
   const route = planRoute(rec.from, rec.to, rec.s, { wait: rec.w, now: rec.at });
   if (!route) return;
-  const elapsed = (Date.now() - rec.at) / 3600e3;
+  const elapsed = (simNow() - rec.at) / 3600e3;
   const moving = rec.dir === "sent" && elapsed < route.hours;
   const left = route.hours - elapsed;
   trackingOverlay({
@@ -619,7 +620,7 @@ export function showLetter(letter, id, onDone, options = {}) {
       to: letter.route,
       s: letter.service,
       w: letter.wait ?? 0,
-      at: Date.now() - got.hours * 3600e3,
+      at: simNow() - got.hours * 3600e3,
       who: letter.from,
     });
   if (got) showTracking(letter, id, () => openEnvelope(letter, id, onDone, options), { first: true });

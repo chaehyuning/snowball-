@@ -1,11 +1,34 @@
 // 내 배송 화면: 이 기기에서 보내고 받은 스노우볼을 모아 운영 대시보드처럼 보여 줌.
 // 서버가 없어서 기록은 이 브라우저에만 남음 (localStorage, 최근 60건).
-// 보낸 배송은 보낸 시각부터 실제 시간으로 시뮬레이션 시계가 흘러 운송 중 → 통관 → 도착으로 바뀜.
-// (받는 사람에게 실제 지연을 걸지는 않음. 이 화면은 보낸 사람이 보는 시뮬레이션)
+// 시간은 실제로 흐르지 않음: 시뮬레이션 시계는 사용자가 턴을 넘길 때만 움직임 (+6h · 하루 · 다음 도착까지).
+// 턴을 넘기면 그 사이 출고·통관·도착이 턴 리포트로 나옴. 기다릴 필요 없이 간접 체험만.
 
-import { CITIES, DESTINATIONS, SERVICES, dispatchWaves, formatHours, phaseAt, planRoute } from "./logistics.mjs";
+import { CITIES, DESTINATIONS, SERVICES, TZ, dispatchWaves, formatHours, phaseAt, planRoute } from "./logistics.mjs";
 
 const KEY = "snowball-shipments";
+const CLOCK_KEY = "snowball-sim-clock";
+
+// 시뮬레이션 시계(ms). 처음엔 지금 실제 시각에서 시작하고, 그 뒤로는 턴을 넘길 때만 앞으로 감
+let clock = null;
+export function simNow() {
+  if (clock == null) {
+    try {
+      clock = Number(localStorage.getItem(CLOCK_KEY)) || null;
+    } catch {
+      clock = null;
+    }
+    if (!clock) setClock(Date.now());
+  }
+  return clock;
+}
+function setClock(t) {
+  clock = t;
+  try {
+    localStorage.setItem(CLOCK_KEY, String(Math.round(t)));
+  } catch {
+    // 이번 화면에서만
+  }
+}
 const MAX = 60;
 
 function load() {
@@ -45,6 +68,23 @@ function stateOf(rec, now) {
   return { rec, route, elapsed, ...p, progress: rec.dir === "received" ? 1 : Math.min(1, Math.max(0, elapsed / route.hours)) };
 }
 
+// 두 시점(경과 시간 h0 → h1) 사이에 이 배송에 일어난 일: 출고, 허브 도착, 통관 완료, 배송 완료
+function eventsBetween(st, h0, h1) {
+  const { route, rec } = st;
+  if (rec.dir !== "sent") return [];
+  const out = [];
+  const add = (h, text) => h > h0 && h <= h1 && out.push({ h, text, rec, route });
+  route.stops.forEach((s, k) => {
+    if (k === 0) return;
+    const last = k === route.stops.length - 1;
+    if (last) return add(s.at, `Delivered to ${s.name}`);
+    add(s.at, `Arrived at ${s.code}`);
+    if (k === 1 && route.departure) add(s.out, `Left ${s.code} on the ${route.departure.label}`);
+    else if (route.customs && s.code === route.hub) add(s.out, `Cleared customs at ${s.code}`);
+  });
+  return out;
+}
+
 // 원형 지표 (SVG). value 0~1
 function ring(value, label, sub, color) {
   const r = 26;
@@ -76,6 +116,17 @@ const inChip = (st, chip) =>
   chip === "all" ||
   (chip === "received" ? st.rec.dir === "received" : st.rec.dir === "sent" && st.phase === chip);
 
+// 시뮬레이션 시각을 그 도시 시각으로: "Mon 26 Oct 14:00"
+function clockText(t, homeId) {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: TZ[homeId], weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(t)).replace(",", "");
+}
+
+// 운송 중인 배송 중 가장 먼저 도착하는 것까지 남은 시간 (없으면 null)
+function nextArrival(all) {
+  const left = all.filter((s) => s.rec.dir === "sent" && s.phase !== "delivered").map((s) => s.route.hours - s.elapsed);
+  return left.length ? Math.min(...left) : null;
+}
+
 let board = null;
 
 // 화면 열기. homeId: 지금 보고 있는 스노우볼(오늘 출고 차수를 그 도시 시각으로), onOpen: 한 건을 눌렀을 때
@@ -89,8 +140,9 @@ export function openShipments(homeId, onOpen) {
   document.body.append(board);
   document.body.classList.add("letter-open");
   let chip = "all";
+  let report = null; // 마지막 턴에 일어난 일
   const render = () => {
-    const now = Date.now();
+    const now = simNow();
     const all = load()
       .map((r) => stateOf(r, now))
       .filter(Boolean);
@@ -116,6 +168,21 @@ export function openShipments(homeId, onOpen) {
         </div>
         <h2 class="board-title">My shipments</h2>
         <p class="board-big"><b>${all.length}</b> shipment${all.length === 1 ? "" : "s"} <span>${inTransit} in transit · ${delivered} delivered</span></p>
+        ${
+          report
+            ? `<section class="board-report" aria-live="polite">
+          <p class="board-h">Turn report <span>${esc(report.title)}</span></p>
+          ${
+            report.events.length
+              ? `<ol>${report.events
+                  .slice(0, 8)
+                  .map((e) => `<li><time>${esc(clockText(e.at, homeId))}</time><span><b>${esc(e.route.stops[0].name)} → ${esc(e.route.stops.at(-1).name)}</b> ${esc(e.text)}</span></li>`)
+                  .join("")}${report.events.length > 8 ? `<li class="more">+${report.events.length - 8} more</li>` : ""}</ol>`
+              : `<p class="board-note">Nothing moved this turn.</p>`
+          }
+        </section>`
+            : ""
+        }
         <div class="board-rings">
           ${ring(sent.length ? sentDone / sent.length : 0, "Delivered", `${sentDone} of ${sent.length} sent`, "#ffd27a")}
           ${ring(all.length ? eco / all.length : 0, "Eco share", `${eco} by sea / rail`, "#5fd3c6")}
@@ -156,8 +223,17 @@ export function openShipments(homeId, onOpen) {
               : `<li class="board-empty">${all.length ? "Nothing here right now." : "No shipments yet. Send a snowball letter and it shows up here."}</li>`
           }
         </ul>
-        <p class="board-note">Simulated on this device only. Status follows the lead time from the moment you sent it.</p>
+        <p class="board-note">Simulated on this device only. Time moves only when you end a turn — no real waiting.</p>
+      </div>
+      <div class="board-turn">
+        <p class="turn-clock"><span>SIM CLOCK</span> ${esc(clockText(now, homeId))} <em>${esc(city)} time</em></p>
+        <div class="turn-buttons">
+          <button type="button" data-skip="6">+6h</button>
+          <button type="button" data-skip="24">End day ▸</button>
+          <button type="button" data-skip="next" ${nextArrival(all) == null ? "disabled" : ""}>Next arrival ▸▸</button>
+        </div>
       </div>`;
+    for (const btn of board.querySelectorAll("[data-skip]")) btn.addEventListener("click", () => endTurn(btn.dataset.skip));
     board.querySelector(".board-back").addEventListener("click", close);
     for (const b of board.querySelectorAll("[data-chip]"))
       b.addEventListener("click", () => {
@@ -171,13 +247,29 @@ export function openShipments(homeId, onOpen) {
         onOpen?.(s.rec, () => board?.querySelector(`.board-item[data-i="${b.dataset.i}"]`)?.focus());
       });
   };
-  // 열어 둔 동안 30초마다 상태를 새로 계산
-  const timer = setInterval(render, 30000);
+  // 턴 넘기기: 시계를 앞으로 돌리고, 그 사이 일어난 일을 모아 리포트로
+  const endTurn = (skip) => {
+    const before = simNow();
+    const states = load()
+      .map((r) => stateOf(r, before))
+      .filter(Boolean);
+    const hours = skip === "next" ? Math.ceil((nextArrival(states) ?? 0) * 60) / 60 : Number(skip);
+    if (!(hours > 0)) return;
+    const after = before + hours * 3600e3;
+    setClock(after);
+    const events = states
+      .flatMap((st) => eventsBetween(st, st.elapsed, st.elapsed + hours))
+      .map((e) => ({ ...e, at: e.rec.at + e.h * 3600e3 }))
+      .sort((a, b) => a.at - b.at);
+    report = { title: `+${formatHours(hours)}`, events };
+    render();
+    board.scrollTo({ top: 0, behavior: "smooth" });
+    navigator.vibrate?.(8);
+  };
   const onKey = (e) => {
     if (e.key === "Escape" && !document.body.classList.contains("tracking-open")) close();
   };
   function close() {
-    clearInterval(timer);
     document.removeEventListener("keydown", onKey);
     board.remove();
     board = null;

@@ -211,7 +211,7 @@ export const SERVICES = {
 };
 
 // 출발 도시 현지 시간대 (출고 차수 계산용)
-const TZ = {
+export const TZ = {
   japan: "Asia/Tokyo", korea: "Asia/Seoul", canada: "America/Toronto", australia: "Australia/Sydney", finland: "Europe/Helsinki",
   china: "Asia/Shanghai", egypt: "Africa/Cairo", france: "Europe/Paris", turkey: "Europe/Istanbul", spain: "Europe/Madrid",
   bolivia: "America/La_Paz", taiwan: "Asia/Taipei",

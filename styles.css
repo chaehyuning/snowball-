@@ -3277,3 +3277,128 @@ body.tracking-open > *:not(.tracking-view) {
     transition: none;
   }
 }
+
+/* 턴 넘기기: 아래에 붙은 시뮬레이션 시계와 버튼 3개. 시간은 이 버튼으로만 흐름 */
+.board-turn {
+  position: sticky;
+  bottom: calc(-28px - env(safe-area-inset-bottom, 0px));
+  display: grid;
+  gap: 8px;
+  width: min(560px, 100%);
+  margin: 16px auto 0;
+  padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  border: 1px solid rgba(255, 210, 122, 0.35);
+  border-radius: 16px 16px 0 0;
+  background: #141418;
+  box-shadow: 0 -12px 30px -18px rgba(0, 0, 0, 0.9);
+}
+
+.turn-clock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.turn-clock span {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: #ffd27a;
+}
+
+.turn-clock em {
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.turn-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 6px;
+}
+
+.turn-buttons button {
+  padding: 10px 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.turn-buttons button:last-child {
+  border-color: transparent;
+  background: #c9a24e;
+  color: #1b1408;
+}
+
+.turn-buttons button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.turn-buttons button:focus-visible {
+  outline: 2px solid #ffd27a;
+  outline-offset: 2px;
+}
+
+.board-report {
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 210, 122, 0.35);
+  border-radius: 16px;
+  background: rgba(255, 210, 122, 0.05);
+  animation: report-in 0.35s ease;
+}
+
+.board-report ol {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  list-style: none;
+}
+
+.board-report li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.board-report time {
+  min-width: 108px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-report b {
+  margin-right: 4px;
+}
+
+.board-report .more {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+@keyframes report-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-report {
+    animation: none;
+  }
+}
