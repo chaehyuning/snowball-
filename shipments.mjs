@@ -1,7 +1,8 @@
 // 내 배송 화면: 이 기기에서 보내고 받은 스노우볼을 모아 운영 대시보드처럼 보여 줌.
 // 서버가 없어서 기록은 이 브라우저에만 남음 (localStorage, 최근 60건).
-// 시간은 실제로 흐르지 않음: 시뮬레이션 시계는 사용자가 턴을 넘길 때만 움직임 (+6h · 하루 · 다음 도착까지).
+// 시간은 실제로 흐르지 않음: 시뮬레이션 시계는 '다음 도착까지' 버튼을 누를 때만 움직임.
 // 턴을 넘기면 그 사이 출고·통관·도착이 턴 리포트로 나옴. 기다릴 필요 없이 간접 체험만.
+// 단계별 목표가 하나씩 열림 (첫 배송 → 도착 → 친환경 → 3개 대륙 → 운임 관리 → 탄소 절감 → 지구 한 바퀴)
 
 import { CITIES, DESTINATIONS, SERVICES, TZ, dispatchWaves, formatHours, phaseAt, planRoute } from "./logistics.mjs";
 
@@ -59,6 +60,76 @@ export function recordShipment(rec) {
 
 export const shipmentCount = () => load().length;
 
+// ── 목표 ───────────────────────────────────────────────
+const GOAL_KEY = "snowball-goal-level";
+const CONTINENT = {
+  KR: "아시아", JP: "아시아", CN: "아시아", TW: "아시아", HK: "아시아", SG: "아시아", TH: "아시아", VN: "아시아", PH: "아시아", ID: "아시아", MY: "아시아", IN: "아시아", AE: "아시아",
+  TR: "유럽", GB: "유럽", FR: "유럽", DE: "유럽", NL: "유럽", ES: "유럽", IT: "유럽", CH: "유럽", FI: "유럽", SE: "유럽", NO: "유럽", DK: "유럽", PL: "유럽",
+  EG: "아프리카", ZA: "아프리카", KE: "아프리카",
+  US: "북미", CA: "북미", MX: "북미",
+  BR: "남미", AR: "남미", CL: "남미", PE: "남미", BO: "남미",
+  AU: "오세아니아", NZ: "오세아니아",
+};
+export const GOALS = [
+  { title: "첫 스노우볼 보내기", hint: "편지를 쓰고 받는 나라를 골라 보내 보세요", goal: 1, key: "sent" },
+  { title: "배송 1건 도착시키기", hint: "내 배송에서 '다음 도착까지'를 눌러 보세요", goal: 1, key: "delivered" },
+  { title: "친환경으로 1건 보내기", hint: "배송 방식에서 친환경을 골라 보세요", goal: 1, key: "eco" },
+  { title: "3개 대륙에 보내기", hint: "아시아 · 유럽 · 북미 · 남미 · 아프리카 · 오세아니아", goal: 3, key: "continents" },
+  { title: "운임 $10 이하로 3건 보내기", hint: "가까운 나라나 친환경이 싸요", goal: 3, key: "cheap" },
+  { title: "특급보다 탄소 5kg 아끼기", hint: "먼 나라일수록 친환경 효과가 커요", goal: 5, key: "saved", unit: "kg" },
+  { title: "함께 지구 한 바퀴", hint: "보낸 거리 40,075km 채우기", goal: 40075, key: "km", unit: "km" },
+];
+
+// 보낸 배송으로 목표 값 계산
+function metrics(now) {
+  const sent = load()
+    .filter((r) => r.dir === "sent")
+    .map((r) => stateOf(r, now))
+    .filter(Boolean);
+  const express = (s) => planRoute(s.rec.from, s.rec.to, "x", { wait: 0, now: s.rec.at })?.co2 || 0;
+  return {
+    sent: sent.length,
+    delivered: sent.filter((s) => s.phase === "delivered").length,
+    eco: sent.filter((s) => s.rec.s === "e").length,
+    continents: new Set(sent.map((s) => CONTINENT[s.rec.to])).size,
+    cheap: sent.filter((s) => s.route.cost <= 10).length,
+    saved: sent.reduce((a, s) => a + Math.max(0, express(s) - s.route.co2), 0),
+    km: sent.reduce((a, s) => a + s.route.km, 0),
+  };
+}
+
+// 지금 목표와 진행도. 조건을 채우면 다음 단계로 넘어가고, 방금 달성한 목표 이름을 돌려줌
+export function goalStatus() {
+  let level = 0;
+  try {
+    level = Number(localStorage.getItem(GOAL_KEY)) || 0;
+  } catch {
+    level = 0;
+  }
+  const m = metrics(simNow());
+  const done = [];
+  while (level < GOALS.length && m[GOALS[level].key] >= GOALS[level].goal) {
+    done.push(GOALS[level].title);
+    level += 1;
+  }
+  if (done.length)
+    try {
+      localStorage.setItem(GOAL_KEY, String(level));
+    } catch {
+      // 이번 화면에서만
+    }
+  const goal = GOALS[level] || null;
+  return { level, total: GOALS.length, goal, value: goal ? m[goal.key] : 0, done };
+}
+
+// 목표 값 표시: 1 / 3, 2.4 / 5kg, 12,300 / 40,075km
+export function goalProgressText(st) {
+  const g = st.goal;
+  const v = Math.min(st.value, g.goal);
+  const num = (x) => (g.unit === "kg" ? x.toFixed(1) : Math.round(x).toLocaleString("en-US"));
+  return `${num(v)} / ${num(g.goal)}${g.unit || ""}`;
+}
+
 // 한 건의 지금 상태: 경로, 지난 시간, 단계
 function stateOf(rec, now) {
   const route = planRoute(rec.from, rec.to, rec.s, { wait: rec.w, now: rec.at });
@@ -94,7 +165,7 @@ function ring(value, label, sub, color) {
     <figure class="board-ring">
       <svg viewBox="0 0 64 64" aria-hidden="true">
         <circle cx="32" cy="32" r="${r}" class="ring-track" />
-        <circle cx="32" cy="32" r="${r}" class="ring-value" style="stroke:${color};stroke-dasharray:${(v * c).toFixed(1)} ${c.toFixed(1)}" />
+        ${v > 0 ? `<circle cx="32" cy="32" r="${r}" class="ring-value" style="stroke:${color};stroke-dasharray:${(v * c).toFixed(1)} ${c.toFixed(1)}" />` : ""}
         <text x="32" y="36" text-anchor="middle">${Math.round(v * 100)}%</text>
       </svg>
       <figcaption><b>${label}</b><span>${sub}</span></figcaption>
@@ -146,6 +217,7 @@ export function openShipments(homeId, onOpen) {
   document.body.classList.add("letter-open");
   let chip = "all";
   let report = null; // 마지막 턴에 일어난 일
+  let cheer = []; // 이번에 달성한 목표
   const render = () => {
     const now = simNow();
     const all = load()
@@ -165,6 +237,8 @@ export function openShipments(homeId, onOpen) {
     const waves = dispatchWaves(homeId, now);
     const city = CITIES[homeId]?.city || "";
     const shown = all.filter((s) => inChip(s, chip));
+    const goal = goalStatus();
+    cheer = cheer.concat(goal.done);
     board.innerHTML = `
       <div class="board-inner">
         <div class="board-top">
@@ -172,6 +246,17 @@ export function openShipments(homeId, onOpen) {
         </div>
         <h2 class="board-title">내 배송</h2>
         <p class="board-big"><b>${all.length}</b>건 <span>배송 중 ${inTransit} · 도착 ${delivered}</span></p>
+        <section class="goal">
+          ${cheer.length ? `<p class="goal-done">달성! ${esc(cheer.join(" · "))} 🎉</p>` : ""}
+          ${
+            goal.goal
+              ? `<p class="goal-step">목표 ${goal.level + 1} / ${goal.total}</p>
+          <p class="goal-title">${esc(goal.goal.title)}</p>
+          <div class="goal-bar"><span style="width:${Math.min(100, (goal.value / goal.goal.goal) * 100).toFixed(1)}%"></span></div>
+          <p class="goal-meta"><b>${goalProgressText(goal)}</b> ${esc(goal.goal.hint)}</p>`
+              : `<p class="goal-title">모든 목표 달성! 🎉</p><p class="goal-meta">스노우볼 물류왕이에요.</p>`
+          }
+        </section>
         ${
           report
             ? `<section class="board-report" aria-live="polite">
@@ -230,9 +315,7 @@ export function openShipments(homeId, onOpen) {
       <div class="board-turn">
         <p class="turn-clock"><span>시뮬레이션 시각</span> ${esc(clockText(now, homeId))} <em>${esc(city)}</em></p>
         <div class="turn-buttons">
-          <button type="button" data-skip="6">+6시간</button>
-          <button type="button" data-skip="24">하루 넘기기</button>
-          <button type="button" data-skip="next" ${nextArrival(all) == null ? "disabled" : ""}>다음 도착까지 ▸</button>
+          <button type="button" data-skip="next" ${nextArrival(all) == null ? "disabled" : ""}>${nextArrival(all) == null ? "배송 중인 게 없어요" : "다음 도착까지 ▸"}</button>
         </div>
       </div>`;
     for (const btn of board.querySelectorAll("[data-skip]")) btn.addEventListener("click", () => endTurn(btn.dataset.skip));
@@ -255,7 +338,8 @@ export function openShipments(homeId, onOpen) {
     const states = load()
       .map((r) => stateOf(r, before))
       .filter(Boolean);
-    const hours = skip === "next" ? Math.ceil((nextArrival(states) ?? 0) * 60) / 60 : Number(skip);
+    // 가장 먼저 도착하는 배송까지 시계를 돌림
+    const hours = Math.ceil((nextArrival(states) ?? 0) * 60) / 60;
     if (!(hours > 0)) return;
     const after = before + hours * 3600e3;
     setClock(after);
