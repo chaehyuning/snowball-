@@ -380,6 +380,17 @@ function paintBase(g, rings, { cw, ch, minLon, maxLon, minLat, maxLat, X, Y }) {
   }
 }
 
+// 지난 구간들의 점 목록. 각 구간을 지금 경로의 경도 평균에 가장 가깝게 ±360도 옮김
+function trailPaths(route, pts) {
+  const mean = (ps) => ps.reduce((a, p) => a + p.lon, 0) / ps.length;
+  const here = mean(pts);
+  return (route.trail || []).map((r) => {
+    const p = (r._path || (r._path = routePath(r))).pts;
+    const shift = 360 * Math.round((here - mean(p)) / 360);
+    return p.map((q) => ({ lat: q.lat, lon: q.lon + shift }));
+  });
+}
+
 // 지도 그리기. progress 0~1: 비행기가 경로 어디쯤 있는지 (null이면 비행기 없이 전체 경로만)
 // pulse: { k, phase } — 허브에서 처리 중인 정류장 k에 퍼지는 고리 (phase 0~1)
 export async function drawRouteMap(canvas, route, progress = null, { pulse } = {}) {
@@ -394,11 +405,14 @@ export async function drawRouteMap(canvas, route, progress = null, { pulse } = {
   }
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const { pts, marks } = route._path || (route._path = routePath(route));
+  // 펜팔 항로: 예전에 주고받은 구간들 (route.trail). 지금 경로와 같은 경도 범위로 옮겨 붙임
+  const trail = (route._trail ||= trailPaths(route, pts));
+  const all = pts.concat(...trail);
   // 경로가 들어오는 범위에 여백을 두고 화면 비율에 맞춤
-  let minLon = Math.min(...pts.map((p) => p.lon));
-  let maxLon = Math.max(...pts.map((p) => p.lon));
-  let minLat = Math.min(...pts.map((p) => p.lat));
-  let maxLat = Math.max(...pts.map((p) => p.lat));
+  let minLon = Math.min(...all.map((p) => p.lon));
+  let maxLon = Math.max(...all.map((p) => p.lon));
+  let minLat = Math.min(...all.map((p) => p.lat));
+  let maxLat = Math.max(...all.map((p) => p.lat));
   const padLon = Math.max(12, (maxLon - minLon) * 0.18);
   const padLat = Math.max(10, (maxLat - minLat) * 0.25);
   minLon -= padLon;
@@ -432,6 +446,23 @@ export async function drawRouteMap(canvas, route, progress = null, { pulse } = {
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.drawImage(route._base.canvas, 0, 0);
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // 지난 펜팔 항로: 가는 옅은 금빛 선과 양 끝 점
+  if (trail.length) {
+    g.strokeStyle = "rgba(255,214,140,0.28)";
+    g.fillStyle = "rgba(255,214,140,0.45)";
+    g.lineWidth = 1.2;
+    for (const t of trail) {
+      g.beginPath();
+      t.forEach((p, i) => (i ? g.lineTo(X(p.lon), Y(p.lat)) : g.moveTo(X(p.lon), Y(p.lat))));
+      g.stroke();
+      for (const p of [t[0], t[t.length - 1]]) {
+        g.beginPath();
+        g.arc(X(p.lon), Y(p.lat), 2, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
 
   // 경로: 전체는 옅은 점선, 지나온 부분은 금빛 실선
   const upto =
@@ -574,7 +605,14 @@ export function progressAt(route, t) {
 }
 
 // 운송장 본문 HTML (정류장 목록, 거리, 리드타임)
-export function waybillHTML(route, id, cargo = "") {
+// 펜팔 기록 한 줄: 몇 번째 편지인지, 지금까지 함께 오간 거리, 지구 몇 바퀴인지
+export const EARTH_KM = 40075;
+export function logText(log) {
+  const laps = log.km / EARTH_KM;
+  return `Letter #${log.n} · ${Math.round(log.km).toLocaleString("en-US")} km together · ${laps < 10 ? laps.toFixed(2) : Math.round(laps)}× around the Earth`;
+}
+
+export function waybillHTML(route, id, cargo = "", log = null) {
   const esc = (s) =>
     String(s).replace(
       /[&<>"']/g,
@@ -599,6 +637,7 @@ export function waybillHTML(route, id, cargo = "") {
       <span class="wb-id">${esc(id)}</span>
     </div>
     ${cargo ? `<p class="wb-cargo"><span>CARGO</span> 1 × snowball · ${esc(cargo)} <em>FRAGILE ❄</em></p>` : ""}
+    ${log ? `<p class="wb-log"><span>PEN-PAL LOG</span> ${esc(logText(log))}</p>` : ""}
     <div class="wb-mapbox"><canvas class="wb-map" aria-label="Simulated route map"></canvas><span class="wb-stamp" aria-hidden="true"></span></div>
     <ol class="wb-stops">${stops}</ol>
     <dl class="wb-facts">

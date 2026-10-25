@@ -33,23 +33,24 @@ function readLetter(code) {
     const json = Buffer.from(String(code).replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
     const d = JSON.parse(json);
     const clip = (v, n) => (typeof v === "string" ? v.slice(0, n) : "");
-    return { from: clip(d.f, 20), to: clip(d.t, 20), route: clip(d.r, 2) };
+    const num = (v, max) => (Number.isFinite(v) ? Math.min(Math.max(v, 0), max) : 0);
+    return { from: clip(d.f, 20), to: clip(d.t, 20), route: clip(d.r, 2), km: num(d.k, 1e7), count: Math.round(num(d.n, 9999)) || 1 };
   } catch {
     return {};
   }
 }
 
-// 배송 경로 한 줄: "✈ Paris → Seoul · 9,001km · 20h" (못 만들면 빈 문자열)
+// 배송 경로: 거리와 한 줄 "✈ Paris → Seoul · 9,001km · 20h" (못 만들면 null)
 let logistics = null;
 async function routeLine(slug, dest) {
-  if (!dest || !SCENE[slug]) return "";
+  if (!dest || !SCENE[slug]) return null;
   try {
     logistics ??= await import("../logistics.mjs");
     const r = logistics.planRoute(SCENE[slug], dest);
-    if (!r) return "";
-    return `✈ ${r.stops[0].name} → ${r.stops.at(-1).name} · ${Math.round(r.km).toLocaleString("en-US")}km · ${logistics.formatHours(r.hours)}`;
+    if (!r) return null;
+    return { km: r.km, text: `✈ ${r.stops[0].name} → ${r.stops.at(-1).name} · ${Math.round(r.km).toLocaleString("en-US")}km · ${logistics.formatHours(r.hours)}` };
   } catch {
-    return "";
+    return null;
   }
 }
 
@@ -77,7 +78,10 @@ module.exports = async (req, res) => {
     const to = q.get("to") || letter.to;
     const route = await routeLine(slug, letter.route);
     const title = `📬 ${from ? `${from}님이 보낸 ` : ""}${place ? `${place} ` : ""}스노우볼 편지가 도착했어요`;
-    const desc = `${route ? `${route} · ` : ""}${to ? `To. ${to} · ` : ""}봉투의 밀랍 도장을 떼고 편지를 열어 보세요 ✉️`;
+    // 답장이 이어진 편지면 몇 번째 편지인지, 둘이 함께 오간 거리
+    const total = letter.km + (route ? route.km : 0);
+    const thread = letter.count > 1 ? `💌 ${letter.count}번째 편지 · 함께 ${Math.round(total).toLocaleString("en-US")}km · ` : "";
+    const desc = `${thread}${route ? `${route.text} · ` : ""}${to ? `To. ${to} · ` : ""}봉투의 밀랍 도장을 떼고 편지를 열어 보세요 ✉️`;
     html = html
       .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
       .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${esc(title)}$2`)
