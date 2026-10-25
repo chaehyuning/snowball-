@@ -109,10 +109,10 @@ function destError(text) {
   return "";
 }
 
-// 편지 쓰기 창의 목표 한 줄. 방금 달성했으면 축하하고 다음 목표를 보여 줌
-function showGoal() {
+// 편지 쓰기 창의 목표 한 줄. 열 때는 보여 주기만, 봉한 직후(mode "seal")에만 달성 판정
+function showGoal(mode = null) {
   const line = writer.querySelector(".letter-goal");
-  const st = goalStatus();
+  const st = goalStatus(mode);
   line.hidden = false;
   line.classList.toggle("won", st.done.length > 0);
   const next = st.goal ? `목표 ${st.level + 1}/${st.total} · ${st.goal.title} (${goalProgressText(st)})` : "모든 목표 달성! 🎉";
@@ -274,7 +274,7 @@ function openWriter(prefill = {}, chain = null) {
       const trackId = trackingId(route, `${data.d}|${data.m}|${data.f}`);
       // 내 배송 화면에 기록: 지금부터 리드타임만큼 시뮬레이션 시계가 흐름
       recordShipment({ id: trackId, dir: "sent", from: id, to: data.r, s: service, w: data.w ?? 0, at: simNow(), who: data.t });
-      showGoal();
+      showGoal("seal");
       showWaybill(route, trackId, cityName(id), log, () => {
         shareBtn.hidden = false;
         shareBtn.focus({ preventScroll: true });

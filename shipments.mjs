@@ -98,8 +98,10 @@ function metrics(now) {
   };
 }
 
-// 지금 목표와 진행도. 조건을 채우면 다음 단계로 넘어가고, 방금 달성한 목표 이름을 돌려줌
-export function goalStatus() {
+// 지금 목표와 진행도. 달성 판정은 정해진 때에만:
+//  mode "seal": 편지를 봉한 직후 (모든 목표) / "turn": '다음 도착까지'로 시간을 넘긴 직후 (도착 목표만)
+//  mode 없음: 보여 주기만 하고 판정하지 않음. 방금 달성한 목표 이름은 done으로 돌려줌
+export function goalStatus(mode = null) {
   let level = 0;
   try {
     level = Number(localStorage.getItem(GOAL_KEY)) || 0;
@@ -108,7 +110,8 @@ export function goalStatus() {
   }
   const m = metrics(simNow());
   const done = [];
-  while (level < GOALS.length && m[GOALS[level].key] >= GOALS[level].goal) {
+  const can = (g) => mode === "seal" || (mode === "turn" && g.key === "delivered");
+  while (level < GOALS.length && can(GOALS[level]) && m[GOALS[level].key] >= GOALS[level].goal) {
     done.push(GOALS[level].title);
     level += 1;
   }
@@ -238,7 +241,6 @@ export function openShipments(homeId, onOpen) {
     const city = CITIES[homeId]?.city || "";
     const shown = all.filter((s) => inChip(s, chip));
     const goal = goalStatus();
-    cheer = cheer.concat(goal.done);
     board.innerHTML = `
       <div class="board-inner">
         <div class="board-top">
@@ -343,6 +345,7 @@ export function openShipments(homeId, onOpen) {
     if (!(hours > 0)) return;
     const after = before + hours * 3600e3;
     setClock(after);
+    cheer = goalStatus("turn").done;
     const events = states
       .flatMap((st) => eventsBetween(st, st.elapsed, st.elapsed + hours))
       .map((e) => ({ ...e, at: e.rec.at + e.h * 3600e3 }))
