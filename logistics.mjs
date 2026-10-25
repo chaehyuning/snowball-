@@ -205,13 +205,13 @@ const PARCEL_T = 0.0012; // 포장한 스노우볼 1.2kg (톤)
 // 탄소 계수는 흔히 쓰는 평균값: 항공 화물 약 0.6, 트럭 약 0.1, 해상·철도 약 0.02.
 // 특급은 혼적 없이 바로 실어 적재율이 낮다고 보고 0.8
 export const SERVICES = {
-  x: { name: "Express", desc: "Priority air · hourly departures", hub: 1, local: 0.5, customs: 0.5, base: 12, rate: { air: 0.0035, road: 0.0006 }, co2: { air: 0.8, road: 0.1 } },
-  s: { name: "Standard", desc: "Scheduled air · 06 / 12 / 18 dispatch waves", hub: 3, local: 1.5, customs: 2, base: 5, rate: { air: 0.0014, road: 0.0006 }, co2: { air: 0.6, road: 0.1 } },
-  e: { name: "Eco", desc: "Consolidated sea / rail · weekly sailing", hub: 12, local: 4, customs: 24, base: 3, rate: { surface: 0.0003, road: 0.0004 }, co2: { surface: 0.02, road: 0.1 } },
+  x: { name: "특급", desc: "비행기 · 매시 출발", hub: 1, local: 0.5, customs: 0.5, base: 12, rate: { air: 0.0035, road: 0.0006 }, co2: { air: 0.8, road: 0.1 } },
+  s: { name: "일반", desc: "비행기 · 하루 3번 출발", hub: 3, local: 1.5, customs: 2, base: 5, rate: { air: 0.0014, road: 0.0006 }, co2: { air: 0.6, road: 0.1 } },
+  e: { name: "친환경", desc: "배·기차 · 주 1번 출발", hub: 12, local: 4, customs: 24, base: 3, rate: { surface: 0.0003, road: 0.0004 }, co2: { surface: 0.02, road: 0.1 } },
 };
 
 // 출발 도시 현지 시간대 (출고 차수 계산용)
-const TZ = {
+export const TZ = {
   japan: "Asia/Tokyo", korea: "Asia/Seoul", canada: "America/Toronto", australia: "Australia/Sydney", finland: "Europe/Helsinki",
   china: "Asia/Shanghai", egypt: "Africa/Cairo", france: "Europe/Paris", turkey: "Europe/Istanbul", spain: "Europe/Madrid",
   bolivia: "America/La_Paz", taiwan: "Asia/Taipei",
@@ -234,16 +234,16 @@ function nextDeparture(service, t, tz) {
   const { h, day } = localClock(t, tz);
   if (service === "x") {
     const wait = (Math.ceil(h + 1e-9) - h) % 1;
-    return { wait, label: "hourly departure" };
+    return { wait, label: "매시 출발" };
   }
   if (service === "e") {
     const hoursIntoWeek = (day - 1) * 24 + h;
     let wait = 9 - hoursIntoWeek; // 월요일 09시
     if (wait <= 0) wait += 7 * 24;
-    return { wait, label: "Monday 09:00 consolidated departure" };
+    return { wait, label: "월요일 9시 출발" };
   }
   const wave = [6, 12, 18, 30].find((w) => w > h + 1e-9);
-  return { wait: wave - h, label: `${String(wave % 24).padStart(2, "0")}:00 dispatch wave` };
+  return { wait: wave - h, label: `${wave % 24}시 출발` };
 }
 
 const RAD = Math.PI / 180;
@@ -343,9 +343,12 @@ export function trackingId(route, seed) {
 }
 
 export const formatHours = (h) => {
-  // 이틀 미만은 시간으로만 (예: 26h), 그 이상은 일·시간 (예: 2d 5h)
+  // 이틀 미만은 시간으로만 (예: 26시간), 그 이상은 일·시간 (예: 2일 5시간). 1시간 미만은 분
+  if (h < 1) return `${Math.max(1, Math.round(h * 60))}분`;
   const total = Math.round(h);
-  return total < 48 ? `${total}h` : `${Math.floor(total / 24)}d ${total % 24}h`;
+  if (total < 48) return `${total}시간`;
+  const r = total % 24;
+  return `${Math.floor(total / 24)}일${r ? ` ${r}시간` : ""}`;
 };
 
 // ── 항로 지도 ─────────────────────────────────────────────
@@ -724,27 +727,28 @@ export function phaseAt(route, h) {
   const n = pts.length - 1 || 1;
   const st = route.stops;
   const code = (s) => (s.kind === "airport" ? s.code : s.name);
-  if (h >= route.hours) return { phase: "delivered", label: `Delivered · ${st.at(-1).name}`, k: st.length - 1, t: 1 };
+  if (h >= route.hours) return { phase: "delivered", label: `도착 · ${st.at(-1).name}`, k: st.length - 1, t: 1 };
   for (let k = 0; k < st.length; k++) {
     if (h >= st[k].at && h < st[k].out) {
       const s = st[k];
       const t = marks[k] / n;
-      if (k === 0) return { phase: "transit", label: `Picked up · ${s.name}`, k, t };
-      if (route.customs && s.code === route.hub) return { phase: "customs", label: `Customs clearance · ${s.code} ${s.name}`, k, t };
-      if (k === 1 && route.departure && h >= s.out - route.departure.wait)
-        return { phase: "transit", label: `Waiting for the ${route.departure.label} · ${s.code}`, k, t };
-      return { phase: "transit", label: `Sorting at hub · ${s.code} ${s.name}`, k, t };
+      if (k === 0) return { phase: "transit", label: `집하 · ${s.name}`, k, t };
+      if (route.customs && s.code === route.hub) return { phase: "customs", label: `통관 중 · ${s.code}`, k, t };
+      if (k === 1 && route.departure && h >= s.out - route.departure.wait) return { phase: "transit", label: `${route.departure.label} 기다리는 중 · ${s.code}`, k, t };
+      return { phase: "transit", label: `분류 중 · ${s.code}`, k, t };
     }
     const leg = route.legs[k];
     if (leg && h >= st[k].out && h < st[k + 1].at) {
       const f = (h - st[k].out) / leg.hours;
       const t = (marks[k] + f * (marks[k + 1] - marks[k])) / n;
-      const how = { air: "In flight", surface: "By sea / rail", road: k === route.legs.length - 1 ? "Out for delivery" : "On the road" }[leg.mode];
+      const how = MOVING[leg.mode] && !(leg.mode === "road" && k === route.legs.length - 1) ? MOVING[leg.mode] : "배달 중";
       return { phase: "transit", label: `${how} · ${code(leg.from)} → ${code(leg.to)}`, k, t };
     }
   }
-  return { phase: "transit", label: "In transit", k: 0, t: 0 };
+  return { phase: "transit", label: "배송 중", k: 0, t: 0 };
 }
+// 이동 수단별 상태 이름
+export const MOVING = { air: "비행 중", surface: "배·기차로 이동 중", road: "트럭 이동 중" };
 
 // 오늘 출고 차수(일반 배송 06·12·18시)가 출발 도시 현지 시각으로 지났는지, 다음인지
 export function dispatchWaves(fromId, now = Date.now()) {
@@ -763,8 +767,8 @@ export function dispatchWaves(fromId, now = Date.now()) {
 export const EARTH_KM = 40075;
 export function logText(log) {
   const laps = log.km / EARTH_KM;
-  const co2 = log.co2 ? ` · ${log.co2.toFixed(1)} kg CO₂` : "";
-  return `Letter #${log.n} · ${Math.round(log.km).toLocaleString("en-US")} km together · ${laps < 10 ? laps.toFixed(2) : Math.round(laps)}× around the Earth${co2}`;
+  const co2 = log.co2 ? ` · 탄소 ${log.co2.toFixed(1)}kg` : "";
+  return `${log.n}번째 편지 · 함께 ${Math.round(log.km).toLocaleString("en-US")}km (지구 ${laps < 10 ? laps.toFixed(1) : Math.round(laps)}바퀴)${co2}`;
 }
 
 export function waybillHTML(route, id, cargo = "", log = null) {
@@ -788,19 +792,19 @@ export function waybillHTML(route, id, cargo = "", log = null) {
     .join("");
   return `
     <div class="wb-head">
-      <span class="wb-label">WAYBILL</span>
+      <span class="wb-label">운송장</span>
       <span class="wb-id">${esc(id)}</span>
     </div>
-    ${cargo ? `<p class="wb-cargo"><span>CARGO</span> 1 × snowball · ${esc(cargo)} <em>FRAGILE ❄</em></p>` : ""}
-    <p class="wb-service" data-service="${route.service}"><span>SERVICE</span> ${esc(SERVICES[route.service].name)} <small>${esc(SERVICES[route.service].desc)}</small></p>
-    ${log ? `<p class="wb-log"><span>PEN-PAL LOG</span> ${esc(logText(log))}</p>` : ""}
+    ${cargo ? `<p class="wb-cargo"><span>화물</span> ${esc(cargo)} 스노우볼 1개 <em>취급주의 ❄</em></p>` : ""}
+    <p class="wb-service" data-service="${route.service}"><span>배송</span> ${esc(SERVICES[route.service].name)} <small>${esc(SERVICES[route.service].desc)}</small></p>
+    ${log ? `<p class="wb-log"><span>펜팔</span> ${esc(logText(log))}</p>` : ""}
     <div class="wb-mapbox"><canvas class="wb-map" aria-label="Simulated route map"></canvas><span class="wb-stamp" aria-hidden="true"></span></div>
     <ol class="wb-stops">${stops}</ol>
     <dl class="wb-facts">
-      <div><dt>Distance</dt><dd>${Math.round(route.km).toLocaleString("en-US")} km</dd></div>
-      <div><dt>Lead time</dt><dd>${formatHours(route.hours)}</dd></div>
-      <div><dt>Freight</dt><dd>$${route.cost.toFixed(2)}</dd></div>
-      <div><dt>CO₂</dt><dd>${route.co2 < 0.1 ? route.co2.toFixed(2) : route.co2.toFixed(1)} kg</dd></div>
+      <div><dt>거리</dt><dd>${Math.round(route.km).toLocaleString("en-US")}km</dd></div>
+      <div><dt>걸리는 시간</dt><dd>${formatHours(route.hours)}</dd></div>
+      <div><dt>운임</dt><dd>$${route.cost.toFixed(2)}</dd></div>
+      <div><dt>탄소</dt><dd>${route.co2 < 0.1 ? route.co2.toFixed(2) : route.co2.toFixed(1)}kg</dd></div>
     </dl>
-    <p class="wb-note">Simulated · hub-and-spoke network, great-circle distances, average freight rates and CO₂ factors${route.customs ? " · customs at destination gateway" : " · domestic"}</p>`;
+    <p class="wb-note">가상 시뮬레이션이에요</p>`;
 }
