@@ -64,7 +64,7 @@ function stateOf(rec, now) {
   const route = planRoute(rec.from, rec.to, rec.s, { wait: rec.w, now: rec.at });
   if (!route) return null;
   const elapsed = (now - rec.at) / 3600e3;
-  const p = rec.dir === "received" ? { phase: "delivered", label: `Received · ${route.stops.at(-1).name}`, t: 1 } : phaseAt(route, elapsed);
+  const p = rec.dir === "received" ? { phase: "delivered", label: `받음 · ${route.stops.at(-1).name}`, t: 1 } : phaseAt(route, elapsed);
   return { rec, route, elapsed, ...p, progress: rec.dir === "received" ? 1 : Math.min(1, Math.max(0, elapsed / route.hours)) };
 }
 
@@ -77,10 +77,10 @@ function eventsBetween(st, h0, h1) {
   route.stops.forEach((s, k) => {
     if (k === 0) return;
     const last = k === route.stops.length - 1;
-    if (last) return add(s.at, `Delivered to ${s.name}`);
-    add(s.at, `Arrived at ${s.code}`);
-    if (k === 1 && route.departure) add(s.out, `Left ${s.code} on the ${route.departure.label}`);
-    else if (route.customs && s.code === route.hub) add(s.out, `Cleared customs at ${s.code}`);
+    if (last) return add(s.at, `${s.name} 도착 🎉`);
+    add(s.at, `${s.code} 도착`);
+    if (k === 1 && route.departure) add(s.out, `${s.code} 출발`);
+    else if (route.customs && s.code === route.hub) add(s.out, `${s.code} 통관 완료`);
   });
   return out;
 }
@@ -102,23 +102,28 @@ function ring(value, label, sub, color) {
 }
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
-const leftText = (h) => (h < 1 ? `${Math.max(1, Math.round(h * 60))} min` : formatHours(h));
+const leftText = formatHours;
 
 // 칩: 전체 / 운송 중 / 통관 / 도착 / 받은 것
 const CHIPS = [
-  ["all", "All"],
-  ["transit", "In transit"],
-  ["customs", "Customs"],
-  ["delivered", "Delivered"],
-  ["received", "Received"],
+  ["all", "전체"],
+  ["transit", "배송 중"],
+  ["customs", "통관"],
+  ["delivered", "도착"],
+  ["received", "받은 것"],
 ];
 const inChip = (st, chip) =>
   chip === "all" ||
   (chip === "received" ? st.rec.dir === "received" : st.rec.dir === "sent" && st.phase === chip);
 
-// 시뮬레이션 시각을 그 도시 시각으로: "Mon 26 Oct 14:00"
+// 시뮬레이션 시각을 그 도시 시각으로: "10/26(월) 14:00"
 function clockText(t, homeId) {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: TZ[homeId], weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(t)).replace(",", "");
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("ko-KR", { timeZone: TZ[homeId], weekday: "short", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date(t))
+      .map((x) => [x.type, x.value]),
+  );
+  return `${p.month}/${p.day}(${p.weekday}) ${p.hour}:${p.minute}`;
 }
 
 // 운송 중인 배송 중 가장 먼저 도착하는 것까지 남은 시간 (없으면 null)
@@ -136,7 +141,7 @@ export function openShipments(homeId, onOpen) {
   board.className = "board";
   board.setAttribute("role", "dialog");
   board.setAttribute("aria-modal", "true");
-  board.setAttribute("aria-label", "My shipments");
+  board.setAttribute("aria-label", "내 배송");
   document.body.append(board);
   document.body.classList.add("letter-open");
   let chip = "all";
@@ -163,40 +168,38 @@ export function openShipments(homeId, onOpen) {
     board.innerHTML = `
       <div class="board-inner">
         <div class="board-top">
-          <button type="button" class="board-back" aria-label="Close">←</button>
-          <p class="tracking-kicker">SNOWBALL LOGISTICS</p>
+          <button type="button" class="board-back" aria-label="닫기">←</button>
         </div>
-        <h2 class="board-title">My shipments</h2>
-        <p class="board-big"><b>${all.length}</b> shipment${all.length === 1 ? "" : "s"} <span>${inTransit} in transit · ${delivered} delivered</span></p>
+        <h2 class="board-title">내 배송</h2>
+        <p class="board-big"><b>${all.length}</b>건 <span>배송 중 ${inTransit} · 도착 ${delivered}</span></p>
         ${
           report
             ? `<section class="board-report" aria-live="polite">
-          <p class="board-h">Turn report <span>${esc(report.title)}</span></p>
+          <p class="board-h">이번 턴에 생긴 일 <span>${esc(report.title)}</span></p>
           ${
             report.events.length
               ? `<ol>${report.events
                   .slice(0, 8)
                   .map((e) => `<li><time>${esc(clockText(e.at, homeId))}</time><span><b>${esc(e.route.stops[0].name)} → ${esc(e.route.stops.at(-1).name)}</b> ${esc(e.text)}</span></li>`)
-                  .join("")}${report.events.length > 8 ? `<li class="more">+${report.events.length - 8} more</li>` : ""}</ol>`
-              : `<p class="board-note">Nothing moved this turn.</p>`
+                  .join("")}${report.events.length > 8 ? `<li class="more">외 ${report.events.length - 8}건</li>` : ""}</ol>`
+              : `<p class="board-note">아무 일도 없었어요.</p>`
           }
         </section>`
             : ""
         }
         <div class="board-rings">
-          ${ring(sent.length ? sentDone / sent.length : 0, "Delivered", `${sentDone} of ${sent.length} sent`, "#ffd27a")}
-          ${ring(all.length ? eco / all.length : 0, "Eco share", `${eco} by sea / rail`, "#5fd3c6")}
-          ${ring(co2Express ? 1 - co2 / co2Express : 0, "CO₂ saved", "vs all-Express", "#8fe0a6")}
+          ${ring(sent.length ? sentDone / sent.length : 0, "도착", `보낸 ${sent.length}건 중 ${sentDone}`, "#ffd27a")}
+          ${ring(all.length ? eco / all.length : 0, "친환경", `${eco}건`, "#5fd3c6")}
+          ${ring(co2Express ? 1 - co2 / co2Express : 0, "탄소 절감", "특급 대비", "#8fe0a6")}
         </div>
         <dl class="board-tiles">
-          <div><dt>Distance</dt><dd>${Math.round(km).toLocaleString("en-US")} km</dd></div>
-          <div><dt>Freight spent</dt><dd>$${spend.toFixed(2)}</dd></div>
-          <div><dt>CO₂</dt><dd>${co2.toFixed(1)} kg</dd></div>
+          <div><dt>거리</dt><dd>${Math.round(km).toLocaleString("en-US")}km</dd></div>
+          <div><dt>운임</dt><dd>$${spend.toFixed(2)}</dd></div>
+          <div><dt>탄소</dt><dd>${co2.toFixed(1)}kg</dd></div>
         </dl>
         <section class="board-waves">
-          <p class="board-h">Today's dispatch waves <span>${esc(city)} · ${waves.time}</span></p>
-          <ol>${waves.waves.map((w) => `<li class="wave-${w.state}"><i></i><b>${w.label}</b><span>${{ done: "Departed", next: "Next", later: "Later" }[w.state]}</span></li>`).join("")}</ol>
-          <p class="board-note">Standard letters wait for the next wave. Express leaves hourly; Eco on Monday 09:00.</p>
+          <p class="board-h">오늘 일반 배송 출발 <span>${esc(city)} ${waves.time}</span></p>
+          <ol>${waves.waves.map((w) => `<li class="wave-${w.state}"><i></i><b>${w.label}</b><span>${{ done: "출발함", next: "다음", later: "" }[w.state]}</span></li>`).join("")}</ol>
         </section>
         <div class="board-chips" role="tablist">
           ${CHIPS.map(([k, name]) => `<button type="button" role="tab" data-chip="${k}" aria-selected="${k === chip}">${name} <span>${counts[k]}</span></button>`).join("")}
@@ -207,30 +210,29 @@ export function openShipments(homeId, onOpen) {
               ? shown
                   .map((s, i) => {
                     const left = s.route.hours - s.elapsed;
-                    const line = s.rec.dir === "received" ? s.label : s.phase === "delivered" ? `Delivered · ${s.route.stops.at(-1).name}` : `${s.label} · arrives in ${leftText(left)}`;
+                    const line = s.rec.dir === "received" ? "받음" : s.phase === "delivered" ? s.label : `${s.label} · ${leftText(left)} 뒤 도착`;
                     return `
             <li><button type="button" class="board-item" data-i="${i}">
               ${ring(s.progress, "", "", s.phase === "delivered" ? "#ffd27a" : s.phase === "customs" ? "#ff9a8a" : "#5fd3c6").replace("board-ring", "board-ring item-ring")}
               <span class="item-main">
                 <b>${esc(s.route.stops[0].name)} → ${esc(s.route.stops.at(-1).name)}</b>
-                <span class="item-meta"><em data-service="${s.rec.s}">${SERVICES[s.rec.s].name}</em> ${s.rec.dir === "received" ? "Received" : "Sent"}${s.rec.who ? ` ${s.rec.dir === "received" ? "from" : "to"} ${esc(s.rec.who)}` : ""} · ${esc(s.rec.id)}</span>
+                <span class="item-meta"><em data-service="${s.rec.s}">${SERVICES[s.rec.s].name}</em>${s.rec.who ? ` · ${esc(s.rec.who)}${s.rec.dir === "received" ? "에게서" : "에게"}` : ""}</span>
                 <span class="item-status">${esc(line)}</span>
               </span>
               <span class="item-go" aria-hidden="true">›</span>
             </button></li>`;
                   })
                   .join("")
-              : `<li class="board-empty">${all.length ? "Nothing here right now." : "No shipments yet. Send a snowball letter and it shows up here."}</li>`
+              : `<li class="board-empty">${all.length ? "없어요" : "아직 배송이 없어요. 편지를 보내면 여기 쌓여요."}</li>`
           }
         </ul>
-        <p class="board-note">Simulated on this device only. Time moves only when you end a turn — no real waiting.</p>
       </div>
       <div class="board-turn">
-        <p class="turn-clock"><span>SIM CLOCK</span> ${esc(clockText(now, homeId))} <em>${esc(city)} time</em></p>
+        <p class="turn-clock"><span>시뮬레이션 시각</span> ${esc(clockText(now, homeId))} <em>${esc(city)}</em></p>
         <div class="turn-buttons">
-          <button type="button" data-skip="6">+6h</button>
-          <button type="button" data-skip="24">End day ▸</button>
-          <button type="button" data-skip="next" ${nextArrival(all) == null ? "disabled" : ""}>Next arrival ▸▸</button>
+          <button type="button" data-skip="6">+6시간</button>
+          <button type="button" data-skip="24">하루 넘기기</button>
+          <button type="button" data-skip="next" ${nextArrival(all) == null ? "disabled" : ""}>다음 도착까지 ▸</button>
         </div>
       </div>`;
     for (const btn of board.querySelectorAll("[data-skip]")) btn.addEventListener("click", () => endTurn(btn.dataset.skip));
