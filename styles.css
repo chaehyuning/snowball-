@@ -2896,3 +2896,384 @@ body.tracking-open > *:not(.tracking-view) {
     transition: none;
   }
 }
+
+/* ── 내 배송 화면 ─────────────────────────────────────────
+   운영 대시보드처럼: 건수 요약 → 원형 지표 3개 → 합계 → 오늘 출고 차수 → 상태 칩 → 배송 목록 */
+.board {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow-y: auto;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 16px calc(28px + env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(ellipse 80% 70% at 50% 30%, #1b1b1f, #0b0b0e 70%);
+  color: var(--ink);
+}
+
+.board-inner {
+  display: grid;
+  gap: 14px;
+  width: min(560px, 100%);
+  margin: 0 auto;
+}
+
+.board-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.board-back {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.board-title {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.board-big {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: -8px;
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+
+.board-big b {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-big span {
+  font-size: 13px;
+}
+
+.board-rings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.board-ring {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin: 0;
+  text-align: center;
+}
+
+.board-ring svg {
+  width: 72px;
+  height: 72px;
+  transform: rotate(-90deg);
+}
+
+.board-ring text {
+  transform: rotate(90deg);
+  transform-origin: 32px 32px;
+  fill: var(--ink);
+  font: 700 13px var(--sans, sans-serif);
+}
+
+.ring-track {
+  fill: none;
+  stroke: rgba(236, 235, 232, 0.1);
+  stroke-width: 6;
+}
+
+.ring-value {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.6s ease;
+}
+
+.board-ring figcaption {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.board-ring figcaption span {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+}
+
+.board-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-tiles div {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.board-tiles dt {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.board-tiles dd {
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.board-waves {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.board-h {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.board-h span {
+  font-weight: 400;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-waves ol {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 12px;
+  list-style: none;
+}
+
+.board-waves ol::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 16.6%;
+  right: 16.6%;
+  height: 2px;
+  background: rgba(236, 235, 232, 0.12);
+}
+
+.board-waves li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-waves i {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(236, 235, 232, 0.3);
+  border-radius: 50%;
+  background: #141418;
+}
+
+.board-waves .wave-done i {
+  border-color: #8fe0a6;
+  background: #8fe0a6;
+}
+
+.board-waves .wave-next i {
+  border-color: #ffd27a;
+  box-shadow: 0 0 0 4px rgba(255, 210, 122, 0.18);
+}
+
+.board-waves li span {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+}
+
+.board-waves .wave-next span {
+  color: #ffd27a;
+}
+
+.board-note {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+.board-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.board-chips button {
+  flex: none;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.board-chips button span {
+  margin-left: 2px;
+  color: var(--ink-faint);
+}
+
+.board-chips button[aria-selected="true"] {
+  border-color: transparent;
+  background: var(--ink);
+  color: #141418;
+  font-weight: 700;
+}
+
+.board-chips button[aria-selected="true"] span {
+  color: #141418;
+}
+
+.board-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.board-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-item:hover {
+  border-color: var(--ink-dim);
+}
+
+.board-item:focus-visible,
+.board-chips button:focus-visible,
+.board-back:focus-visible {
+  outline: 2px solid #ffd27a;
+  outline-offset: 2px;
+}
+
+.item-ring svg {
+  width: 46px;
+  height: 46px;
+}
+
+.item-ring text {
+  font-size: 12px;
+}
+
+.item-ring figcaption {
+  display: none;
+}
+
+.item-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.item-main b {
+  font-size: 14px;
+}
+
+.item-meta {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--ink-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-meta em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+.item-meta em[data-service="x"] {
+  color: #ff9a8a;
+}
+
+.item-meta em[data-service="e"] {
+  color: #5fd3c6;
+}
+
+.item-status {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.item-go {
+  font-size: 20px;
+  color: var(--ink-faint);
+}
+
+.board-empty {
+  padding: 22px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--ink-faint);
+}
+
+.wb-mine {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #b0763a;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wb-mine[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-value {
+    transition: none;
+  }
+}

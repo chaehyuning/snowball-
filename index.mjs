@@ -642,7 +642,7 @@ document.querySelector(".globe-open").addEventListener("click", () => openPicker
   toggle.addEventListener("click", () => setOpen(menu.hidden));
   document.addEventListener("pointerdown", (e) => !menu.hidden && !e.target.closest(".tools") && setOpen(false));
   document.addEventListener("keydown", (e) => e.key === "Escape" && !menu.hidden && setOpen(false));
-  for (const sel of [".postcard-toggle", ".help-toggle"]) menu.querySelector(sel).addEventListener("click", () => setOpen(false));
+  for (const sel of [".shipments-toggle", ".postcard-toggle", ".help-toggle"]) menu.querySelector(sel).addEventListener("click", () => setOpen(false));
 }
 
 // 처음 방문이면 튜토리얼 (지구본 선택창이 떠 있으면 닫힌 뒤에)

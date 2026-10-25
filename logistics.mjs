@@ -717,6 +717,47 @@ export function progressAt(route, t) {
   return { k, f, hours: route.stops[k].out + f * leg.hours, leg };
 }
 
+// 출발 후 h시간이 지났을 때 어디쯤인지: 단계(phase), 한 줄 설명, 마지막으로 닿은 정류장 k, 지도 진행률 t.
+// phase: transit(집하·허브·이동·출고 대기) / customs(받는 나라 통관) / delivered
+export function phaseAt(route, h) {
+  const { pts, marks } = route._path || (route._path = routePath(route));
+  const n = pts.length - 1 || 1;
+  const st = route.stops;
+  const code = (s) => (s.kind === "airport" ? s.code : s.name);
+  if (h >= route.hours) return { phase: "delivered", label: `Delivered · ${st.at(-1).name}`, k: st.length - 1, t: 1 };
+  for (let k = 0; k < st.length; k++) {
+    if (h >= st[k].at && h < st[k].out) {
+      const s = st[k];
+      const t = marks[k] / n;
+      if (k === 0) return { phase: "transit", label: `Picked up · ${s.name}`, k, t };
+      if (route.customs && s.code === route.hub) return { phase: "customs", label: `Customs clearance · ${s.code} ${s.name}`, k, t };
+      if (k === 1 && route.departure && h >= s.out - route.departure.wait)
+        return { phase: "transit", label: `Waiting for the ${route.departure.label} · ${s.code}`, k, t };
+      return { phase: "transit", label: `Sorting at hub · ${s.code} ${s.name}`, k, t };
+    }
+    const leg = route.legs[k];
+    if (leg && h >= st[k].out && h < st[k + 1].at) {
+      const f = (h - st[k].out) / leg.hours;
+      const t = (marks[k] + f * (marks[k + 1] - marks[k])) / n;
+      const how = { air: "In flight", surface: "By sea / rail", road: k === route.legs.length - 1 ? "Out for delivery" : "On the road" }[leg.mode];
+      return { phase: "transit", label: `${how} · ${code(leg.from)} → ${code(leg.to)}`, k, t };
+    }
+  }
+  return { phase: "transit", label: "In transit", k: 0, t: 0 };
+}
+
+// 오늘 출고 차수(일반 배송 06·12·18시)가 출발 도시 현지 시각으로 지났는지, 다음인지
+export function dispatchWaves(fromId, now = Date.now()) {
+  const { h } = localClock(now, TZ[fromId]);
+  const next = [6, 12, 18].find((w) => w > h);
+  const hh = Math.floor(h);
+  const mm = Math.floor((h - hh) * 60);
+  return {
+    time: `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`,
+    waves: [6, 12, 18].map((w) => ({ label: `${String(w).padStart(2, "0")}:00`, state: w <= h ? "done" : w === next ? "next" : "later" })),
+  };
+}
+
 // 운송장 본문 HTML (정류장 목록, 거리, 리드타임)
 // 펜팔 기록 한 줄: 몇 번째 편지인지, 지금까지 함께 오간 거리, 지구 몇 바퀴인지
 export const EARTH_KM = 40075;
