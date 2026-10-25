@@ -197,9 +197,54 @@ export function findDestination(text) {
 const CRUISE_KMH = 850; // 평균 순항 속도
 const TAXI_H = 0.5; // 이착륙·지상 이동
 const ROAD_KMH = 50; // 첫·마지막 구간 육로
-const HUB_HANDLING_H = 3; // 큰 허브 환적 처리
-const LOCAL_HANDLING_H = 1.5; // 작은 공항 처리
-const CUSTOMS_H = 2; // 국경을 넘으면 도착국 통관
+const TRUCK_KMH = 60; // 친환경: 가까운 공항 사이 트럭 간선 (우회 1.2배)
+const SURFACE_KMH = 30; // 친환경: 먼 구간 해상·철도 (평균 약 16노트, 우회 1.3배)
+const PARCEL_T = 0.0012; // 포장한 스노우볼 1.2kg (톤)
+
+// 배송 방식: 처리 시간, 출고 방식, 운임, 탄소 계수(kg CO₂ / 톤·km)
+// 탄소 계수는 흔히 쓰는 평균값: 항공 화물 약 0.6, 트럭 약 0.1, 해상·철도 약 0.02.
+// 특급은 혼적 없이 바로 실어 적재율이 낮다고 보고 0.8
+export const SERVICES = {
+  x: { name: "Express", desc: "Priority air · hourly departures", hub: 1, local: 0.5, customs: 0.5, base: 12, rate: { air: 0.0035, road: 0.0006 }, co2: { air: 0.8, road: 0.1 } },
+  s: { name: "Standard", desc: "Scheduled air · 06 / 12 / 18 dispatch waves", hub: 3, local: 1.5, customs: 2, base: 5, rate: { air: 0.0014, road: 0.0006 }, co2: { air: 0.6, road: 0.1 } },
+  e: { name: "Eco", desc: "Consolidated sea / rail · weekly sailing", hub: 12, local: 4, customs: 24, base: 3, rate: { surface: 0.0003, road: 0.0004 }, co2: { surface: 0.02, road: 0.1 } },
+};
+
+// 출발 도시 현지 시간대 (출고 차수 계산용)
+const TZ = {
+  japan: "Asia/Tokyo", korea: "Asia/Seoul", canada: "America/Toronto", australia: "Australia/Sydney", finland: "Europe/Helsinki",
+  china: "Asia/Shanghai", egypt: "Africa/Cairo", france: "Europe/Paris", turkey: "Europe/Istanbul", spain: "Europe/Madrid",
+  bolivia: "America/La_Paz", taiwan: "Asia/Taipei",
+};
+
+// 시각 t(ms)의 출발 도시 현지 시·분·요일(월=1 … 일=7)
+function localClock(t, tz) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "numeric", weekday: "short", hourCycle: "h23" })
+      .formatToParts(new Date(t))
+      .map((p) => [p.type, p.value]),
+  );
+  const day = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }[parts.weekday];
+  return { h: Number(parts.hour) + Number(parts.minute) / 60, day };
+}
+
+// 출고 대기: 공항에서 처리가 끝난 시각 t부터 다음 출발까지 몇 시간인지와 그 이름
+//  특급: 매시 정각 / 일반: 현지 06·12·18시 차수 / 친환경: 매주 월요일 09시 출항
+function nextDeparture(service, t, tz) {
+  const { h, day } = localClock(t, tz);
+  if (service === "x") {
+    const wait = (Math.ceil(h + 1e-9) - h) % 1;
+    return { wait, label: "hourly departure" };
+  }
+  if (service === "e") {
+    const hoursIntoWeek = (day - 1) * 24 + h;
+    let wait = 9 - hoursIntoWeek; // 월요일 09시
+    if (wait <= 0) wait += 7 * 24;
+    return { wait, label: "Monday 09:00 consolidated departure" };
+  }
+  const wave = [6, 12, 18, 30].find((w) => w > h + 1e-9);
+  return { wait: wave - h, label: `${String(wave % 24).padStart(2, "0")}:00 dispatch wave` };
+}
 
 const RAD = Math.PI / 180;
 // 대권 거리 (km)
@@ -213,11 +258,14 @@ export function greatCircleKm(a, b) {
 }
 
 // 경로 계산: 랜드마크 → 가까운 공항 → 관문 허브 → 받는 나라 관문 공항 → 받는 도시
-// 같은 나라 안이면 국내선(관문 허브를 거치지 않음), 같은 공항이면 육로만
-export function planRoute(fromId, destCode) {
+// 같은 나라 안이면 국내선(관문 허브를 거치지 않음), 같은 공항이면 육로만.
+// service: x 특급 / s 일반 / e 친환경. 첫 공항에서 출고 차수를 기다림:
+//  wait를 주면 그 값을 쓰고(받은 편지는 보낸 사람이 본 값과 같게), 없으면 now(ms) 기준으로 계산
+export function planRoute(fromId, destCode, service = "s", { wait = null, now = Date.now() } = {}) {
   const A = CITIES[fromId];
   const D = DESTINATIONS[destCode];
-  if (!A || !D) return null;
+  const S = SERVICES[service];
+  if (!A || !D || !S) return null;
   const customs = A.country !== destCode;
   const chain = customs ? [A.local, A.gateway, D.hub] : [A.local, D.hub];
   const codes = chain.filter((c, i, all) => i === 0 || c !== all[i - 1]);
@@ -229,28 +277,59 @@ export function planRoute(fromId, destCode) {
   ];
   const legs = [];
   let hours = 0;
+  let cost = S.base;
+  let co2 = 0;
+  let departure = null;
   stops[0].at = stops[0].out = 0;
   // 공항을 거치지 않는 같은 도시 배송은 집하 처리 시간만
-  if (!codes.length) stops[0].out = hours = LOCAL_HANDLING_H;
+  if (!codes.length) stops[0].out = hours = S.local;
   for (let i = 0; i < stops.length - 1; i++) {
     const a = stops[i];
     const b = stops[i + 1];
     const km = greatCircleKm(a, b);
-    const ground = a.kind !== "airport" || b.kind !== "airport";
-    const h = ground ? km / ROAD_KMH : km / CRUISE_KMH + TAXI_H;
-    legs.push({ from: a, to: b, km, hours: h, mode: ground ? "road" : "air" });
+    let mode = "road";
+    let h = km / ROAD_KMH;
+    let travelled = km;
+    if (a.kind === "airport" && b.kind === "airport") {
+      if (service !== "e") {
+        mode = "air";
+        h = km / CRUISE_KMH + TAXI_H;
+      } else if (km > 800) {
+        mode = "surface";
+        travelled = km * 1.3;
+        h = travelled / SURFACE_KMH;
+      } else {
+        travelled = km * 1.2;
+        h = travelled / TRUCK_KMH;
+      }
+    }
+    legs.push({ from: a, to: b, km, hours: h, mode });
+    cost += travelled * (S.rate[mode] ?? S.rate.road);
+    co2 += PARCEL_T * travelled * (S.co2[mode] ?? S.co2.road);
     hours += h;
     b.at = hours;
     // 공항에서의 처리 시간 (받는 나라 관문 공항에서는 통관 시간도 더함). at: 도착, out: 출발
     if (b.kind === "airport") {
       const hub = customs && (b.code === A.gateway || b.code === D.hub);
-      hours += hub ? HUB_HANDLING_H : LOCAL_HANDLING_H;
-      if (customs && b.code === D.hub) hours += CUSTOMS_H;
+      hours += hub ? S.hub : S.local;
+      if (customs && b.code === D.hub) hours += S.customs;
+      // 첫 공항: 다음 출고 차수까지 대기
+      if (i === 0) {
+        const next = nextDeparture(service, now + hours * 3600e3, TZ[fromId]);
+        const w = wait == null ? next.wait : Math.min(Math.max(wait, 0), 24 * 7);
+        departure = { wait: w, label: next.label };
+        hours += w;
+      }
     }
     b.out = hours;
   }
   const km = legs.reduce((s, l) => s + l.km, 0);
-  return { from: fromId, to: destCode, hub: D.hub, stops, legs, km, hours, customs };
+  return { from: fromId, to: destCode, hub: D.hub, service, stops, legs, km, hours, customs, cost, co2, departure };
+}
+
+// 세 방식을 한꺼번에 계산 (같은 시각 기준). 고르는 카드에 씀
+export function compareServices(fromId, destCode, now = Date.now()) {
+  return Object.fromEntries(Object.keys(SERVICES).map((k) => [k, planRoute(fromId, destCode, k, { now })]));
 }
 
 // 운송장 번호: 출발·도착 공항과 편지 내용에서 만든 고정 번호 (같은 편지는 늘 같은 번호)
@@ -327,7 +406,7 @@ function routePath(route) {
   for (const leg of route.legs) {
     // 점 개수를 거리에 비례시켜 비행기가 긴 구간을 오래 날게 함
     const seg =
-      leg.mode === "air"
+      leg.mode !== "road"
         ? arcPoints(leg.from, leg.to, Math.max(6, Math.round(leg.km / 120)))
         : [leg.from, leg.to];
     if (pts.length) seg.shift();
@@ -478,15 +557,28 @@ export async function drawRouteMap(canvas, route, progress = null, { pulse } = {
   );
   g.stroke();
   g.setLineDash([]);
-  if (progress != null) {
-    g.strokeStyle = "#ffd27a";
-    g.lineWidth = 2;
+  // 해상·철도 구간은 청록 점선으로 따로 표시
+  route.legs.forEach((leg, k) => {
+    if (leg.mode !== "surface") return;
+    g.setLineDash([5, 4]);
+    g.strokeStyle = "rgba(95,211,198,0.6)";
+    g.lineWidth = 1.6;
     g.beginPath();
-    for (let i = 0; i <= Math.floor(upto); i++)
-      i
-        ? g.lineTo(X(pts[i].lon), Y(pts[i].lat))
-        : g.moveTo(X(pts[i].lon), Y(pts[i].lat));
+    for (let i = marks[k]; i <= marks[k + 1]; i++) (i === marks[k] ? g.moveTo(X(pts[i].lon), Y(pts[i].lat)) : g.lineTo(X(pts[i].lon), Y(pts[i].lat)));
     g.stroke();
+    g.setLineDash([]);
+  });
+  // 지나온 부분: 항공·육로는 금빛, 해상·철도는 청록 실선
+  if (progress != null) {
+    g.lineWidth = 2;
+    route.legs.forEach((leg, k) => {
+      const end = Math.min(marks[k + 1], Math.floor(upto));
+      if (end <= marks[k]) return;
+      g.strokeStyle = leg.mode === "surface" ? "#5fd3c6" : "#ffd27a";
+      g.beginPath();
+      for (let i = marks[k]; i <= end; i++) (i === marks[k] ? g.moveTo(X(pts[i].lon), Y(pts[i].lat)) : g.lineTo(X(pts[i].lon), Y(pts[i].lat)));
+      g.stroke();
+    });
   }
 
   // 정류장 표시: 출발·도착 도시는 큰 점, 공항은 작은 점과 코드
@@ -545,6 +637,27 @@ export async function drawRouteMap(canvas, route, progress = null, { pulse } = {
     const x = X(a.lon + (b.lon - a.lon) * f);
     const y = Y(a.lat + (b.lat - a.lat) * f);
     const ang = Math.atan2(Y(b.lat) - Y(a.lat), X(b.lon) - X(a.lon));
+    const legIndex = marks.findIndex((m, k) => k < marks.length - 1 && upto >= m && upto <= marks[k + 1]);
+    if (route.legs[legIndex]?.mode === "surface") {
+      // 배: 선체와 컨테이너 두 칸 (뱃머리가 진행 방향)
+      g.save();
+      g.translate(x, y);
+      g.scale(Math.cos(ang) < 0 ? -1 : 1, 1);
+      g.fillStyle = "#ffffff";
+      g.beginPath();
+      g.moveTo(-7, -1);
+      g.lineTo(8, -1);
+      g.lineTo(5, 3.5);
+      g.lineTo(-6, 3.5);
+      g.closePath();
+      g.fill();
+      g.fillStyle = "#5fd3c6";
+      g.fillRect(-5, -4.5, 4, 3.2);
+      g.fillStyle = "#ffd27a";
+      g.fillRect(-0.5, -4.5, 4, 3.2);
+      g.restore();
+      return;
+    }
     g.save();
     g.translate(x, y);
     g.rotate(ang + Math.PI / 2);
@@ -609,7 +722,8 @@ export function progressAt(route, t) {
 export const EARTH_KM = 40075;
 export function logText(log) {
   const laps = log.km / EARTH_KM;
-  return `Letter #${log.n} · ${Math.round(log.km).toLocaleString("en-US")} km together · ${laps < 10 ? laps.toFixed(2) : Math.round(laps)}× around the Earth`;
+  const co2 = log.co2 ? ` · ${log.co2.toFixed(1)} kg CO₂` : "";
+  return `Letter #${log.n} · ${Math.round(log.km).toLocaleString("en-US")} km together · ${laps < 10 ? laps.toFixed(2) : Math.round(laps)}× around the Earth${co2}`;
 }
 
 export function waybillHTML(route, id, cargo = "", log = null) {
@@ -637,14 +751,15 @@ export function waybillHTML(route, id, cargo = "", log = null) {
       <span class="wb-id">${esc(id)}</span>
     </div>
     ${cargo ? `<p class="wb-cargo"><span>CARGO</span> 1 × snowball · ${esc(cargo)} <em>FRAGILE ❄</em></p>` : ""}
+    <p class="wb-service" data-service="${route.service}"><span>SERVICE</span> ${esc(SERVICES[route.service].name)} <small>${esc(SERVICES[route.service].desc)}</small></p>
     ${log ? `<p class="wb-log"><span>PEN-PAL LOG</span> ${esc(logText(log))}</p>` : ""}
     <div class="wb-mapbox"><canvas class="wb-map" aria-label="Simulated route map"></canvas><span class="wb-stamp" aria-hidden="true"></span></div>
     <ol class="wb-stops">${stops}</ol>
     <dl class="wb-facts">
       <div><dt>Distance</dt><dd>${Math.round(route.km).toLocaleString("en-US")} km</dd></div>
       <div><dt>Lead time</dt><dd>${formatHours(route.hours)}</dd></div>
-      <div><dt>Hubs</dt><dd>${route.stops.filter((st) => st.kind === "airport").length} · ${route.legs.filter((l) => l.mode === "air").length} flight${route.legs.filter((l) => l.mode === "air").length > 1 ? "s" : ""}</dd></div>
-      <div><dt>Customs</dt><dd>${route.customs ? "Yes" : "Domestic"}</dd></div>
+      <div><dt>Freight</dt><dd>$${route.cost.toFixed(2)}</dd></div>
+      <div><dt>CO₂</dt><dd>${route.co2 < 0.1 ? route.co2.toFixed(2) : route.co2.toFixed(1)} kg</dd></div>
     </dl>
-    <p class="wb-note">Simulated route · hub-and-spoke model, great-circle distances</p>`;
+    <p class="wb-note">Simulated · hub-and-spoke network, great-circle distances, average freight rates and CO₂ factors${route.customs ? " · customs at destination gateway" : " · domestic"}</p>`;
 }
