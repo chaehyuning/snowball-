@@ -238,7 +238,7 @@ export function fillTicker(ids) {
   const line = ids
     .map((id) => INFO[id]?.landmark)
     .filter(Boolean)
-    .map((name) => `<span>${name}</span><i aria-hidden="true">✦</i>`)
+    .map((name) => `<span>${name}</span><i aria-hidden="true">·</i>`)
     .join("");
   track.innerHTML = line + line;
 }

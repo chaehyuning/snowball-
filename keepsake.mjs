@@ -39,7 +39,7 @@ function drawCard(g, snap, info, { from }) {
   g.textAlign = "left";
   g.fillStyle = "#ecebe8";
   g.font = "700 30px Pretendard, sans-serif";
-  g.fillText("❄  SNOWBALL", 110, SAFE_TOP + 40);
+  g.fillText("SNOWBALL", 110, SAFE_TOP + 40);
   g.textAlign = "right";
   g.fillStyle = "rgba(236,235,232,0.55)";
   g.font = "500 24px Pretendard, sans-serif";
@@ -182,7 +182,7 @@ function openPostcard() {
       const file = new File([lastBlob], fileName(), { type: lastBlob.type });
       const tries = [];
       if (navigator.canShare?.({ files: [file] })) tries.push({ files: [file] });
-      if (navigator.share) tries.push({ text: "내 스노우볼 엽서 ❄", url: link });
+      if (navigator.share) tries.push({ text: "내 스노우볼 엽서", url: link });
       for (const data of tries) {
         try {
           await navigator.share(data);

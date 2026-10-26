@@ -4,8 +4,6 @@
   box-sizing: border-box;
 }
 
-/* 글꼴은 저장소에 직접 넣음. 프리텐다드는 사이트에 쓰는 글자만 남긴 부분 파일이라
-   새 한글 문구를 넣으면 fonts/ 를 다시 만들어야 함 (없는 글자는 시스템 글꼴로 보임) */
 @font-face {
   font-family: "Pretendard";
   src: url("./fonts/pretendard-subset.woff2") format("woff2");
@@ -34,7 +32,6 @@
   font-display: swap;
 }
 
-/* 장면 색이 바뀔 때 부드럽게 번지도록 색 변수로 등록 */
 @property --accent {
   syntax: "<color>";
   inherits: true;
@@ -53,21 +50,16 @@
   --sans: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --script: "Pinyon Script", "Snell Roundhand", cursive;
   --serif: "Playfair Display", "Didot", "Bodoni 72", Georgia, serif;
-  /* 이야기·편지처럼 읽는 한국어 글: 영어 기울임 세리프와 결을 맞춘 부드러운 바탕체 */
   --story: "Gowun Batang", "Nanum Myeongjo", "AppleMyungjo", serif;
   color-scheme: dark;
   transition: --accent 1.2s ease;
 }
 
-/* 바탕색은 html에 칠해야 그 위의 빛줄기(z-index -1)가 가려지지 않음 */
 html {
   height: 100%;
   background: radial-gradient(ellipse 80% 70% at 50% 45%, #1b1b1f, var(--bg) 70%) fixed, var(--bg);
 }
 
-/* 작은 화면에서 버튼이 여러 줄로 늘어나면 세로로 스크롤됨 */
-/* 화면 밖으로 삐져나온 글씨(배경 필기체 지명 등) 때문에 폰 화면이 옆으로 넓어지지 않게 자름.
-   넓어지면 아래 고정 띠가 화면 밖으로 밀려남 */
 html,
 body {
   overflow-x: clip;
@@ -86,8 +78,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 비단 빛줄기: 화면 전체 뒤에 고정. 움직이지 않음 (30초마다 좌우로 밀리는 게 배경이 흔들리는 것처럼 보였음)
-   폰에서 주소창이 접히고 펴질 때 높이가 바뀌면 그림이 다시 맞춰지며 튀므로, 가장 큰 화면 높이(lvh)로 고정 */
 .silk {
   position: fixed;
   top: 0;
@@ -131,7 +121,6 @@ body {
   color: var(--ink);
 }
 
-/* 스노우볼 뒤에 장면 색으로 번지는 빛 */
 .stage {
   position: relative;
 }
@@ -150,7 +139,6 @@ body {
   pointer-events: none;
 }
 
-/* 스노우볼 뒤에 크게 깔리는 필기체 지명 */
 .ghost {
   position: absolute;
   left: 50%;
@@ -177,7 +165,6 @@ body {
   }
 }
 
-/* 왼쪽 아래 도시 소개: 관광 홍보 지면처럼 */
 .meta {
   position: absolute;
   left: clamp(16px, 4vw, 72px);
@@ -202,7 +189,6 @@ body {
   letter-spacing: 0.08em;
 }
 
-/* 도시 이름: 잡지 표지처럼 대비 강한 세리프를 좁게 붙여서 */
 .meta-thisis {
   margin-top: 18px;
   font-family: var(--serif);
@@ -232,7 +218,6 @@ body {
   color: var(--accent);
 }
 
-/* 기본은 한 줄 카피와 현지 시각만, 자세한 이야기는 접었다 폄 */
 .meta-toggle {
   display: inline-flex;
   align-items: center;
@@ -290,7 +275,6 @@ body {
   color: var(--ink);
 }
 
-/* 현지 시각 옆 지금 날씨: "비 · 14°" */
 .meta-weather {
   margin-left: 6px;
   padding-left: 8px;
@@ -312,11 +296,7 @@ body {
   display: none;
 }
 
-/* PC도 처음엔 도시·한 줄 카피·현지 시각만. '자세히 보기'를 누르면 그 자리에서 이야기와 정보가 펼쳐짐.
-   위쪽 Let it snow 글씨와 겹치지 않게 제목은 조금 줄이고, 이야기는 화면 높이에 맞춰 스크롤 */
 @media (min-width: 1181px) {
-  /* 왼쪽 소개(폭 270px)와 도구 버튼이 겹치지 않도록, 화면이 좁으면 가운데 묶음(도구·스노우볼·나라)을
-     오른쪽으로 민다. 묶음 폭은 46 + 18 + 400 + 18 + 316 = 798px */
   #app {
     position: relative;
     left: max(0px, calc(clamp(16px, 4vw, 72px) + 294px - (100vw - 798px) / 2));
@@ -389,7 +369,6 @@ body {
   box-shadow: 0 0 8px var(--accent);
 }
 
-/* 아래쪽에 천천히 흐르는 랜드마크 이름 띠 */
 .ticker {
   position: absolute;
   left: 0;
@@ -439,7 +418,6 @@ body {
   pointer-events: none;
 }
 
-/* 양옆 장식 글씨: 필기체 머리글자 + 굵은 산세리프 */
 .deco {
   position: fixed;
   z-index: -1;
@@ -489,8 +467,6 @@ body {
   color: var(--ink-dim);
 }
 
-/* 장식 글씨와 장면 정보가 버튼과 겹칠 만큼 좁아지면 숨김 */
-/* 나라 격자가 6열로 넓어지고 가운데 묶음이 오른쪽으로 밀려, 1560px보다 좁은 화면에서는 오른쪽 Wonders 글씨와 겹침 → 숨김 */
 @media (max-width: 1559px) {
   .deco-right {
     display: none;
@@ -502,7 +478,6 @@ body {
     display: none;
   }
 
-  /* 도시 소개는 스노우볼과 버튼 아래로 내려옴 */
   body {
     flex-direction: column;
     gap: 36px;
@@ -513,7 +488,6 @@ body {
     width: min(100%, 420px);
   }
 
-  /* 좁은 화면: 자세한 이야기는 현재 장면 카드 하나만 바텀 시트로 올라옴 */
   .meta .meta-more {
     display: block !important;
     position: fixed;
@@ -588,12 +562,10 @@ body {
     display: none;
   }
 
-
   .deco-left .deco-sub {
     display: none;
   }
 
-  /* 왼쪽 글씨는 작게 줄여서 위쪽 오른편에 둠 */
   .deco-left {
     position: absolute;
     top: 50px;
@@ -613,15 +585,12 @@ body {
 }
 
 @media (max-width: 640px) {
-  /* 도시 소개는 화면 아래에 붙어 따라다니는 작은 띠: 도시 이름·현지 시각·자세히 보기만.
-     누르면 이야기와 랜드마크가 바텀 시트로 올라옴 */
   body {
     flex-direction: column;
     gap: 36px;
     padding-bottom: calc(200px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* 아래 이름 띠와 저작권 줄은 따라다니는 띠 위로 올림 */
   .ticker {
     bottom: calc(124px + env(safe-area-inset-bottom, 0px));
   }
@@ -651,8 +620,7 @@ body {
     padding: 10px 10px 10px 16px;
     border: 1px solid var(--line);
     border-radius: 18px;
-    background: #17171b; /* 비치면 뒤의 지구본 버튼 글씨가 겹쳐 보여서 불투명 */
-    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.8);
+    background: #17171b;    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.8);
   }
 
   .meta .meta-num,
@@ -683,7 +651,6 @@ body {
     margin: 0;
   }
 
-  /* 띠(.meta)가 시트를 품고 있어서, 시트가 열리면 띠째로 어두운 배경 위로 올림 */
   body.sheet-open .meta {
     z-index: 31;
   }
@@ -696,7 +663,6 @@ body {
   }
 }
 
-/* 왼쪽: 소리·음악·도움말 / 가운데: 스노우볼 / 오른쪽: 지구본 + 나라 3열 */
 #app {
   display: grid;
   grid-template-columns: auto auto auto;
@@ -729,7 +695,6 @@ body {
   touch-action: none;
 }
 
-/* 오른쪽: 나라 3열 격자, 그 아래 'or' 구분선, 따로 떨어진 지구본 버튼 */
 .scenes {
   grid-area: scenes;
   display: flex;
@@ -738,7 +703,6 @@ body {
   gap: 18px;
 }
 
-/* 지구본 버튼 + 나라 12개 = 13칸을 7열로 (열 폭 합은 예전 6열과 같은 316px) */
 .scene-grid {
   display: grid;
   grid-template-columns: repeat(7, 40px);
@@ -773,7 +737,6 @@ body {
   background: var(--line);
 }
 
-/* 지구본 버튼은 나라 기호 줄의 맨 앞 칸. 글자는 숨기고 기호만 */
 .globe-label,
 .scenes-or {
   display: none;
@@ -839,7 +802,6 @@ body {
   }
 }
 
-/* 지구본 선택창: 화면 전체를 덮는 캐릭터 선택 화면 */
 .picker {
   position: fixed;
   inset: 0;
@@ -861,7 +823,6 @@ body {
   display: none;
 }
 
-/* 나라를 고르면 지구본이 커지며(줌인) 창 전체가 투명해짐 */
 .picker {
   transition: opacity 0.55s ease, backdrop-filter 0.55s ease;
 }
@@ -889,7 +850,6 @@ body {
   }
 }
 
-/* 지구본을 열면: 구름이 화면을 덮었다가 좌우로 걷히고, 그 사이로 지구본이 떠오름 */
 .picker-sky {
   position: absolute;
   inset: 0;
@@ -941,7 +901,6 @@ body {
   }
 }
 
-/* backwards만: 끝난 뒤엔 원래 transform으로 돌아가야 고를 때 줌인(.leaving)이 먹음 */
 .picker.arrive .picker-globe {
   animation: globe-rise 0.95s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
@@ -953,7 +912,6 @@ body {
   }
 }
 
-/* 지구본에서 고르면 비행기가 비행운을 남기며 가로지름 (창 밖에 잠깐 붙는 요소) */
 .fly-plane {
   position: fixed;
   left: 0;
@@ -971,8 +929,7 @@ body {
 .fly-plane svg {
   width: 100%;
   height: 100%;
-  transform: rotate(90deg); /* 그림은 위를 보고 있어서 진행 방향(오른쪽)으로 돌림 */
-}
+  transform: rotate(90deg);}
 
 .fly-trail {
   position: absolute;
@@ -998,7 +955,6 @@ body {
   }
 }
 
-/* 지구본을 고르는 동안에는 아래 도시 띠를 숨기고, 그 자리에 비행기와 Where to go? */
 body.picker-open .meta {
   display: none;
 }
@@ -1139,7 +1095,6 @@ body.picker-open .meta {
   }
 }
 
-/* 좁은 화면: 설정은 스노우볼 위 왼쪽에 가로로, 나라는 아래에 5열 2줄 */
 @media (max-width: 640px) {
   .edition-coord,
   .brand em {
@@ -1162,7 +1117,6 @@ body.picker-open .meta {
     width: min(calc(100vw - 32px), calc((100vh - 270px) / 1.5), 400px);
   }
 
-  /* 지구본 버튼 아래 나라 6열 2줄 */
   .scenes {
     align-items: center;
     gap: 12px;
@@ -1210,9 +1164,6 @@ body.picker-open .meta {
   display: inline;
 }
 
-
-
-/* 튜토리얼: 대상만 밝게 비추고 나머지는 어둡게 */
 .tour-spot {
   position: fixed;
   z-index: 20;
@@ -1306,7 +1257,6 @@ body.picker-open .meta {
   outline-offset: 2px;
 }
 
-/* 도움말 창 */
 .help {
   position: fixed;
   inset: 0;
@@ -1359,7 +1309,6 @@ body.picker-open .meta {
   }
 }
 
-/* 엽서 창: 도움말 창 모양을 밝은 종이 톤으로. 아래 도시 띠(z 25)보다 위에 */
 .keep-modal {
   z-index: 30;
 }
@@ -1425,8 +1374,6 @@ body.picker-open .meta {
   opacity: 0.4;
 }
 
-
-/* ── 편지 ─────────────────────────────────────────────── */
 .postcard-field textarea {
   padding: 10px 12px;
   border: 1px solid #d8ccb8;
@@ -1460,8 +1407,6 @@ body.picker-open .meta {
   overflow-wrap: anywhere;
 }
 
-/* 받은 편지: 밝은 종이 배경 위 진한 단색 봉투(나라 색), 접힌 결과 그늘, 가운데 금빛 밀랍 도장.
-   도장을 떼면 뚜껑이 열리고 종이가 올라온 뒤 줄 쳐진 편지지가 펼쳐짐 */
 .letter-view {
   --env: color-mix(in srgb, var(--seal) 58%, #3a0610);
   --env-deep: color-mix(in srgb, var(--seal) 42%, #22040a);
@@ -1475,7 +1420,6 @@ body.picker-open .meta {
   justify-content: center;
   gap: 12px;
   padding: 24px 16px calc(24px + env(safe-area-inset-bottom, 0px));
-  /* 사이트 배경과 같은 어두운 바탕에, 봉투 뒤로 나라 색 빛이 은은하게 번짐 */
   background:
     radial-gradient(ellipse 60% 45% at 50% 48%, color-mix(in srgb, var(--seal) 22%, transparent), transparent 70%),
     radial-gradient(ellipse 80% 70% at 50% 45%, #1b1b1f, #0b0b0e 70%);
@@ -1498,7 +1442,6 @@ body.picker-open .meta {
   color: var(--ink-dim);
 }
 
-/* 우편함 투입구: 은빛 틀과 어두운 틈. 봉투가 이 틈에서 미끄러져 나옴 */
 .mail-slot {
   position: relative;
   z-index: 1;
@@ -1513,9 +1456,6 @@ body.picker-open .meta {
     0 10px 18px -8px rgba(0, 0, 0, 0.7);
 }
 
-/* 아직 투입구 안: 보이지 않음 → 버튼을 누르면 미끄러져 나옴 → 다 나오면(landed) 애니메이션을 떼어 열기 동작이 자유로움 */
-/* 틈 위쪽(투입구 안)에 있는 부분은 잘라 내서, 봉투 아랫부분부터 틈 밖으로 서서히 밀려 나옴.
-   위로 밀린 거리와 잘라 낸 높이를 같은 비율로 줄여 가며 맞춤 */
 .letter-view:not(.delivered) .envelope {
   clip-path: inset(100% 0 0 0);
   transform: translateY(-100%);
@@ -1536,13 +1476,11 @@ body.picker-open .meta {
   }
 }
 
-/* 열면 봉투가 투입구에서 조금 내려와, 뚜껑이 열리고 편지가 올라오는 모습이 보임 */
 .letter-view.opened .envelope {
   transform: translateY(56px);
   transition: transform 0.4s ease;
 }
 
-/* 열면 제목과 투입구는 사라지고, 열린 뚜껑과 올라오는 편지만 보임 */
 .letter-view.opened .mail-slot,
 .letter-view.opened .letter-arrive,
 .letter-view.opened .letter-sub {
@@ -1566,10 +1504,8 @@ body.picker-open .meta {
   position: relative;
   width: min(330px, 86vw);
   aspect-ratio: 3 / 2;
-  /* 봉투 윗변을 까만 틈의 아랫선에 맞춤: 틀의 아랫부분은 봉투 뒤로 가려지고, 봉투는 틈에서 바로 나옴 */
   z-index: 2;
-  margin-top: -31px; /* 부모의 gap 12px까지 빼서 틈 아랫선에 맞춤 */
-  perspective: 900px;
+  margin-top: -31px;  perspective: 900px;
   transition: transform 0.5s ease, opacity 0.5s ease;
 }
 
@@ -1585,7 +1521,6 @@ body.picker-open .meta {
   box-shadow: 0 30px 50px -18px rgba(0, 0, 0, 0.85), 0 8px 18px -8px rgba(0, 0, 0, 0.6);
 }
 
-/* 닫혀 있을 때 종이는 앞주머니 아래에 숨어 있다가, 열면 위로 올라옴 */
 .letter-paper {
   left: 7%;
   right: 7%;
@@ -1598,7 +1533,6 @@ body.picker-open .meta {
   transition: transform 0.45s 0.15s ease, opacity 0.15s 0.1s;
 }
 
-/* 앞주머니: 양옆 날개(가운데로 갈수록 어두운 그늘)와 아래 날개가 겹쳐 접힌 결이 보임 */
 .envelope-front {
   inset: 0;
   z-index: 3;
@@ -1616,7 +1550,6 @@ body.picker-open .meta {
   clip-path: polygon(0 100%, 50% 50%, 100% 100%);
 }
 
-/* 위 뚜껑과 그 아래로 떨어지는 그늘 */
 .envelope-flap-shadow {
   left: 0;
   right: 0;
@@ -1652,7 +1585,6 @@ body.picker-open .meta {
   color: rgba(255, 240, 225, 0.85);
 }
 
-/* 우표: 톱니 테두리 + 나라 그림 */
 .stamp {
   position: absolute;
   right: 6%;
@@ -1689,7 +1621,6 @@ body.picker-open .meta {
   color: #6b5640;
 }
 
-/* 소인: 우표 위를 지나가는 동그란 도장과 물결 줄 */
 .postmark {
   position: absolute;
   right: 13%;
@@ -1717,9 +1648,6 @@ body.picker-open .meta {
   font-size: 6.5px;
 }
 
-
-/* 밀랍 도장: 가장자리가 울퉁불퉁한 붉은 밀랍, 가운데 눈꽃이 눌려 찍힘.
-   끌면 들리며 따라오고, 떼면 빙글 돌며 떨어져 나감 */
 .wax-seal {
   position: absolute;
   left: 50%;
@@ -1754,7 +1682,6 @@ body.picker-open .meta {
   border-radius: 50%;
 }
 
-/* 들어 올리면 그림자가 멀어짐 */
 .wax-seal.lifting {
   cursor: grabbing;
   animation: none;
@@ -1826,7 +1753,6 @@ body.picker-open .meta {
   color: var(--ink-dim);
 }
 
-/* 편지지: 위아래 에어메일 띠, 줄 쳐진 종이, 귀퉁이 날짜 */
 .letter-sheet {
   position: relative;
   width: min(360px, 100%);
@@ -1901,7 +1827,6 @@ body.picker-open .meta {
   line-height: 28px;
 }
 
-/* 편지지 오른쪽 위에 클립으로 꽂힌 폴라로이드: 보낸 사람이 고른 스노우볼 한 장면. 글은 사진 옆으로 흐름 */
 .polaroid {
   position: relative;
   float: right;
@@ -1992,7 +1917,6 @@ body.picker-open .meta {
   font-weight: 700;
 }
 
-/* 편지 쓰기 창 위쪽 에어메일 띠 */
 .airmail-strip {
   height: 6px;
   margin: -18px -18px 12px;
@@ -2017,7 +1941,6 @@ body.tour-open .meta {
   }
 }
 
-/* 폰: 나라 목록은 가로 한 줄 스와이프 롤러. 스노우볼이 화면을 더 넓게 차지함 */
 @media (max-width: 640px) {
   .scene-grid {
     display: flex;
@@ -2045,8 +1968,6 @@ body.tour-open .meta {
   }
 }
 
-/* ── 화면 정리 ───────────────────────────────────────────
-   스노우볼에 눈이 가도록 장식 글자·흐르는 띠·좌표·저작권 줄은 숨김 */
 .ghost,
 .ticker,
 .colophon,
@@ -2057,14 +1978,12 @@ body.tour-open .meta {
   display: none;
 }
 
-/* PC·태블릿은 왼쪽 소개에 번호가 있으므로 위쪽 번호는 폰에서만 */
 @media (min-width: 641px) {
   .edition {
     display: none;
   }
 }
 
-/* 도구: 편지 보내기만 밖에 두고 나머지는 ··· 메뉴 */
 .tools {
   position: relative;
   align-items: center;
@@ -2130,7 +2049,6 @@ body.tour-open .meta {
   display: inline;
 }
 
-/* 폰: 편지 보내기는 글자가 붙은 알약 버튼 */
 @media (max-width: 640px) {
   .tools .tool-primary {
     display: flex;
@@ -2149,7 +2067,6 @@ body.tour-open .meta {
   }
 }
 
-/* 멍때리기 모드: 빈 곳을 톡 치면 글자·버튼이 스르륵 사라지고 스노우볼만 남음. 다시 치면 돌아옴 */
 .masthead,
 .tools,
 .scenes,
@@ -2212,7 +2129,6 @@ body.zen .zen-hint {
   }
 }
 
-/* 받은 편지 뒤 스노우볼 화면 아래쪽에 떠 있는 답장 버튼 (폰은 소개 띠 바로 위) */
 .reply-float {
   position: fixed;
   left: 50%;
@@ -2253,15 +2169,11 @@ body.picker-open .reply-float {
   pointer-events: none;
 }
 
-/* 편지 쓰는 칸도 받는 편지와 같은 글씨로 */
 .letter-card textarea {
   font-family: var(--story);
   font-size: 15px;
 }
 
-/* ── 실시간 낮·밤 배경 ─────────────────────────────────────
-   지금 보는 도시의 현지 시각에 맞춰 배경 빛이 바뀜 (스노우볼 속 그림은 그대로).
-   새벽 분홍빛 · 낮 푸른 하늘빛 · 해 질 녘 주황빛 · 밤 짙은 남색과 별 */
 .daylight {
   position: fixed;
   inset: 0;
@@ -2313,9 +2225,6 @@ html[data-daypart="night"] .daylight {
   }
 }
 
-/* ── 편지 배송 시뮬레이션 (PC 전용) ─────────────────────────
-   운송장: 항공 화물 운송장처럼 번호·항로 지도·경유 공항·거리·리드타임 */
-/* 봉한 뒤: 편지 칸을 접고 운송장과 링크 보내기만 남김 */
 .letter-card.sealed .postcard-field {
   display: none;
 }
@@ -2475,7 +2384,6 @@ html[data-daypart="night"] .daylight {
   color: #c8343a;
 }
 
-/* 배송 방식 고르기: 세 장의 카드, 지표마다 막대. 고르면 막대와 비교 문구가 바로 바뀜 */
 .ship {
   margin-top: 12px;
 }
@@ -2657,7 +2565,6 @@ html[data-daypart="night"] .daylight {
   color: #5fd3c6;
 }
 
-/* 펜팔 기록 줄: 몇 번째 편지인지, 함께 오간 거리 */
 .wb-log {
   display: flex;
   flex-wrap: wrap;
@@ -2702,12 +2609,10 @@ html[data-daypart="night"] .daylight {
   display: none;
 }
 
-/* 추적 화면이 덮는 동안 뒤 화면(흐르는 띠·흐림 필터)은 그리지 않음 */
 body.tracking-open > *:not(.tracking-view) {
   visibility: hidden;
 }
 
-/* 받은 편지 앞의 배송 추적 화면: 편지 화면과 같은 어두운 바탕 */
 .tracking-view {
   position: fixed;
   inset: 0;
@@ -2775,8 +2680,6 @@ body.tracking-open > *:not(.tracking-view) {
   color: var(--ink-faint);
 }
 
-/* 도착하면 운송장에 "DELIVERED" 도장이 찍힘 */
-/* 재생이 끝나면 지도 아래쪽에 도장이 찍힘: 보낼 때 SHIPPED, 받을 때 DELIVERED */
 .wb-mapbox {
   position: relative;
 }
@@ -2865,7 +2768,6 @@ body.tracking-open > *:not(.tracking-view) {
   outline-offset: 2px;
 }
 
-/* 휴대폰: 사실 칸은 두 줄, 추적 화면은 위에서부터 스크롤 */
 @media (max-width: 520px) {
   .wb-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2898,8 +2800,6 @@ body.tracking-open > *:not(.tracking-view) {
   }
 }
 
-/* ── 내 배송 화면 ─────────────────────────────────────────
-   운영 대시보드처럼: 건수 요약 → 원형 지표 3개 → 합계 → 오늘 출고 차수 → 상태 칩 → 배송 목록 */
 .board {
   position: fixed;
   inset: 0;
@@ -3279,7 +3179,6 @@ body.tracking-open > *:not(.tracking-view) {
   }
 }
 
-/* 턴 넘기기: 아래에 붙은 시뮬레이션 시계와 버튼 3개. 시간은 이 버튼으로만 흐름 */
 .board-turn {
   position: sticky;
   bottom: calc(-28px - env(safe-area-inset-bottom, 0px));
@@ -3403,7 +3302,6 @@ body.tracking-open > *:not(.tracking-view) {
   }
 }
 
-/* 한국어 라벨: 영어 대문자용 넓은 자간을 줄이고, 단어 중간에서 줄이 바뀌지 않게 */
 .wb-label,
 .wb-cargo span,
 .wb-cargo em,
@@ -3430,7 +3328,6 @@ body.tracking-open > *:not(.tracking-view) {
   min-width: 92px;
 }
 
-/* 목표 카드: 지금 목표 하나, 진행 막대, 힌트. 달성하면 위에 축하 줄 */
 .goal {
   display: grid;
   gap: 6px;
@@ -3490,7 +3387,6 @@ body.tracking-open > *:not(.tracking-view) {
   font-variant-numeric: tabular-nums;
 }
 
-/* 편지 쓰기 창의 목표 한 줄 */
 .letter-goal {
   margin-top: 8px;
   padding: 7px 10px;

@@ -631,7 +631,6 @@ for (const button of document.querySelectorAll("[data-scene]")) {
 // 지구본 선택창
 document.querySelector(".globe-open").addEventListener("click", () => openPicker(SCENES, scene.id, pickFromGlobe));
 
-// ··· 메뉴: 소리·음악·엽서·도움말. 바깥을 누르거나 Esc면 닫힘. 엽서·도움말은 창이 열리면서 닫힘
 {
   const toggle = document.querySelector(".tools-more-toggle");
   const menu = document.querySelector(".tools-menu");

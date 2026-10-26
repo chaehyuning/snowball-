@@ -1,5 +1,18 @@
 {
   "routes": [
+    {
+      "src": "/(.*)",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.open-meteo.com; media-src 'self' data: blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(self), gyroscope=(self)",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+        "Cross-Origin-Opener-Policy": "same-origin"
+      },
+      "continue": true
+    },
     { "src": "/", "has": [{ "type": "query", "key": "letter" }], "dest": "/api/letter" },
     { "src": "/", "has": [{ "type": "query", "key": "landmark" }], "dest": "/api/letter" },
     { "handle": "filesystem" }

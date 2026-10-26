@@ -1,26 +1,19 @@
-// 편지 링크: 스노우볼과 짧은 편지를 링크 하나에 담아 보냄.
-// 서버 없이 편지 내용을 주소의 letter= 뒤에 담음 (UTF-8 → base64url).
-// 받는 사람이 링크를 열면 봉투가 먼저 나오고, 열면 편지 → 보낸 사람이 고른 스노우볼(명판 문구 포함)
-
 import { sceneInfo } from "./editorial.mjs";
 import { PLACES } from "./picker.mjs";
 import { sealCrack } from "./sound.mjs";
 import { goalProgressText, goalStatus, openShipments, recordShipment, simNow } from "./shipments.mjs";
 import { CITIES, DESTINATIONS, SERVICES, compareServices, findDestination, logText, planRoute, trackingId, waybillHTML, drawRouteMap, progressAt, legSpans, formatHours, phaseAt, MOVING } from "./logistics.mjs";
 
-// 편지에 쓰는 도시 이름 (예: Paris)과 우표 그림(나라 버튼의 아이콘)
 const cityName = (id) => sceneInfo(id).city || PLACES[id]?.landmark || "";
 const stampIcon = (id) => document.querySelector(`[data-scene="${id}"] svg`)?.outerHTML || "";
-// 소인 날짜: 04 OCT 2026
 const postDate = (iso) => {
   const d = iso ? new Date(`${iso}T12:00:00`) : new Date();
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
 };
 
 const MAX_MESSAGE = 200;
-const MAX_HOPS = 10; // 링크가 너무 길어지지 않게 지난 구간은 최근 10개만 들고 감
+const MAX_HOPS = 10;
 
-// 받은 편지에 답장할 때 이어 갈 펜팔 기록: 받은 편지의 구간을 기록 끝에 붙이고 거리·편지 수를 더함
 function threadAfter(letter, id) {
   const hop = letter.route && routeOf(letter, id);
   return {
@@ -30,9 +23,7 @@ function threadAfter(letter, id) {
     n: letter.count + 1,
   };
 }
-// 받은 편지의 경로: 보낸 사람이 고른 방식과 그때 본 출고 대기 시간 그대로
 const routeOf = (letter, id) => planRoute(id, letter.route, letter.service, { wait: letter.wait });
-// 기록 구간들을 경로로 (지도에 옅게 그림)
 const trailRoutes = (h) => h.map(([a, b]) => planRoute(a, b)).filter(Boolean);
 
 function encode(data) {
@@ -56,7 +47,6 @@ function decode(code) {
       plate: clip(data.p, 20),
       date: /^\d{4}-\d{2}-\d{2}$/.test(data.d) ? data.d : "",
       route: typeof data.r === "string" && DESTINATIONS[data.r] ? data.r : "",
-      // 펜팔 기록: 지난 구간들 [스노우볼 장면, 받는 나라], 지난 구간 누적 거리(km), 몇 번째 편지인지
       history: (Array.isArray(data.h) ? data.h : [])
         .filter((hop) => Array.isArray(hop) && CITIES[hop[0]] && DESTINATIONS[hop[1]])
         .slice(-MAX_HOPS)
@@ -64,7 +54,6 @@ function decode(code) {
       km: Number.isFinite(data.k) ? Math.min(Math.max(data.k, 0), 1e7) : 0,
       count: Number.isInteger(data.n) ? Math.min(Math.max(data.n, 1), 9999) : 1,
       co2: Number.isFinite(data.c) ? Math.min(Math.max(data.c, 0), 1e5) : 0,
-      // 배송 방식(x 특급 / s 일반 / e 친환경)과 보낼 때 본 출고 대기 시간
       service: SERVICES[data.s] ? data.s : "s",
       wait: Number.isFinite(data.w) ? Math.min(Math.max(data.w, 0), 168) : null,
     };
@@ -73,7 +62,6 @@ function decode(code) {
   }
 }
 
-// 주소에 담긴 편지 (없으면 null)
 export function readLetter() {
   const code = new URLSearchParams(location.search).get("letter");
   return code ? decode(code) : null;
@@ -86,20 +74,16 @@ export function setupLetters(options) {
   document.querySelector(".letter-toggle")?.addEventListener("click", () => openWriter());
 }
 
-// 내 배송 화면 열기 (··· 메뉴, 보낸 뒤 링크). 한 건을 누르면 지금 위치까지 재생
 export function openMyShipments() {
   if (writer) writer.hidden = true;
   openShipments(opts.currentId(), (rec, back) => showShipment(rec, back));
 }
 
-// ── 편지 쓰기 ────────────────────────────────────────────────
-
 let writer = null;
-let thread = null; // 답장 중이면 이어 갈 펜팔 기록
-let service = "s"; // 고른 배송 방식
-let shownDest = null; // 카드에 지금 그려 둔 받는 나라
+let thread = null;
+let service = "s";
+let shownDest = null;
 
-// 받는 나라 칸이 틀렸으면 그 이유 (맞으면 빈 문자열)
 function destError(text) {
   if (!String(text).trim()) return "받는 나라를 적어 주세요.";
   const dest = findDestination(text);
@@ -109,24 +93,20 @@ function destError(text) {
   return "";
 }
 
-// 편지 쓰기 창의 목표 한 줄. 열 때는 보여 주기만, 봉한 직후(mode "seal")에만 달성 판정
 function showGoal(mode = null) {
   const line = writer.querySelector(".letter-goal");
   const st = goalStatus(mode);
   line.hidden = false;
   line.classList.toggle("won", st.done.length > 0);
-  const next = st.goal ? `목표 ${st.level + 1}/${st.total} · ${st.goal.title} (${goalProgressText(st)})` : "모든 목표 달성! 🎉";
-  line.textContent = st.done.length ? `달성! ${st.done.join(" · ")} 🎉  다음: ${st.goal ? st.goal.title : "없음"}` : `🎯 ${next}`;
+  const next = st.goal ? `목표 ${st.level + 1}/${st.total} · ${st.goal.title} (${goalProgressText(st)})` : "모든 목표 달성!";
+  line.textContent = st.done.length ? `달성! ${st.done.join(" · ")} · 다음: ${st.goal ? st.goal.title : "없음"}` : next;
 }
 
-// 세 방식 카드를 그리고, 고른 방식을 일반(Standard)과 비교한 한 줄을 적음.
-// 막대는 세 방식 중 가장 큰 값을 꽉 찬 길이로 (리드타임·운임·CO₂ 모두 짧을수록 좋음)
 function renderShipping() {
   const box = writer.querySelector(".ship");
   const dest = findDestination(writer.querySelector('[name="dest"]').value);
   const id = opts.currentId();
   shownDest = dest;
-  // 같은 나라를 적으면 카드 대신 바로 안내
   const value = writer.querySelector('[name="dest"]').value;
   writer.querySelector(".letter-dest-hint").textContent = dest ? destError(value) : "";
   const all = dest && !destError(value) ? compareServices(id, dest, simNow()) : null;
@@ -191,8 +171,8 @@ function openWriter(prefill = {}, chain = null) {
         <div class="waybill" hidden></div>
         <div class="help-actions">
           <button type="button" class="help-replay letter-cancel">닫기</button>
-          <button type="button" class="help-close letter-send">봉하고 보내기 ✉</button>
-          <button type="button" class="help-close letter-share" hidden>링크 보내기 ✉</button>
+          <button type="button" class="help-close letter-send">봉하고 보내기</button>
+          <button type="button" class="help-close letter-share" hidden>링크 보내기</button>
         </div>
       </div>`;
     document.body.append(writer);
@@ -215,8 +195,6 @@ function openWriter(prefill = {}, chain = null) {
         p: field("plate").value.trim(),
         d: new Date().toISOString().slice(0, 10),
       };
-      // 받는 나라는 필수: 스노우볼이 거쳐 갈 물류 경로를 편지에 함께 담음.
-      // 스노우볼과 같은 나라는 공항을 거치지 않아 배송 시뮬레이션이 없으므로 다른 나라만
       const destProblem = destError(field("dest").value);
       if (destProblem) {
         writer.querySelector(".letter-dest-hint").textContent = destProblem;
@@ -229,23 +207,20 @@ function openWriter(prefill = {}, chain = null) {
         return;
       }
       const id = opts.currentId();
-      if (thread) Object.assign(data, thread); // 답장이면 펜팔 기록을 이어 담음
-      // 받는 나라가 있으면 고른 배송 방식으로 지금 시각 기준 경로를 계산하고, 방식과 출고 대기 시간을 편지에 담음
-      // 출고 차수는 시뮬레이션 시계 기준 (턴을 넘겨 시간을 돌리면 다음 차수도 바뀜)
+      if (thread) Object.assign(data, thread);
       const route = data.r && planRoute(id, data.r, service, { now: simNow() });
       if (route) {
         data.s = service;
         if (route.departure) data.w = Math.round(route.departure.wait * 100) / 100;
       }
       const url = `${location.origin}${location.pathname}?landmark=${opts.slugOf(id)}&letter=${encode(data)}`;
-      // 메신저는 제목·문장·주소를 이어 붙여 보여 주므로 문장은 짧게 한 줄만 (자세한 건 미리보기 카드가 보여 줌)
-      const text = `✉️ A snowball letter from ${data.f || "a friend"}`;
+      const text = `A snowball letter from ${data.f || "a friend"}`;
       const done = writer.querySelector(".letter-done");
       const share = async () => {
         if (navigator.share) {
           try {
             await navigator.share({ text, url });
-            done.textContent = "편지를 보냈어요 ✈";
+            done.textContent = "편지를 보냈어요";
             done.hidden = false;
             return;
           } catch (e) {
@@ -262,8 +237,6 @@ function openWriter(prefill = {}, chain = null) {
       };
       if (!route) return share();
       if (thread) route.trail = trailRoutes(thread.h);
-      // 받는 나라가 있으면: 편지 칸을 접고 운송장에서 스노우볼이 출발하는 장면을 먼저 보여 준 뒤,
-      // 도장이 찍히면 링크 보내기 버튼을 띄움 (휴대폰 공유 창이 운송장을 가리지 않게)
       writer.querySelector(".letter-card").classList.add("sealed");
       writer.querySelector(".letter-where").textContent = `봉했어요. ${DESTINATIONS[data.r].city}행 출발!`;
       const sendBtn = writer.querySelector(".letter-send");
@@ -272,7 +245,6 @@ function openWriter(prefill = {}, chain = null) {
       shareBtn.onclick = share;
       const log = thread ? { n: thread.n, km: thread.k + route.km, co2: (thread.c || 0) + route.co2 } : null;
       const trackId = trackingId(route, `${data.d}|${data.m}|${data.f}`);
-      // 내 배송 화면에 기록: 지금부터 리드타임만큼 시뮬레이션 시계가 흐름
       recordShipment({ id: trackId, dir: "sent", from: id, to: data.r, s: service, w: data.w ?? 0, at: simNow(), who: data.t });
       showGoal("seal");
       showWaybill(route, trackId, cityName(id), log, () => {
@@ -281,11 +253,9 @@ function openWriter(prefill = {}, chain = null) {
       });
     });
   }
-  // 배송 방식 카드: 받는 나라를 알아들으면 세 방식을 같은 시각 기준으로 계산해 보여 줌
   if (!writer.dataset.ship) {
     writer.dataset.ship = "1";
     const destInput = writer.querySelector('[name="dest"]');
-    // 나라가 바뀔 때만 다시 그림 (입력칸을 떠나며 생기는 change가 카드 클릭 도중 카드를 바꿔 치우지 않게)
     const onDest = () => findDestination(destInput.value) !== shownDest && renderShipping();
     destInput.addEventListener("input", onDest);
     destInput.addEventListener("change", onDest);
@@ -297,7 +267,6 @@ function openWriter(prefill = {}, chain = null) {
     });
   }
   service = "s";
-  // 받는 나라 목록: 지금 스노우볼의 나라는 빼고 (목록에서 고르거나 직접 적음, 필수)
   const home = CITIES[opts.currentId()]?.country;
   writer.querySelector("#dest-countries").innerHTML = Object.entries(DESTINATIONS)
     .filter(([code]) => code !== home)
@@ -313,7 +282,6 @@ function openWriter(prefill = {}, chain = null) {
   writer.querySelector(".letter-share").hidden = true;
   writer.querySelector(".letter-where").textContent = `${cityName(opts.currentId())} 스노우볼에 편지를 담아 보내요.`;
   showGoal();
-  // 답장이면 지금까지의 펜팔 기록을 보여 주고, 받는 나라를 적으면 그 항로가 기록에 이어짐
   const threadLine = writer.querySelector(".letter-thread");
   threadLine.hidden = !thread;
   if (thread)
@@ -325,7 +293,6 @@ function openWriter(prefill = {}, chain = null) {
   writer.querySelector(prefill.to ? '[name="message"]' : '[name="to"]').focus();
 }
 
-// 공항마다 하는 일: 출발 공항 적재 → 수출 허브 분류 → 받는 나라 관문 공항 통관
 function hubTask(route, k) {
   const s = route.stops[k];
   const A = CITIES[route.from];
@@ -334,10 +301,6 @@ function hubTask(route, k) {
   return "싣는 중";
 }
 
-// 운송장(root) 위에서 스노우볼이 경로를 따라 이동하는 장면을 재생.
-// 구간은 거리에 비례해 움직이고, 공항마다 잠깐 멈춰 분류·통관 고리가 퍼짐. 시계는 시뮬레이션 시간.
-// 끝나면 지도 위에 도장(data-stamp)이 찍힘. 반환값 skip()은 바로 끝 장면으로
-// until: 출발 후 몇 시간째까지만 재생 (운송 중인 배송의 "지금 위치"). 없으면 끝까지
 function playRoute(root, route, { status, onDone, endText, until = null } = {}) {
   const canvas = root.querySelector(".wb-map");
   const stops = [...root.querySelectorAll(".wb-stop")];
@@ -348,7 +311,6 @@ function playRoute(root, route, { status, onDone, endText, until = null } = {}) 
   const now = until != null && until < route.hours ? phaseAt(route, until) : null;
   const plan = [];
   for (const [i, [a, b]] of spans.entries()) {
-    // 지금 위치에서 멈춤: 그 구간은 지금 지점까지만, 그 뒤 단계는 빼고
     if (now && now.t < b) {
       if (now.t > a) plan.push({ kind: "move", leg: i, a, b: now.t, ms: Math.max(300, (now.t - a) * MOVE) });
       break;
@@ -376,7 +338,6 @@ function playRoute(root, route, { status, onDone, endText, until = null } = {}) 
     done = true;
     cancelAnimationFrame(raf);
     if (now) {
-      // 운송 중: 지금 위치에 화물을 두고 멈춤
       drawRouteMap(canvas, route, Math.min(now.t, 0.9999)).catch(() => {});
       setStops(now.k);
       say(endText || now.label);
@@ -397,7 +358,7 @@ function playRoute(root, route, { status, onDone, endText, until = null } = {}) 
     if (!step) return finish();
     const f = left / step.ms;
     if (step.kind === "move") {
-      const e = f < 0.5 ? 2 * f * f : 1 - (-2 * f + 2) ** 2 / 2; // 구간마다 천천히 출발·도착
+      const e = f < 0.5 ? 2 * f * f : 1 - (-2 * f + 2) ** 2 / 2;
       const t = step.a + (step.b - step.a) * e;
       const leg = route.legs[step.leg];
       drawRouteMap(canvas, route, t).catch(() => {});
@@ -407,14 +368,12 @@ function playRoute(root, route, { status, onDone, endText, until = null } = {}) 
       const s = route.stops[step.k];
       drawRouteMap(canvas, route, step.at, { pulse: { k: step.k, phase: (f * 2) % 1 } }).catch(() => {});
       setStops(step.k);
-      // 첫 공항: 처리 뒤 출고 차수를 기다리는 시간이 길면 그걸 보여 줌
       const waiting = step.k === 1 && route.departure && route.departure.wait > 0.25 && f > 0.4;
       const task = waiting ? `${route.departure.label} 기다리는 중` : hubTask(route, step.k);
       say(`${task} · ${s.code} · +${formatHours(s.at + f * (s.out - s.at))}`);
     }
     raf = requestAnimationFrame(frame);
   };
-  // 육지 윤곽을 먼저 받아 둔 뒤 출발 (움직임을 줄인 설정이면 바로 끝 장면)
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   drawRouteMap(canvas, route, 0)
     .catch(() => {})
@@ -422,13 +381,12 @@ function playRoute(root, route, { status, onDone, endText, until = null } = {}) 
   return { skip: finish };
 }
 
-// 봉한 뒤 편지 쓰기 창에 운송장을 펼치고, 스노우볼이 허브를 거쳐 가는 장면을 재생. 끝나면 onShipped
 function showWaybill(route, id, cargo, log, onShipped) {
   if (!route) return;
   const bill = writer.querySelector(".waybill");
   bill.dataset.stamp = "발송";
   bill.innerHTML = `${waybillHTML(route, id, cargo, log)}
-    <div class="wb-play"><p class="tracking-status" aria-live="polite"></p><button type="button" class="wb-replay">다시 보기 ↻</button></div>
+    <div class="wb-play"><p class="tracking-status" aria-live="polite"></p><button type="button" class="wb-replay">다시 보기</button></div>
     <button type="button" class="wb-mine" hidden>내 배송에서 보기 →</button>`;
   bill.querySelector(".wb-mine").addEventListener("click", openMyShipments);
   bill.hidden = false;
@@ -448,8 +406,6 @@ function showWaybill(route, id, cargo, log, onShipped) {
   play();
 }
 
-// 받은 편지의 "어떻게 왔는지" 배송 추적 화면. first: 편지를 받자마자 봉투보다 먼저 (닫으면 우편함으로),
-// 아니면 편지를 읽은 뒤 다시 보기 (닫으면 편지로 돌아감)
 function showTracking(letter, id, onClose, { first = false } = {}) {
   const route = routeOf(letter, id);
   if (!route) return;
@@ -462,12 +418,11 @@ function showTracking(letter, id, onClose, { first = false } = {}) {
     cargo: cityName(id),
     log,
     title: first ? "스노우볼이 오고 있어요" : "이렇게 왔어요",
-    goLabel: first ? "우편함 열기 ✉" : "편지로 돌아가기 ✉",
+    goLabel: first ? "우편함 열기" : "편지로 돌아가기",
     onClose,
   });
 }
 
-// 내 배송 화면에서 한 건 열기: 운송 중이면 지금 위치까지만 재생하고 IN TRANSIT 도장
 export function showShipment(rec, onClose) {
   const route = planRoute(rec.from, rec.to, rec.s, { wait: rec.w, now: rec.at });
   if (!route) return;
@@ -487,7 +442,6 @@ export function showShipment(rec, onClose) {
   });
 }
 
-// 운송장 + 경로 재생 화면 (받은 편지 추적, 내 배송 한 건 보기에 같이 씀)
 function trackingOverlay({ route, trackId, cargo, log = null, title, goLabel, stamp = "배송 완료", until = null, endText = null, onClose }) {
   const el = document.createElement("div");
   el.className = "tracking-view";
@@ -501,7 +455,7 @@ function trackingOverlay({ route, trackId, cargo, log = null, title, goLabel, st
     <p class="tracking-status" aria-live="polite"></p>
     <div class="tracking-actions">
       <button type="button" class="tracking-skip">건너뛰기</button>
-      <button type="button" class="tracking-replay" hidden>다시 보기 ↻</button>
+      <button type="button" class="tracking-replay" hidden>다시 보기</button>
       <button type="button" class="tracking-go" hidden></button>
     </div>`;
   el.querySelector(".tracking-title").textContent = title;
@@ -538,8 +492,6 @@ function trackingOverlay({ route, trackId, cargo, log = null, title, goLabel, st
   });
 }
 
-// 밀랍 도장 SVG: 녹아 퍼진 울퉁불퉁한 가장자리(각도마다 반지름을 조금씩 달리한 매끈한 곡선),
-// 눌려 들어간 안쪽 원과 그 둘레의 볼록한 테, 양각으로 찍힌 눈꽃(그늘 획 + 빛 획 + 바탕 획), 윤기
 function waxSealSVG() {
   const C = 50;
   const N = 18;
@@ -550,7 +502,6 @@ function waxSealSVG() {
     const r = 43 + wobble;
     pts.push([C + Math.cos(a) * r, C + Math.sin(a) * r]);
   }
-  // 점들을 지나는 매끈한 닫힌 곡선 (캣멀-롬 → 베지어)
   let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
   for (let i = 0; i < N; i++) {
     const p0 = pts[(i - 1 + N) % N];
@@ -561,7 +512,6 @@ function waxSealSVG() {
     const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
     d += `C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
   }
-  // 눈꽃 문양: 여섯 갈래와 곁가지
   let flake = "";
   for (let k = 0; k < 6; k++) {
     const a = (k * Math.PI) / 3 - Math.PI / 2;
@@ -617,12 +567,8 @@ function waxSealSVG() {
   </svg>`;
 }
 
-// ── 받은 편지: 봉투 → 편지 → 스노우볼 ─────────────────────────
-
-// 받은 편지: 배송 경로가 담겨 있으면 추적 화면 먼저, 그다음 봉투 → 편지 → 스노우볼
 export function showLetter(letter, id, onDone, options = {}) {
   const got = letter.route && routeOf(letter, id);
-  // 받은 배송도 내 배송 화면에 (도착한 상태로)
   if (got)
     recordShipment({
       id: trackingId(got, `${letter.date}|${letter.message}|${letter.from}`),
@@ -685,9 +631,9 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
       <p class="paper-from"></p>
     </div>
     <div class="letter-actions" hidden>
-      <button type="button" class="letter-track" hidden>어떻게 왔는지 보기 ✈</button>
-      <button type="button" class="letter-go">Shake the snowball ❄</button>
-      <button type="button" class="letter-reply">Write back ✉</button>
+      <button type="button" class="letter-track" hidden>어떻게 왔는지 보기</button>
+      <button type="button" class="letter-go">Shake the snowball</button>
+      <button type="button" class="letter-reply">Write back</button>
     </div>`;
   const $ = (sel) => el.querySelector(sel);
   $(".letter-sub").textContent = `from ${letter.from || "a friend"} · a snowball from ${city}`;
@@ -696,7 +642,6 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
   $(".pm-city").textContent = city.toUpperCase().slice(0, 12);
   $(".pm-date").textContent = date;
   $(".sheet-date").textContent = `${date} · ${city}`;
-  // 보낸 사람이 고른 스노우볼의 한 장면을 폴라로이드로 편지지 귀퉁이에 꽂아 둠
   if (snapshot) {
     try {
       const shot = snapshot();
@@ -706,7 +651,6 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
       $(".polaroid-caption").textContent = `${city}, ${new Date(letter.date || Date.now()).getFullYear() || ""}`;
       $(".polaroid").hidden = false;
     } catch {
-      // 사진을 못 떠도 편지는 그대로 보여 줌
     }
   }
   $(".paper-to").textContent = `Dear ${letter.to || "you"},`;
@@ -715,7 +659,6 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
   document.body.append(el);
   document.body.classList.add("letter-open");
 
-  // 밀랍 도장 떼기: 손가락으로 끌면 도장이 들리며 따라오고, 충분히 끌거나 톡 누르면 떨어져 나가며 봉투가 열림
   const seal = $(".wax-seal");
   let start = null;
   let peeled = false;
@@ -745,7 +688,7 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
   const release = () => {
     if (!start || peeled || !delivered) return;
     start = null;
-    peel(); // 짧게 누르기만 해도 떼어짐
+    peel();
   };
   seal.addEventListener("pointerup", release);
   seal.addEventListener("pointercancel", () => {
@@ -753,7 +696,6 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
     seal.classList.remove("lifting");
     seal.style.transform = "";
   });
-  // 처음엔 투입구만 보이고, 버튼을 누르면 봉투가 투입구에서 떨어져 나옴. 그 뒤 버튼은 "열기"가 됨
   const btn = $(".letter-open-btn");
   let delivered = false;
   const deliver = () => {
@@ -766,14 +708,12 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
     setTimeout(() => ($(".letter-hint").hidden = false), 2400);
   };
   btn.addEventListener("click", () => (delivered ? peel() : deliver()));
-  // 봉투 다른 곳을 눌러도 도장부터 떼어짐
   $(".envelope").addEventListener("click", (e) => delivered && e.target !== seal && !seal.contains(e.target) && peel());
 
   const open = () => {
     el.classList.add("opened");
     $(".letter-hint").hidden = true;
     $(".letter-open-btn").hidden = true;
-    // 봉투 뚜껑이 열리고 종이가 올라온 뒤 편지지를 펼침
     setTimeout(() => {
       $(".letter-sheet").hidden = false;
       $(".letter-actions").hidden = false;
@@ -787,7 +727,6 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
     onDone?.();
   };
   $(".letter-go").addEventListener("click", finish);
-  // 배송 경로가 담긴 편지면, 다 읽은 뒤에도 어떻게 왔는지 다시 볼 수 있음
   if (letter.route && routeOf(letter, id)) {
     $(".letter-track").hidden = false;
     $(".letter-track").addEventListener("click", () => showTracking(letter, id, () => $(".letter-track").focus()));
@@ -798,14 +737,12 @@ function openEnvelope(letter, id, onDone, { snapshot } = {}) {
   });
 }
 
-// 편지를 받은 사람의 스노우볼 화면에 계속 떠 있는 답장 버튼 → 자기가 고른 나라로 답장 스노우볼을 보내는 펜팔 루프
 function showReplyFloat(from, chain) {
   if (document.querySelector(".reply-float")) return;
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "reply-float";
-  btn.textContent = from ? `✉️ Write back to ${from}` : "✉️ Send a snowball back";
-  // 한 번 누르면 사라짐 (편지 쓰기 창의 보내기 버튼을 가리지 않게)
+  btn.textContent = from ? `Write back to ${from}` : "Send a snowball back";
   btn.addEventListener("click", () => {
     btn.remove();
     openWriter({ to: from || "" }, chain);
