@@ -1,15 +1,8 @@
-// 내 배송 화면: 이 기기에서 보내고 받은 스노우볼을 모아 운영 대시보드처럼 보여 줌.
-// 서버가 없어서 기록은 이 브라우저에만 남음 (localStorage, 최근 60건).
-// 시간은 실제로 흐르지 않음: 시뮬레이션 시계는 '다음 도착까지' 버튼을 누를 때만 움직임.
-// 턴을 넘기면 그 사이 출고·통관·도착이 턴 리포트로 나옴. 기다릴 필요 없이 간접 체험만.
-// 단계별 목표가 하나씩 열림 (첫 배송 → 도착 → 친환경 → 3개 대륙 → 운임 관리 → 탄소 절감 → 지구 한 바퀴)
-
 import { CITIES, DESTINATIONS, SERVICES, TZ, dispatchWaves, formatHours, phaseAt, planRoute } from "./logistics.mjs";
 
 const KEY = "snowball-shipments";
 const CLOCK_KEY = "snowball-sim-clock";
 
-// 시뮬레이션 시계(ms). 처음엔 지금 실제 시각에서 시작하고, 그 뒤로는 턴을 넘길 때만 앞으로 감
 let clock = null;
 export function simNow() {
   if (clock == null) {
@@ -27,7 +20,6 @@ function setClock(t) {
   try {
     localStorage.setItem(CLOCK_KEY, String(Math.round(t)));
   } catch {
-    // 이번 화면에서만
   }
 }
 const MAX = 60;
@@ -45,12 +37,9 @@ function save(list) {
   try {
     localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX)));
   } catch {
-    // 저장소를 못 쓰면 이번 화면에서만
   }
 }
 
-// 한 건 기록. rec: { id 운송장 번호, dir "sent"|"received", from 스노우볼 장면, to 받는 나라, s 방식, w 출고 대기, at 보낸 시각(ms), who 상대 이름 }
-// 같은 운송장 번호는 한 번만 (받은 편지를 여러 번 열어도)
 export function recordShipment(rec) {
   const list = load();
   if (list.some((r) => r.id === rec.id && r.dir === rec.dir)) return;
@@ -60,7 +49,6 @@ export function recordShipment(rec) {
 
 export const shipmentCount = () => load().length;
 
-// ── 목표 ───────────────────────────────────────────────
 const GOAL_KEY = "snowball-goal-level";
 const CONTINENT = {
   KR: "아시아", JP: "아시아", CN: "아시아", TW: "아시아", HK: "아시아", SG: "아시아", TH: "아시아", VN: "아시아", PH: "아시아", ID: "아시아", MY: "아시아", IN: "아시아", AE: "아시아",
@@ -80,7 +68,6 @@ export const GOALS = [
   { title: "함께 지구 한 바퀴", hint: "보낸 거리 40,075km 채우기", goal: 40075, key: "km", unit: "km" },
 ];
 
-// 보낸 배송으로 목표 값 계산
 function metrics(now) {
   const sent = load()
     .filter((r) => r.dir === "sent")
@@ -98,9 +85,6 @@ function metrics(now) {
   };
 }
 
-// 지금 목표와 진행도. 달성 판정은 정해진 때에만:
-//  mode "seal": 편지를 봉한 직후 (모든 목표) / "turn": '다음 도착까지'로 시간을 넘긴 직후 (도착 목표만)
-//  mode 없음: 보여 주기만 하고 판정하지 않음. 방금 달성한 목표 이름은 done으로 돌려줌
 export function goalStatus(mode = null) {
   let level = 0;
   try {
@@ -119,13 +103,11 @@ export function goalStatus(mode = null) {
     try {
       localStorage.setItem(GOAL_KEY, String(level));
     } catch {
-      // 이번 화면에서만
     }
   const goal = GOALS[level] || null;
   return { level, total: GOALS.length, goal, value: goal ? m[goal.key] : 0, done };
 }
 
-// 목표 값 표시: 1 / 3, 2.4 / 5kg, 12,300 / 40,075km
 export function goalProgressText(st) {
   const g = st.goal;
   const v = Math.min(st.value, g.goal);
@@ -133,7 +115,6 @@ export function goalProgressText(st) {
   return `${num(v)} / ${num(g.goal)}${g.unit || ""}`;
 }
 
-// 한 건의 지금 상태: 경로, 지난 시간, 단계
 function stateOf(rec, now) {
   const route = planRoute(rec.from, rec.to, rec.s, { wait: rec.w, now: rec.at });
   if (!route) return null;
@@ -142,7 +123,6 @@ function stateOf(rec, now) {
   return { rec, route, elapsed, ...p, progress: rec.dir === "received" ? 1 : Math.min(1, Math.max(0, elapsed / route.hours)) };
 }
 
-// 두 시점(경과 시간 h0 → h1) 사이에 이 배송에 일어난 일: 출고, 허브 도착, 통관 완료, 배송 완료
 function eventsBetween(st, h0, h1) {
   const { route, rec } = st;
   if (rec.dir !== "sent") return [];
@@ -151,7 +131,7 @@ function eventsBetween(st, h0, h1) {
   route.stops.forEach((s, k) => {
     if (k === 0) return;
     const last = k === route.stops.length - 1;
-    if (last) return add(s.at, `${s.name} 도착 🎉`);
+    if (last) return add(s.at, `${s.name} 도착`);
     add(s.at, `${s.code} 도착`);
     if (k === 1 && route.departure) add(s.out, `${s.code} 출발`);
     else if (route.customs && s.code === route.hub) add(s.out, `${s.code} 통관 완료`);
@@ -159,7 +139,6 @@ function eventsBetween(st, h0, h1) {
   return out;
 }
 
-// 원형 지표 (SVG). value 0~1
 function ring(value, label, sub, color) {
   const r = 26;
   const c = 2 * Math.PI * r;
@@ -178,7 +157,6 @@ function ring(value, label, sub, color) {
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 const leftText = formatHours;
 
-// 칩: 전체 / 운송 중 / 통관 / 도착 / 받은 것
 const CHIPS = [
   ["all", "전체"],
   ["transit", "배송 중"],
@@ -190,7 +168,6 @@ const inChip = (st, chip) =>
   chip === "all" ||
   (chip === "received" ? st.rec.dir === "received" : st.rec.dir === "sent" && st.phase === chip);
 
-// 시뮬레이션 시각을 그 도시 시각으로: "10/26(월) 14:00"
 function clockText(t, homeId) {
   const p = Object.fromEntries(
     new Intl.DateTimeFormat("ko-KR", { timeZone: TZ[homeId], weekday: "short", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
@@ -200,7 +177,6 @@ function clockText(t, homeId) {
   return `${p.month}/${p.day}(${p.weekday}) ${p.hour}:${p.minute}`;
 }
 
-// 운송 중인 배송 중 가장 먼저 도착하는 것까지 남은 시간 (없으면 null)
 function nextArrival(all) {
   const left = all.filter((s) => s.rec.dir === "sent" && s.phase !== "delivered").map((s) => s.route.hours - s.elapsed);
   return left.length ? Math.min(...left) : null;
@@ -208,7 +184,6 @@ function nextArrival(all) {
 
 let board = null;
 
-// 화면 열기. homeId: 지금 보고 있는 스노우볼(오늘 출고 차수를 그 도시 시각으로), onOpen: 한 건을 눌렀을 때
 export function openShipments(homeId, onOpen) {
   if (board) return;
   board = document.createElement("div");
@@ -219,8 +194,8 @@ export function openShipments(homeId, onOpen) {
   document.body.append(board);
   document.body.classList.add("letter-open");
   let chip = "all";
-  let report = null; // 마지막 턴에 일어난 일
-  let cheer = []; // 이번에 달성한 목표
+  let report = null;
+  let cheer = [];
   const render = () => {
     const now = simNow();
     const all = load()
@@ -230,7 +205,6 @@ export function openShipments(homeId, onOpen) {
     const delivered = all.filter((s) => s.phase === "delivered").length;
     const eco = all.filter((s) => s.rec.s === "e").length;
     const co2 = all.reduce((a, s) => a + s.route.co2, 0);
-    // Express로 보냈다면 나왔을 CO₂와 비교한 절감률
     const co2Express = all.reduce((a, s) => a + (planRoute(s.rec.from, s.rec.to, "x", { wait: 0, now: s.rec.at })?.co2 || 0), 0);
     const km = all.reduce((a, s) => a + s.route.km, 0);
     const spend = sent.reduce((a, s) => a + s.route.cost, 0);
@@ -249,14 +223,14 @@ export function openShipments(homeId, onOpen) {
         <h2 class="board-title">내 배송</h2>
         <p class="board-big"><b>${all.length}</b>건 <span>배송 중 ${inTransit} · 도착 ${delivered}</span></p>
         <section class="goal">
-          ${cheer.length ? `<p class="goal-done">달성! ${esc(cheer.join(" · "))} 🎉</p>` : ""}
+          ${cheer.length ? `<p class="goal-done">달성! ${esc(cheer.join(" · "))}</p>` : ""}
           ${
             goal.goal
               ? `<p class="goal-step">목표 ${goal.level + 1} / ${goal.total}</p>
           <p class="goal-title">${esc(goal.goal.title)}</p>
           <div class="goal-bar"><span style="width:${Math.min(100, (goal.value / goal.goal.goal) * 100).toFixed(1)}%"></span></div>
           <p class="goal-meta"><b>${goalProgressText(goal)}</b> ${esc(goal.goal.hint)}</p>`
-              : `<p class="goal-title">모든 목표 달성! 🎉</p><p class="goal-meta">스노우볼 물류왕이에요.</p>`
+              : `<p class="goal-title">모든 목표 달성!</p><p class="goal-meta">스노우볼 물류왕이에요.</p>`
           }
         </section>
         ${
@@ -334,13 +308,11 @@ export function openShipments(homeId, onOpen) {
         onOpen?.(s.rec, () => board?.querySelector(`.board-item[data-i="${b.dataset.i}"]`)?.focus());
       });
   };
-  // 턴 넘기기: 시계를 앞으로 돌리고, 그 사이 일어난 일을 모아 리포트로
   const endTurn = (skip) => {
     const before = simNow();
     const states = load()
       .map((r) => stateOf(r, before))
       .filter(Boolean);
-    // 가장 먼저 도착하는 배송까지 시계를 돌림
     const hours = Math.ceil((nextArrival(states) ?? 0) * 60) / 60;
     if (!(hours > 0)) return;
     const after = before + hours * 3600e3;

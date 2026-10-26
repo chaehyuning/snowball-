@@ -193,7 +193,7 @@ export function openHelp() {
           <dt>엽서</dt><dd>명판에 문구를 새겨 지금 장면을 이미지로 저장하거나 공유해요.</dd>
           <dt>좌우로 밀기</dt><dd>이전·다음 나라로 넘어가요.</dd>
           <dt>오른쪽 기호</dt><dd>나라를 바로 골라요. 지구본을 누르면 돌려 가며 고르기.</dd>
-          <dt>🔊 · ♪</dt><dd>효과음과 배경음악을 따로 켜고 꺼요.</dd>
+          <dt>소리 · 음악</dt><dd>효과음과 배경음악을 따로 켜고 꺼요.</dd>
           <dt>키보드</dt><dd>← → 나라 바꾸기, Space 팡.</dd>
         </dl>
         <div class="help-actions">
