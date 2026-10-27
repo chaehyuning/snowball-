@@ -3406,3 +3406,32 @@ body.tracking-open > *:not(.tracking-view) {
   background: #2f7a4f;
   color: #fff;
 }
+
+@media (max-width: 640px) {
+  .scene-grid button[data-scene] {
+    display: none;
+  }
+
+  .scene-grid {
+    justify-content: center;
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .scenes .globe-open {
+    display: flex;
+    gap: 8px;
+    width: auto;
+    padding: 0 18px 0 10px;
+    border-radius: 999px;
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .scenes .globe-open .globe-label {
+    display: inline;
+  }
+}

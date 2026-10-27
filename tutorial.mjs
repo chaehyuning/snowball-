@@ -21,7 +21,7 @@ const STEPS = [
   {
     target: ".scenes",
     title: "여기서 나라를 골라요",
-    text: "기호를 누르면 바로, 지구본을 누르면 돌려 가며 고를 수 있어요.",
+    text: "지구본을 누르거나 스노우볼을 옆으로 밀면 다른 나라로 가요.",
   },
   {
     target: ".tools-more-toggle",
